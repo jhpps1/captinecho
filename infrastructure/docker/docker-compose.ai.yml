@@ -1,0 +1,151 @@
+version: '3.8'
+
+# ==============================================
+# EC2 #2 전용 - AI Service Docker Compose
+# ==============================================
+# 이 파일은 EC2 #2에서만 실행됩니다
+# PostgreSQL은 EC2 #1(10.0.2.10:5432)에 연결합니다
+
+services:
+  # ==============================================
+  # FastAPI + CrewAI (AI Service Only)
+  # ==============================================
+  ai-service:
+    image: ${DOCKER_REGISTRY:-your-dockerhub}/ai-service:${IMAGE_TAG:-latest}
+    container_name: fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      # OpenAI 설정
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE:-0.7}
+
+      # PostgreSQL 연결 (EC2 #1)
+      - DB_HOST=10.0.2.10
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_URL=postgresql://${DB_USER}:${DB_PASSWORD}@10.0.2.10:5432/${DB_NAME}
+
+      # AI Service 설정
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+
+      # CrewAI 설정
+      - CREWAI_TELEMETRY_OPT_OUT=true
+      - CREWAI_LOG_LEVEL=WARNING
+
+      # Agent Memory 설정
+      - AGENT_MEMORY_BACKEND=postgresql
+      - AGENT_MEMORY_CONNECTION_STRING=postgresql://${DB_USER}:${DB_PASSWORD}@10.0.2.10:5432/${DB_NAME}
+
+      # 성능 최적화
+      - WORKERS=2
+      - MAX_REQUESTS=1000
+      - MAX_REQUESTS_JITTER=50
+      - TIMEOUT=300
+    volumes:
+      - /var/log/app/ai:/app/logs
+    restart: unless-stopped
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+        reservations:
+          memory: 1G
+
+  # ==============================================
+  # Node Exporter (시스템 메트릭)
+  # ==============================================
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /:/host:ro,rslave
+    restart: unless-stopped
+    networks:
+      - ai-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==============================================
+  # Redis (로컬 캐시 - AI 서비스용)
+  # ==============================================
+  redis-local:
+    image: redis:7-alpine
+    container_name: redis-local
+    ports:
+      - "6380:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --save 900 1
+    volumes:
+      - redis-local-data:/data
+    restart: unless-stopped
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+# ==============================================
+# 볼륨 정의
+# ==============================================
+volumes:
+  redis-local-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ubuntu/volumes/redis-local
+
+# ==============================================
+# 네트워크 정의
+# ==============================================
+networks:
+  ai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

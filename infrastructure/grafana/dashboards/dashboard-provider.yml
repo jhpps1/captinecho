@@ -1,0 +1,63 @@
+# ==============================================
+# Grafana 대시보드 프로바이더 설정
+# ==============================================
+
+apiVersion: 1
+
+# 대시보드 프로바이더 목록
+providers:
+  # ==============================================
+  # 교육 플랫폼 대시보드
+  # ==============================================
+  - name: 'edu-platform-dashboards'
+    orgId: 1
+    folder: 'Education Platform'
+    folderUid: 'edu-platform'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/edu-platform
+
+  # ==============================================
+  # 인프라 모니터링 대시보드
+  # ==============================================
+  - name: 'infrastructure-dashboards'
+    orgId: 1
+    folder: 'Infrastructure'
+    folderUid: 'infrastructure'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/infrastructure
+
+  # ==============================================
+  # 애플리케이션 대시보드
+  # ==============================================
+  - name: 'application-dashboards'
+    orgId: 1
+    folder: 'Applications'
+    folderUid: 'applications'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/applications
+
+  # ==============================================
+  # AI 서비스 대시보드
+  # ==============================================
+  - name: 'ai-service-dashboards'
+    orgId: 1
+    folder: 'AI Services'
+    folderUid: 'ai-services'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/ai-services

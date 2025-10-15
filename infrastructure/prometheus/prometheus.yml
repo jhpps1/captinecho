@@ -1,0 +1,219 @@
+# ==============================================
+# 교육 플랫폼 Prometheus 설정
+# ==============================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'edu-platform'
+    replica: 'prometheus-1'
+
+# Alertmanager 설정 (추후 확장)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# 규칙 파일 로드
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# 스크레이핑 설정
+scrape_configs:
+  # ==============================================
+  # Prometheus 자체 모니터링
+  # ==============================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # ==============================================
+  # Spring Boot Backend (Actuator)
+  # ==============================================
+  - job_name: 'spring-boot-backend'
+    static_configs:
+      - targets: ['backend:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'backend-service'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'jvm_.*'
+        target_label: service
+        replacement: 'backend'
+
+  # ==============================================
+  # FastAPI AI Service
+  # ==============================================
+  - job_name: 'fastapi-ai-service'
+    static_configs:
+      - targets: ['ai-service:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'ai-service'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'fastapi_.*'
+        target_label: service
+        replacement: 'ai-service'
+
+  # ==============================================
+  # PostgreSQL Database
+  # ==============================================
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'postgres-db'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'pg_.*'
+        target_label: service
+        replacement: 'postgres'
+
+  # ==============================================
+  # Redis Cache
+  # ==============================================
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'redis-cache'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'redis_.*'
+        target_label: service
+        replacement: 'redis'
+
+  # ==============================================
+  # Nginx 웹서버
+  # ==============================================
+  - job_name: 'nginx-exporter'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'nginx-proxy'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'nginx_.*'
+        target_label: service
+        replacement: 'nginx'
+
+  # ==============================================
+  # Node Exporter (시스템 메트릭) - EC2 #1
+  # ==============================================
+  - job_name: 'node-exporter-backend'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'ec2-backend'
+      - target_label: server_type
+        replacement: 'backend-server'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'node_.*'
+        target_label: service
+        replacement: 'system'
+
+  # ==============================================
+  # Node Exporter (시스템 메트릭) - EC2 #2 (AI Service)
+  # ==============================================
+  - job_name: 'node-exporter-ai'
+    static_configs:
+      - targets: ['10.0.2.20:9100']  # EC2 #2 내부 IP
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'ec2-ai-service'
+      - target_label: server_type
+        replacement: 'ai-server'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'node_.*'
+        target_label: service
+        replacement: 'system'
+
+  # ==============================================
+  # cAdvisor (컨테이너 메트릭)
+  # ==============================================
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'container-metrics'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'container_.*'
+        target_label: service
+        replacement: 'docker'
+
+  # ==============================================
+  # 커스텀 애플리케이션 메트릭
+  # ==============================================
+  - job_name: 'custom-edu-metrics'
+    static_configs:
+      - targets: ['backend:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 30s
+    params:
+      format: ['prometheus']
+    metric_relabel_configs:
+      # 교육 관련 메트릭만 필터링
+      - source_labels: [__name__]
+        regex: '(edu_.*|student_.*|learning_.*|agent_.*)'
+        target_label: metric_type
+        replacement: 'education'
+      # 불필요한 메트릭 제외
+      - source_labels: [__name__]
+        regex: '(go_.*|process_.*|promhttp_.*)'
+        action: drop
+
+# ==============================================
+# 글로벌 라벨링 규칙
+# ==============================================
+metric_relabel_configs:
+  # 환경 라벨 추가
+  - target_label: environment
+    replacement: 'development'  # production으로 변경
+
+  # 플랫폼 라벨 추가
+  - target_label: platform
+    replacement: 'edu-platform'

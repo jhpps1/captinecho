@@ -1,0 +1,91 @@
+# ==============================================
+# Grafana 데이터소스 설정
+# ==============================================
+
+apiVersion: 1
+
+# 데이터소스 목록
+datasources:
+  # ==============================================
+  # Prometheus (메인 메트릭 데이터소스)
+  # ==============================================
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+    # 기본 설정
+    basicAuth: false
+    withCredentials: false
+
+    # JSON 데이터 (추가 설정)
+    jsonData:
+      # 쿼리 타임아웃 (초)
+      timeInterval: "15s"
+      queryTimeout: "60s"
+
+      # HTTP 설정
+      httpMethod: POST
+
+      # 캐시 설정
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: "10m"
+
+      # 프로메테우스 버전
+      prometheusType: "Prometheus"
+      prometheusVersion: "2.40.0"
+
+      # 쿼리 편집기 설정
+      disableMetricsLookup: false
+      customQueryParameters: ""
+
+      # 알림 설정
+      manageAlerts: true
+      alertmanagerUid: ""
+
+  # ==============================================
+  # PostgreSQL (로그 및 상세 데이터 분석용)
+  # ==============================================
+  - name: PostgreSQL-EduPlatform
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: edudb
+    user: admin
+    editable: false
+
+    # 보안 필드 (환경변수에서 로드)
+    secureJsonData:
+      password: $DB_PASSWORD
+
+    # JSON 데이터
+    jsonData:
+      sslmode: "disable"
+      maxOpenConns: 5
+      maxIdleConns: 2
+      maxIdleConnsAuto: true
+      connMaxLifetime: 14400
+      postgresVersion: 1500
+      timescaledb: false
+
+  # ==============================================
+  # TestData (개발 및 테스트용)
+  # ==============================================
+  - name: TestData
+    type: testdata
+    access: proxy
+    isDefault: false
+    editable: true
+
+    jsonData:
+      # 테스트 시나리오 설정
+      scenarioId: "csv_metric_values"
+
+# ==============================================
+# 삭제할 데이터소스 (정리용)
+# ==============================================
+deleteDatasources:
+  - name: "old-prometheus"
+    orgId: 1
