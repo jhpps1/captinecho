@@ -144,7 +144,22 @@ pipeline {
 
         stage('개발 서버 배포') {
             when {
-                branch 'develop'
+                allOf {
+                    branch 'develop'
+                    // MR이 merge된 경우에만 배포 (merge commit 감지)
+                    expression {
+                        def commitMsg = sh(returnStdout: true, script: 'git log -1 --pretty=%B').trim()
+                        def isMerge = commitMsg.contains('Merge branch') ||
+                                      commitMsg.contains('Merge request') ||
+                                      commitMsg.startsWith('Merge')
+                        if (isMerge) {
+                            echo "✅ Merge commit 감지: ${commitMsg}"
+                        } else {
+                            echo "⏭️  일반 commit - 배포 건너뜀: ${commitMsg}"
+                        }
+                        return isMerge
+                    }
+                }
             }
             steps {
                 echo '🚢 개발 서버(EC2)에 배포 중...'
