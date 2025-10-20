@@ -165,45 +165,39 @@ pipeline {
                     echo "✅ Merge commit 감지: ${commitMsg}"
                     echo '🚢 개발 서버(EC2)에 배포 중...'
                     sh '''
-                        cd /home/ubuntu/projects/S13P31D101
-
-                        # Git Pull
-                        git checkout develop
-                        git pull origin develop
-
                         # Docker Compose로 개발 환경 재배포
-                        docker compose -f infrastructure/docker/docker-compose.dev.yml pull
+                        docker compose -f infrastructure/docker/docker-compose.dev.yml down
                         docker compose -f infrastructure/docker/docker-compose.dev.yml up -d --remove-orphans
 
                         # 헬스체크
                         echo "Waiting for services to start..."
-                        sleep 15
+                        sleep 20
 
                         echo "Backend Health Check:"
                         curl -f http://localhost:8080/api/health || echo "Backend not ready yet"
 
-                        echo "Development deployment successful!"
+                        echo "Frontend Health Check:"
+                        curl -f http://localhost/health || echo "Frontend not ready yet"
+
+                        echo "✅ Development deployment successful!"
                     '''
                 }
             }
         }
 
         stage('프로덕션 서버 배포') {
-            when {
-                branch 'master'
-            }
             steps {
-                echo '🚀 프로덕션 서버에 배포 중...'
                 script {
+                    // master 브랜치 체크
+                    if (GIT_BRANCH != 'master' && !GIT_BRANCH.endsWith('/master')) {
+                        echo "⏭️  master 브랜치가 아님 - 배포 건너뜀 (현재: ${GIT_BRANCH})"
+                        return
+                    }
+
+                    echo '🚀 프로덕션 서버에 배포 중...'
                     sh '''
-                        cd /home/ubuntu/projects/S13P31D101
-
-                        # Git Pull
-                        git checkout master
-                        git pull origin master
-
                         # Docker Compose로 프로덕션 재배포
-                        docker compose -f infrastructure/docker/docker-compose.prod.yml pull
+                        docker compose -f infrastructure/docker/docker-compose.prod.yml down
                         docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
                         # 헬스체크
@@ -213,7 +207,10 @@ pipeline {
                         echo "Backend Health Check:"
                         curl -f http://localhost:8080/api/health || exit 1
 
-                        echo "Production deployment successful!"
+                        echo "Frontend Health Check:"
+                        curl -f http://localhost/health || exit 1
+
+                        echo "✅ Production deployment successful!"
                     '''
                 }
             }
