@@ -143,11 +143,14 @@ pipeline {
         }
 
         stage('개발 서버 배포') {
-            when {
-                branch 'develop'
-            }
             steps {
                 script {
+                    // develop 브랜치 체크
+                    if (GIT_BRANCH != 'develop' && !GIT_BRANCH.endsWith('/develop')) {
+                        echo "⏭️  develop 브랜치가 아님 - 배포 건너뜀 (현재: ${GIT_BRANCH})"
+                        return
+                    }
+
                     // MR이 merge된 경우에만 배포 (merge commit 감지)
                     def commitMsg = sh(returnStdout: true, script: 'git log -1 --pretty=%B').trim()
                     def isMerge = commitMsg.contains('Merge branch') ||
