@@ -2,7 +2,9 @@
 // Captain Echo CI/CD Pipeline
 // ==============================================
 // 프로젝트: S13P31D101
-// 빌드 타겟: ARM64 (EC2 c6g.2xlarge)
+// 브랜치 전략:
+//   - develop: 개발 서버 자동 배포
+//   - master: 프로덕션 서버 자동 배포
 
 pipeline {
     agent any
@@ -17,10 +19,13 @@ pipeline {
         FRONTEND_IMAGE = "${DOCKER_REGISTRY}/${PROJECT_NAME}-frontend"
 
         // Git 정보
-        GIT_BRANCH = "${env.BRANCH_NAME ?: 'infra'}"
+        GIT_BRANCH = "${env.BRANCH_NAME ?: 'develop'}"
 
         // 빌드 번호
         BUILD_TAG = "${env.BUILD_NUMBER}"
+
+        // 배포 환경 결정
+        DEPLOY_ENV = "${env.BRANCH_NAME == 'master' ? 'prod' : 'dev'}"
     }
 
     options {
@@ -43,6 +48,7 @@ pipeline {
                     echo "======================================"
                     echo "Branch: ${GIT_BRANCH}"
                     echo "Build: #${BUILD_TAG}"
+                    echo "Deploy Environment: ${DEPLOY_ENV}"
                     echo "======================================"
 
                     sh '''
@@ -105,9 +111,8 @@ pipeline {
         stage('이미지 푸시') {
             when {
                 anyOf {
-                    branch 'main'
+                    branch 'master'
                     branch 'develop'
-                    branch 'infra'
                 }
             }
             steps {
@@ -137,51 +142,64 @@ pipeline {
             }
         }
 
-        stage('EC2 배포') {
+        stage('개발 서버 배포') {
             when {
-                anyOf {
-                    branch 'main'
-                    branch 'develop'
-                }
+                branch 'develop'
             }
             steps {
-                echo '🚢 EC2 서버에 배포 중...'
+                echo '🚢 개발 서버(EC2)에 배포 중...'
                 script {
-                    // EC2 SSH 접속 (Jenkins Credentials 사용)
-                    withCredentials([sshUserPrivateKey(
-                        credentialsId: 'ec2-ssh-key',
-                        keyFileVariable: 'SSH_KEY',
-                        usernameVariable: 'SSH_USER'
-                    )]) {
-                        sh '''
-                            # EC2 서버 IP
-                            EC2_HOST="13.209.41.60"
+                    sh '''
+                        cd /home/ubuntu/projects/S13P31D101
 
-                            # SSH 접속 및 배포
-                            ssh -o StrictHostKeyChecking=no \
-                                -i $SSH_KEY \
-                                $SSH_USER@$EC2_HOST << 'ENDSSH'
+                        # Git Pull
+                        git checkout develop
+                        git pull origin develop
 
-                            cd /home/ubuntu/projects/S13P31D101
+                        # Docker Compose로 개발 환경 재배포
+                        docker compose -f infrastructure/docker/docker-compose.dev.yml pull
+                        docker compose -f infrastructure/docker/docker-compose.dev.yml up -d --remove-orphans
 
-                            # Git Pull
-                            git pull origin ${GIT_BRANCH}
+                        # 헬스체크
+                        echo "Waiting for services to start..."
+                        sleep 15
 
-                            # Docker Compose로 재배포
-                            docker compose -f infrastructure/docker/docker-compose.prod.yml pull
-                            docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
+                        echo "Backend Health Check:"
+                        curl -f http://localhost:8080/api/health || echo "Backend not ready yet"
 
-                            # 헬스체크
-                            echo "Waiting for services to start..."
-                            sleep 10
+                        echo "Development deployment successful!"
+                    '''
+                }
+            }
+        }
 
-                            echo "Backend Health Check:"
-                            curl -f http://localhost:8080/api/health || exit 1
+        stage('프로덕션 서버 배포') {
+            when {
+                branch 'master'
+            }
+            steps {
+                echo '🚀 프로덕션 서버에 배포 중...'
+                script {
+                    sh '''
+                        cd /home/ubuntu/projects/S13P31D101
 
-                            echo "Deployment successful!"
-ENDSSH
-                        '''
-                    }
+                        # Git Pull
+                        git checkout master
+                        git pull origin master
+
+                        # Docker Compose로 프로덕션 재배포
+                        docker compose -f infrastructure/docker/docker-compose.prod.yml pull
+                        docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
+
+                        # 헬스체크
+                        echo "Waiting for services to start..."
+                        sleep 20
+
+                        echo "Backend Health Check:"
+                        curl -f http://localhost:8080/api/health || exit 1
+
+                        echo "Production deployment successful!"
+                    '''
                 }
             }
         }
@@ -189,15 +207,21 @@ ENDSSH
 
     post {
         success {
-            echo '✅ 빌드 및 배포 성공!'
-            // Slack 알림 (선택사항)
-            // slackSend(color: 'good', message: "✅ Captain Echo 배포 성공! Build #${BUILD_TAG}")
+            script {
+                def deployMsg = env.BRANCH_NAME == 'master' ? '프로덕션' : '개발'
+                echo "✅ ${deployMsg} 서버 빌드 및 배포 성공!"
+                // Slack 알림 (선택사항)
+                // slackSend(color: 'good', message: "✅ Captain Echo ${deployMsg} 배포 성공! Build #${BUILD_TAG}")
+            }
         }
 
         failure {
-            echo '❌ 빌드 또는 배포 실패!'
-            // Slack 알림 (선택사항)
-            // slackSend(color: 'danger', message: "❌ Captain Echo 배포 실패! Build #${BUILD_TAG}")
+            script {
+                def deployMsg = env.BRANCH_NAME == 'master' ? '프로덕션' : '개발'
+                echo "❌ ${deployMsg} 서버 빌드 또는 배포 실패!"
+                // Slack 알림 (선택사항)
+                // slackSend(color: 'danger', message: "❌ Captain Echo ${deployMsg} 배포 실패! Build #${BUILD_TAG}")
+            }
         }
 
         always {
