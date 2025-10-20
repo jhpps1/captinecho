@@ -10,19 +10,11 @@ pipeline {
     agent any
 
     environment {
-        // Docker Registry (Docker Hub 또는 Private Registry)
-        DOCKER_REGISTRY = 'your-dockerhub-username'
-
         // 프로젝트 정보
         PROJECT_NAME = 'captain-echo'
-        BACKEND_IMAGE = "${DOCKER_REGISTRY}/${PROJECT_NAME}-backend"
-        FRONTEND_IMAGE = "${DOCKER_REGISTRY}/${PROJECT_NAME}-frontend"
 
         // Git 정보
         GIT_BRANCH = "${env.BRANCH_NAME ?: 'develop'}"
-
-        // 빌드 번호
-        BUILD_TAG = "${env.BUILD_NUMBER}"
 
         // 배포 환경 결정
         DEPLOY_ENV = "${env.BRANCH_NAME == 'master' ? 'prod' : 'dev'}"
@@ -42,26 +34,9 @@ pipeline {
     stages {
         stage('환경 확인') {
             steps {
-                script {
-                    echo "======================================"
-                    echo "Captain Echo CI/CD Pipeline"
-                    echo "======================================"
-                    echo "Branch: ${GIT_BRANCH}"
-                    echo "Build: #${BUILD_TAG}"
-                    echo "Deploy Environment: ${DEPLOY_ENV}"
-                    echo "======================================"
-
-                    sh '''
-                        echo "Docker Version:"
-                        docker --version
-                        echo ""
-                        echo "Docker Compose Version:"
-                        docker compose version
-                        echo ""
-                        echo "Architecture:"
-                        uname -m
-                    '''
-                }
+                echo "🚀 Captain Echo CI/CD Pipeline"
+                echo "📌 Branch: ${GIT_BRANCH} | Environment: ${DEPLOY_ENV}"
+                sh 'docker --version && docker compose version'
             }
         }
 
@@ -77,14 +52,13 @@ pipeline {
                 echo '🏗️ Backend Docker 이미지 빌드 중...'
                 script {
                     dir('backend') {
-                        sh """
+                        sh '''
                             docker build \
-                                -t ${BACKEND_IMAGE}:${BUILD_TAG} \
-                                -t ${BACKEND_IMAGE}:latest \
-                                --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-                                --build-arg VCS_REF=\$(git rev-parse --short HEAD) \
+                                -t captain-echo-backend:latest \
+                                --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+                                --build-arg VCS_REF=$(git rev-parse --short HEAD) \
                                 .
-                        """
+                        '''
                     }
                 }
             }
@@ -95,47 +69,12 @@ pipeline {
                 echo '🎨 Frontend Docker 이미지 빌드 중...'
                 script {
                     dir('frontend') {
-                        sh """
-                            docker build \
-                                -t ${FRONTEND_IMAGE}:${BUILD_TAG} \
-                                -t ${FRONTEND_IMAGE}:latest \
-                                --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-                                --build-arg VCS_REF=\$(git rev-parse --short HEAD) \
-                                .
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('이미지 푸시') {
-            when {
-                anyOf {
-                    branch 'master'
-                    branch 'develop'
-                }
-            }
-            steps {
-                echo '🚀 Docker Hub에 이미지 푸시 중...'
-                script {
-                    // Docker Hub 로그인 (Jenkins Credentials 사용)
-                    withCredentials([usernamePassword(
-                        credentialsId: 'dockerhub-credentials',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
                         sh '''
-                            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-
-                            # Backend 푸시
-                            docker push ${BACKEND_IMAGE}:${BUILD_TAG}
-                            docker push ${BACKEND_IMAGE}:latest
-
-                            # Frontend 푸시
-                            docker push ${FRONTEND_IMAGE}:${BUILD_TAG}
-                            docker push ${FRONTEND_IMAGE}:latest
-
-                            docker logout
+                            docker build \
+                                -t captain-echo-frontend:latest \
+                                --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+                                --build-arg VCS_REF=$(git rev-parse --short HEAD) \
+                                .
                         '''
                     }
                 }
@@ -219,29 +158,16 @@ pipeline {
 
     post {
         success {
-            script {
-                def deployMsg = env.BRANCH_NAME == 'master' ? '프로덕션' : '개발'
-                echo "✅ ${deployMsg} 서버 빌드 및 배포 성공!"
-                // Slack 알림 (선택사항)
-                // slackSend(color: 'good', message: "✅ Captain Echo ${deployMsg} 배포 성공! Build #${BUILD_TAG}")
-            }
+            echo "✅ 빌드 및 배포 성공!"
         }
 
         failure {
-            script {
-                def deployMsg = env.BRANCH_NAME == 'master' ? '프로덕션' : '개발'
-                echo "❌ ${deployMsg} 서버 빌드 또는 배포 실패!"
-                // Slack 알림 (선택사항)
-                // slackSend(color: 'danger', message: "❌ Captain Echo ${deployMsg} 배포 실패! Build #${BUILD_TAG}")
-            }
+            echo "❌ 빌드 또는 배포 실패!"
         }
 
         always {
             echo '🧹 Docker 이미지 정리 중...'
-            sh '''
-                # 댕글링 이미지 삭제
-                docker image prune -f
-            '''
+            sh 'docker image prune -f'
         }
     }
 }
