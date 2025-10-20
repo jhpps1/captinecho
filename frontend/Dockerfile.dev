@@ -1,0 +1,50 @@
+# ==============================================
+# Captain Echo Frontend Dockerfile (Development)
+# ==============================================
+# Development mode with hot reload
+# Multi-arch support: ARM64 (EC2) & x86_64 (로컬 개발)
+
+FROM node:20-alpine
+
+# 메타데이터
+LABEL maintainer="captain-echo-team"
+LABEL description="Captain Echo React Frontend (Development)"
+LABEL stage="dev"
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# 시스템 패키지 설치
+RUN apk add --no-cache \
+    git \
+    curl
+
+# 타임존 설정
+ENV TZ=Asia/Seoul
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    echo "Asia/Seoul" > /etc/timezone && \
+    apk del tzdata
+
+# package.json 복사
+COPY package*.json ./
+
+# 의존성 설치 (개발 의존성 포함)
+RUN npm install --silent
+
+# 소스 코드는 볼륨 마운트로 연결
+
+# 환경변수 설정
+ENV NODE_ENV=development
+ENV VITE_API_URL=http://localhost:8080/api
+ENV VITE_AI_SERVICE_URL=http://localhost:8000/api/ai
+
+# 포트 노출 (Vite 기본 포트)
+EXPOSE 5173
+
+# 헬스체크
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:5173 || exit 1
+
+# Vite 개발 서버 실행
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
