@@ -48,9 +48,7 @@ COPY requirements.txt .
 
 # Python 패키지 설치
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    # 캐시 정리
-    pip cache purge
+    pip install -r requirements.txt
 
 # 애플리케이션 소스 복사
 COPY --chown=appuser:appgroup . .
@@ -94,5 +92,4 @@ CMD ["python", "-m", "uvicorn", "app.main:app", \
      "--port", "8000", \
      "--workers", "1", \
      "--timeout-keep-alive", "65", \
-     "--access-log", \
-     "--log-config", "app/logging.conf"]
+     "--access-log"]
