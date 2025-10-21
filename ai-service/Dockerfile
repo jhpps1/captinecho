@@ -92,5 +92,4 @@ CMD ["python", "-m", "uvicorn", "app.main:app", \
      "--port", "8000", \
      "--workers", "1", \
      "--timeout-keep-alive", "65", \
-     "--access-log", \
-     "--log-config", "app/logging.conf"]
+     "--access-log"]

@@ -65,11 +65,13 @@ build/
 
 # Spring Boot
 application.properties
-application.yml
 application-*.properties
-application-*.yml
-!application-example.properties
+!application.yml
 !application-example.yml
+!application-example.properties
+application-dev.yml
+application-prod.yml
+application-test.yml
 
 # Python
 __pycache__/
