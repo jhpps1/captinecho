@@ -104,20 +104,8 @@ pipeline {
                     echo "✅ Merge commit 감지: ${commitMsg}"
                     echo '🚢 개발 서버(EC2)에 배포 중...'
                     sh '''
-                        # 배포 디렉토리 설정
-                        DEPLOY_DIR="/home/ubuntu/deploy/captain-echo"
-
-                        # 기존 배포 파일 정리
-                        rm -rf ${DEPLOY_DIR}/*
-
-                        # 필요한 파일들을 배포 디렉토리로 복사
-                        cp -r infrastructure ${DEPLOY_DIR}/
-
-                        # 호스트의 .env 파일을 배포 디렉토리로 복사
-                        cp /home/ubuntu/projects/S13P31D101/.env ${DEPLOY_DIR}/
-
-                        # 배포 디렉토리에서 Docker Compose 실행
-                        cd ${DEPLOY_DIR}
+                        # 프로젝트 디렉토리에서 직접 실행
+                        cd /home/ubuntu/projects/S13P31D101
                         docker compose -f infrastructure/docker/docker-compose.prod.yml down
                         docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
