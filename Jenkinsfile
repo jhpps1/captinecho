@@ -104,9 +104,9 @@ pipeline {
                     echo "✅ Merge commit 감지: ${commitMsg}"
                     echo '🚢 개발 서버(EC2)에 배포 중...'
                     sh '''
-                        # Docker Compose로 개발 환경 재배포
-                        docker compose -f infrastructure/docker/docker-compose.dev.yml down
-                        docker compose -f infrastructure/docker/docker-compose.dev.yml up -d --remove-orphans
+                        # Docker Compose로 개발 서버 재배포 (prod.yml 사용)
+                        docker compose -f infrastructure/docker/docker-compose.prod.yml down
+                        docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
                         # 헬스체크
                         echo "Waiting for services to start..."
