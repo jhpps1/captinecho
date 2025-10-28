@@ -33,7 +33,10 @@ services:
   # Spring Boot Backend (프로덕션 최적화)
   # ==============================================
   backend:
-    image: ${DOCKER_REGISTRY:-your-dockerhub}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: captain-echo-backend:latest
     container_name: spring-boot
     ports:
       - "8080:8080"
