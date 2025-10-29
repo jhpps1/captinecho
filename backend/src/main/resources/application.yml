@@ -17,20 +17,23 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  spring:
-    security:
-      oauth2:
-        client:
-          registration:
-            google:
-              client-id: ${GOOGLE_CLIENT_ID}
-              client-secret: ${GOOGLE_CLIENT_SECRET}
-              scope:
-                - openid
-                - email
-          provider:
-            google:
-              redirect-uri: http://localhost:8080/login/oauth2/code/google
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - email
+        provider:
+          google:
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity-ms: ${JWT_ACCESS_TOKEN_EXPIRY}
 
 logging:
   level:

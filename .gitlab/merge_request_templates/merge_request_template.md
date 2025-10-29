@@ -1,6 +1,6 @@
 ### 관련 Jira 이슈
 ---
-closes S13P21D103-
+closes S13P31D101-
 
 
 ### 작업 내용
