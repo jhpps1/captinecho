@@ -5,8 +5,6 @@
     src: url('./fonts/PeachMarket-Regular.ttf');
 }
 
-*,
-body {
-    font-family: 'PeachMarket';
-;
+@theme inline {
+    --font-peach: 'PeachMarket', 'sans-serif';
 }
