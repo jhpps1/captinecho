@@ -7,12 +7,7 @@
 //   - master: 프로덕션 서버 자동 배포
 
 pipeline {
-    agent {
-        node {
-            label ''
-            customWorkspace '/home/ubuntu/projects/S13P31D101'
-        }
-    }
+    agent any
 
     environment {
         // 프로젝트 정보
@@ -109,7 +104,11 @@ pipeline {
                     echo "✅ Merge commit 감지: ${commitMsg}"
                     echo '🚢 개발 서버(EC2)에 배포 중...'
                     sh '''
-                        # 프로젝트 디렉토리에서 직접 실행
+                        # 최신 설정 파일을 배포 디렉토리로 복사
+                        echo "📋 설정 파일 업데이트 중..."
+                        cp -rf ${WORKSPACE}/infrastructure /home/ubuntu/projects/S13P31D101/
+
+                        # 배포 디렉토리로 이동 후 배포
                         cd /home/ubuntu/projects/S13P31D101
                         docker compose -f infrastructure/docker/docker-compose.prod.yml down
                         docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
@@ -141,7 +140,12 @@ pipeline {
 
                     echo '🚀 프로덕션 서버에 배포 중...'
                     sh '''
-                        # Docker Compose로 프로덕션 재배포
+                        # 최신 설정 파일을 배포 디렉토리로 복사
+                        echo "📋 설정 파일 업데이트 중..."
+                        cp -rf ${WORKSPACE}/infrastructure /home/ubuntu/projects/S13P31D101/
+
+                        # 배포 디렉토리로 이동 후 배포
+                        cd /home/ubuntu/projects/S13P31D101
                         docker compose -f infrastructure/docker/docker-compose.prod.yml down
                         docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
