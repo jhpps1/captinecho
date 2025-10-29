@@ -8,41 +8,42 @@ const AdventurePage = () => {
   const [visiblePart] = useState('ㄱ');
   const [hiddenPart] = useState('ㅏ');
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);  // 답변 완료 여부
+  const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);  // 오답 목록
+  const [isAnswered, setIsAnswered] = useState(false);  // 정답 완료 여부
   const [isAnimating, setIsAnimating] = useState(false);  // 애니메이션 진행 중
 
   const options = ['ㄴ', 'ㅏ', 'ㅡ'];
 
   const handleOptionClick = (option: string) => {
-    if (isAnimating) return;  // 애니메이션 중이면 무시
+    // 이미 정답을 맞췄거나, 이미 틀린 답이거나, 애니메이션 중이면 무시
+    if (isAnswered || wrongAnswers.includes(option) || isAnimating) return;
 
     setSelectedAnswer(option);
 
     if (option === hiddenPart) {
-      // 정답인 경우 - 완전히 완료 처리
+      // 정답인 경우
       console.log('정답!');
       setIsAnswered(true);
     } else {
-      // 오답인 경우 - 애니메이션 후 재선택 가능
+      // 오답인 경우
       console.log('오답!');
-
+      
       // 애니메이션 시작
       setIsAnimating(true);
-
-      // 애니메이션 완료 후 (1초) 초기화
+      
+      // 오답 목록에 추가
+      setWrongAnswers(prev => [...prev, option]);
+      
+      // 애니메이션 완료 후 선택 초기화
       setTimeout(() => {
         setSelectedAnswer(null);
-        setIsAnimating(false);
-      }, 1000);
+        setIsAnimating(false);  // 애니메이션 종료
+      }, 1000);  // X 표시 1초 보여준 후
     }
   };
 
   const isCorrect = (option: string) => {
     return selectedAnswer === option && option === hiddenPart;
-  };
-
-  const isWrong = (option: string) => {
-    return selectedAnswer === option && option !== hiddenPart;
   };
 
   // 전체 문제가 정답인지 확인
@@ -110,7 +111,7 @@ const AdventurePage = () => {
             <button
               key={index}
               onClick={() => handleOptionClick(option)}
-              disabled={isAnswered || isAnimating}  // 정답 완료 또는 애니메이션 중 비활성화
+              disabled={isAnswered || wrongAnswers.includes(option) || isAnimating}  // 정답 완료, 이미 틀린 답, 애니메이션 중 비활성화
               className={`
                 w-28 h-28
                 sm:w-36 sm:h-36
@@ -123,18 +124,22 @@ const AdventurePage = () => {
                 flex items-center justify-center
                 text-5xl sm:text-6xl md:text-7xl
                 font-bold text-gray-800
-                ${!isAnswered && !isAnimating ? 'hover:scale-105 cursor-pointer' : 'cursor-default'}
+                ${!isAnswered && !wrongAnswers.includes(option) && !isAnimating ? 'hover:scale-105 cursor-pointer' : 'cursor-default'}
                 active:scale-95
                 transition-all duration-200
                 relative
               `}
             >
-              <span className={selectedAnswer === option ? 'opacity-20' : ''}>
+              {/* 글자 - 정답이거나 오답이면 흐리게 */}
+              <span className={isCorrect(option) || wrongAnswers.includes(option) ? 'opacity-20' : ''}>
                 {option}
               </span>
               
+              {/* 정답 O 표시 */}
               {isCorrect(option) && <AnswerFeedback isCorrect={true} />}
-              {isWrong(option) && <AnswerFeedback isCorrect={false} />}
+              
+              {/* 오답 X 표시 - wrongAnswers에 포함되어 있으면 표시 */}
+              {wrongAnswers.includes(option) && <AnswerFeedback isCorrect={false} />}
             </button>
           ))}
         </div>
@@ -146,7 +151,7 @@ const AdventurePage = () => {
           <img
             src={isQuestionCorrect ? '/adventurepage/happy_eco.png' : '/adventurepage/question_eco.png'}
             alt={isQuestionCorrect ? '정답 캐릭터' : '오답 캐릭터'}
-            className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain"
+            className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 object-contain"
           />
         </div>
       )}
