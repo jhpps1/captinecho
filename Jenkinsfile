@@ -9,7 +9,7 @@
 pipeline {
     agent {
         node {
-            label 'any'
+            label ''
             customWorkspace '/home/ubuntu/projects/S13P31D101'
         }
     }
