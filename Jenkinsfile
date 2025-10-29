@@ -110,8 +110,8 @@ pipeline {
 
                         # 배포 디렉토리로 이동 후 배포
                         cd /home/ubuntu/projects/S13P31D101
-                        docker compose -f infrastructure/docker/docker-compose.prod.yml down
-                        docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml down
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
                         # 헬스체크
                         echo "Waiting for services to start..."
@@ -146,8 +146,8 @@ pipeline {
 
                         # 배포 디렉토리로 이동 후 배포
                         cd /home/ubuntu/projects/S13P31D101
-                        docker compose -f infrastructure/docker/docker-compose.prod.yml down
-                        docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml down
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
                         # 헬스체크
                         echo "Waiting for services to start..."
