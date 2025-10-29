@@ -7,7 +7,11 @@
 //   - master: 프로덕션 서버 자동 배포
 
 pipeline {
-    agent any
+    agent {
+        node {
+            customWorkspace '/home/ubuntu/projects/S13P31D101'
+        }
+    }
 
     environment {
         // 프로젝트 정보
