@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   # ==============================================
-  # Nginx (프로덕션용 - CloudFlare 연동)
+  # Nginx + Frontend (프로덕션용 - CloudFlare 연동)
   # ==============================================
   nginx:
-    image: nginx:alpine
+    image: captain-echo-frontend:latest
     container_name: nginx
     ports:
       - "80:80"

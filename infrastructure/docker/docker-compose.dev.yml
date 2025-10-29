@@ -1,9 +1,9 @@
 services:
   # ==============================================
-  # Nginx (리버스 프록시 & 웹서버)
+  # Nginx + Frontend (리버스 프록시 & 웹서버)
   # ==============================================
   nginx:
-    image: nginx:alpine
+    image: captain-echo-frontend:latest
     container_name: nginx
     ports:
       - "80:80"
