@@ -43,6 +43,9 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8000}
       - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_EXPIRY=${JWT_ACCESS_TOKEN_EXPIRY:-3600000}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
