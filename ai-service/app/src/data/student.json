@@ -1,0 +1,11 @@
+{
+  "student_id": 1234,
+  "name": "홍길동",
+  "current_level": "초급 (Level 2)",
+  "top_weak_jamo": [
+    {"jamo": "ㅓ", "fail_rate": "85%"},
+    {"jamo": "ㅕ", "fail_rate": "67%"},
+    {"jamo": "ㅠ", "fail_rate": "55%"}
+  ],
+  "error_patterns_summary": "최근 학습에서 모음 'ㅓ'와 'ㅕ'를 'ㅏ'로 혼동하는 패턴이 80%를 차지함. '엄마', '여우' 등에서 반복."
+}
