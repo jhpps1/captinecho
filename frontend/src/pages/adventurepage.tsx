@@ -1,18 +1,31 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AnswerFeedback from '../components/AnswerFeedback';
 import { HelpCircle, DoorOpen } from 'lucide-react';
 
 const AdventurePage = () => {
-  // 예시 문제
+  // --------예시 문제(하드코딩)--------
   const [visiblePart] = useState('ㄱ');
   const [hiddenPart] = useState('ㅏ');
+  const options = ['ㄴ', 'ㅏ', 'ㅡ'];
+  // ---------------------------------
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);  // 오답 목록
   const [isAnswered, setIsAnswered] = useState(false);  // 정답 완료 여부
   const [isAnimating, setIsAnimating] = useState(false);  // 애니메이션 진행 중
+  const [isTutorialMode, setIsTutorialMode] = useState(false);  // 튜토리얼 모드
 
-  const options = ['ㄴ', 'ㅏ', 'ㅡ'];
+  // ESC 키로 튜토리얼 모드 닫기
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isTutorialMode) {
+        setIsTutorialMode(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTutorialMode]);
 
   const handleOptionClick = (option: string) => {
     // 이미 정답을 맞췄거나, 이미 틀린 답이거나, 애니메이션 중이면 무시
@@ -50,7 +63,7 @@ const AdventurePage = () => {
   const isQuestionCorrect = selectedAnswer === hiddenPart && isAnswered;
 
   return (
-    <div 
+    <div
       className="flex flex-col h-screen relative"
       style={{
         backgroundImage: 'url(/adventurepage/adventure_1_background.png)',
@@ -59,15 +72,20 @@ const AdventurePage = () => {
         backgroundColor: '#D4B896'
       }}
     >
+      {/* 어두운 배경 오버레이 - 튜토리얼 모드 */}
+      {isTutorialMode && (
+        <div className="absolute inset-0 bg-black/60 z-[1]" />
+      )}
+
       {/* 상단 아이콘 */}
       <header className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2 sm:gap-3 z-10">
         {/* 물음표 버튼 */}
-        <button 
+        <button
           className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
-          onClick={() => console.log('Help clicked')}
+          onClick={() => setIsTutorialMode(!isTutorialMode)}
         >
-          <HelpCircle 
-            className="text-gray-700" 
+          <HelpCircle
+            className="text-gray-700"
             size={24}
           />
         </button>
@@ -85,7 +103,7 @@ const AdventurePage = () => {
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20 relative z-[2]">
         {/* 문제 카드 */}
         <div className="mb-12 sm:mb-16">
           <div className="w-[85vw] max-w-2xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800">
