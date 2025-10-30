@@ -3,6 +3,9 @@ services:
   # Nginx + Frontend (리버스 프록시 & 웹서버)
   # ==============================================
   nginx:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
     image: captain-echo-frontend:latest
     container_name: nginx
     ports:
