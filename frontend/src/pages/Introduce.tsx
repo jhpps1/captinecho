@@ -31,6 +31,7 @@ const Introduction = () => {
             />
           </div>
 
+        {/* 인포카드는 컴포넌트 화 처리 */}
           <div className="w-full md:w-2/3">
             <div className="flex flex-col md:flex-row gap-6 md:gap-8 w-full">
 
@@ -44,7 +45,6 @@ const Introduction = () => {
                 <InfoCard title="학습 유형" description="4개 유형을 탐험을 통해 진행" />
                 <InfoCard title="학습 방법" description="앵무새와 메아리를 이용한 피드백" />
               </div>
-
             </div>
           </div>
         </div>
