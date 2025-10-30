@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import MainPage from '../pages/mainpage.tsx';
-import AdventurePage from '../pages/adventurepage.tsx';
+import AdventurePage1 from '../pages/adventurepage1.tsx';
 
 const router = createBrowserRouter([
   {
@@ -8,8 +8,8 @@ const router = createBrowserRouter([
     element: <MainPage />,
   },
   {
-    path: '/adventure',
-    element: <AdventurePage />,
+    path: '/adventure1',
+    element: <AdventurePage1 />,
   },
 ]);
 
