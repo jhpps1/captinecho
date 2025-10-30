@@ -104,9 +104,14 @@ pipeline {
                     echo "✅ Merge commit 감지: ${commitMsg}"
                     echo '🚢 개발 서버(EC2)에 배포 중...'
                     sh '''
-                        # Docker Compose로 개발 환경 재배포
-                        docker compose -f infrastructure/docker/docker-compose.dev.yml down
-                        docker compose -f infrastructure/docker/docker-compose.dev.yml up -d --remove-orphans
+                        # 최신 설정 파일을 배포 디렉토리로 복사
+                        echo "📋 설정 파일 업데이트 중..."
+                        cp -rf ${WORKSPACE}/infrastructure /home/ubuntu/projects/S13P31D101/
+
+                        # 배포 디렉토리로 이동 후 배포
+                        cd /home/ubuntu/projects/S13P31D101
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml down
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
                         # 헬스체크
                         echo "Waiting for services to start..."
@@ -135,9 +140,14 @@ pipeline {
 
                     echo '🚀 프로덕션 서버에 배포 중...'
                     sh '''
-                        # Docker Compose로 프로덕션 재배포
-                        docker compose -f infrastructure/docker/docker-compose.prod.yml down
-                        docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
+                        # 최신 설정 파일을 배포 디렉토리로 복사
+                        echo "📋 설정 파일 업데이트 중..."
+                        cp -rf ${WORKSPACE}/infrastructure /home/ubuntu/projects/S13P31D101/
+
+                        # 배포 디렉토리로 이동 후 배포
+                        cd /home/ubuntu/projects/S13P31D101
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml down
+                        docker compose --env-file .env -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
 
                         # 헬스체크
                         echo "Waiting for services to start..."

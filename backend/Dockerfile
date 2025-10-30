@@ -22,28 +22,29 @@ RUN apk add --no-cache \
     curl \
     bash
 
-# Maven Wrapper와 pom.xml 먼저 복사 (캐시 최적화)
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
+# Gradle Wrapper와 build.gradle 먼저 복사 (캐시 최적화)
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
 
-# Maven Wrapper 실행 권한 부여 및 Windows 줄바꿈 문제 해결
-RUN chmod +x mvnw && \
-    sed -i 's/\r$//' mvnw
+# Gradle Wrapper 실행 권한 부여 및 Windows 줄바꿈 문제 해결
+RUN chmod +x gradlew && \
+    sed -i 's/\r$//' gradlew
 
 # 의존성 다운로드 (캐시 레이어)
-RUN ./mvnw dependency:go-offline -B
+RUN ./gradlew dependencies --no-daemon
 
 # 소스 코드 복사
 COPY src src
 
 # 애플리케이션 빌드
-RUN ./mvnw clean package -DskipTests -B
+RUN ./gradlew clean bootJar --no-daemon
 
 # JAR 파일 압축 해제 (레이어 캐싱 최적화)
-RUN mkdir -p target/dependency && \
-    cd target/dependency && \
-    jar -xf ../app.jar
+RUN mkdir -p build/dependency && \
+    cd build/dependency && \
+    jar -xf ../libs/app.jar
 
 # ==============================================
 # Stage 2: Runtime Stage
@@ -79,9 +80,9 @@ RUN mkdir -p /app/logs && \
     chown -R appuser:appgroup /app
 
 # 빌드된 애플리케이션 복사 (레이어별 복사로 캐싱 최적화)
-COPY --from=build --chown=appuser:appgroup /app/target/dependency/BOOT-INF/lib /app/lib
-COPY --from=build --chown=appuser:appgroup /app/target/dependency/META-INF /app/META-INF
-COPY --from=build --chown=appuser:appgroup /app/target/dependency/BOOT-INF/classes /app
+COPY --from=build --chown=appuser:appgroup /app/build/dependency/BOOT-INF/lib /app/lib
+COPY --from=build --chown=appuser:appgroup /app/build/dependency/META-INF /app/META-INF
+COPY --from=build --chown=appuser:appgroup /app/build/dependency/BOOT-INF/classes /app
 
 # 헬스체크 스크립트 추가
 COPY --chown=appuser:appgroup <<'EOF' /app/healthcheck.sh
@@ -119,5 +120,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # 애플리케이션 실행
-# TODO: 실제 메인 클래스명으로 수정 필요 (Spring Boot 프로젝트 생성 후)
-CMD ["sh", "-c", "java $JAVA_OPTS -cp /app:/app/lib/* com.captainecho.CaptainEchoApplication"]
+CMD ["sh", "-c", "java $JAVA_OPTS -cp /app:/app/lib/* com.captainecho.captainecho.CaptainechoApplication"]
