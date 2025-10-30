@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AnswerFeedback from '../components/AnswerFeedback';
 import { HelpCircle, DoorOpen } from 'lucide-react';
 
@@ -10,57 +10,100 @@ const AdventurePage = () => {
   const options = ['ㄴ', 'ㅏ', 'ㅡ'];
   // ---------------------------------
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);  // 오답 목록
-  const [isAnswered, setIsAnswered] = useState(false);  // 정답 완료 여부
-  const [isAnimating, setIsAnimating] = useState(false);  // 애니메이션 진행 중
-  const [isTutorialMode, setIsTutorialMode] = useState(false);  // 튜토리얼 모드
+  const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [isTutorialMode, setIsTutorialMode] = useState(false);
 
-  // ESC 키로 튜토리얼 모드 닫기
+  // 음성 관련 상태
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentVoiceType, setCurrentVoiceType] = useState<string | null>(null);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
+
+  // speechSynthesis 초기화
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      synthRef.current = window.speechSynthesis;
+    }
+  }, []);
+
+  // 음성 재생 (튜토리얼 전용)
+  const playVoice = useCallback((type: string, text: string) => {
+    if (!synthRef.current) return;
+    synthRef.current.cancel();
+
+    setTimeout(() => {
+      if (!synthRef.current) return;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ko-KR';
+      utterance.rate = 0.95;
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setCurrentVoiceType(null);
+      };
+
+      setIsSpeaking(true);
+      setCurrentVoiceType(type);
+      synthRef.current.speak(utterance);
+    }, 100);
+  }, []);
+
+  // ESC 키로 튜토리얼 닫기
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isTutorialMode) {
         setIsTutorialMode(false);
+        if (synthRef.current) synthRef.current.cancel();
+        setIsSpeaking(false);
+        setCurrentVoiceType(null);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTutorialMode]);
 
-  const handleOptionClick = (option: string) => {
-    // 이미 정답을 맞췄거나, 이미 틀린 답이거나, 애니메이션 중이면 무시
-    if (isAnswered || wrongAnswers.includes(option) || isAnimating) return;
+  // 언마운트 시 음성 중단
+  useEffect(() => {
+    return () => {
+      if (synthRef.current) synthRef.current.cancel();
+    };
+  }, []);
 
+  const handleOptionClick = (option: string) => {
+    if (isAnswered || wrongAnswers.includes(option) || isAnimating || isTutorialMode) return;
     setSelectedAnswer(option);
 
     if (option === hiddenPart) {
-      // 정답인 경우
-      console.log('정답!');
       setIsAnswered(true);
     } else {
-      // 오답인 경우
-      console.log('오답!');
-      
-      // 애니메이션 시작
       setIsAnimating(true);
-      
-      // 오답 목록에 추가
       setWrongAnswers(prev => [...prev, option]);
-      
-      // 애니메이션 완료 후 선택 초기화
       setTimeout(() => {
         setSelectedAnswer(null);
-        setIsAnimating(false);  // 애니메이션 종료
-      }, 1000);  // X 표시 1초 보여준 후
+        setIsAnimating(false);
+      }, 1000);
     }
   };
 
-  const isCorrect = (option: string) => {
-    return selectedAnswer === option && option === hiddenPart;
-  };
-
-  // 전체 문제가 정답인지 확인
+  const isCorrect = (option: string) => selectedAnswer === option && option === hiddenPart;
   const isQuestionCorrect = selectedAnswer === hiddenPart && isAnswered;
+
+  const handleTutorialClick = () => {
+    const goingToTutorial = !isTutorialMode;
+    setIsTutorialMode(goingToTutorial);
+
+    if (goingToTutorial) {
+      playVoice(
+        'tutorial',
+        '회색 칸에 들어갈 글자를 골라보세요! 아래 카드 중에서 하나를 골라요!'
+      );
+    } else {
+      if (synthRef.current) synthRef.current.cancel();
+      setIsSpeaking(false);
+      setCurrentVoiceType(null);
+    }
+  };
 
   return (
     <div
@@ -79,48 +122,74 @@ const AdventurePage = () => {
 
       {/* 상단 아이콘 */}
       <header className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2 sm:gap-3 z-10">
-        {/* 물음표 버튼 */}
         <button
           className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
-          onClick={() => setIsTutorialMode(!isTutorialMode)}
+          onClick={handleTutorialClick}
         >
-          <HelpCircle
-            className="text-gray-700"
-            size={24}
-          />
+          <HelpCircle className="text-gray-700" size={24} />
         </button>
-        
-        {/* 게임 나가기 버튼 */}
-        <Link 
+
+        <Link
           to="/"
           className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
         >
-          <DoorOpen
-            className="text-gray-700" 
-            size={24}
-          />
+          <DoorOpen className="text-gray-700" size={24} />
         </Link>
       </header>
 
       {/* 메인 콘텐츠 */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20 relative z-[2]">
+
+        {/* 상단 안내 영역 (항상 자리 차지 / flex 중앙 정렬) */}
+        <div
+          className="flex items-center justify-center mb-4 sm:mb-6"
+          style={{ minHeight: '3rem' /* 약 48px 고정 공간 */ }}
+        >
+          {isTutorialMode && (
+            <p
+              className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800
+                         text-center bg-white/80 rounded-xl px-4 sm:px-6 py-2
+                         border-2 border-gray-800 shadow-md
+                         whitespace-normal break-keep max-w-[90%]"
+            >
+              회색 칸에 들어갈 글자를 골라보세요!
+            </p>
+          )}
+        </div>
+
         {/* 문제 카드 */}
-        <div className="mb-12 sm:mb-16">
+        <div className="mb-6 sm:mb-8 md:mb-10">
           <div className="w-[85vw] max-w-2xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800">
             <div className="flex items-center gap-0">
-              {/* 선명한 글자 */}
               <div className="text-7xl sm:text-8xl md:text-9xl font-bold text-gray-800">
                 {visiblePart}
               </div>
-              
-              {/* 흐린 글자 - 정답이면 검정색으로 변경 */}
-              <div className={`text-7xl sm:text-8xl md:text-9xl font-bold -ml-2 sm:-ml-3 transition-colors duration-300 ${
-                isQuestionCorrect ? 'text-gray-800' : 'text-gray-300'
-              }`}>
+              <div
+                className={`text-7xl sm:text-8xl md:text-9xl font-bold -ml-2 sm:-ml-3 transition-colors duration-300 ${
+                  isQuestionCorrect ? 'text-gray-800' : 'text-gray-300'
+                }`}
+              >
                 {hiddenPart}
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 하단 안내 영역 (항상 자리 차지 / flex 중앙 정렬) */}
+        <div
+          className="flex items-center justify-center mb-6 sm:mb-8 md:mb-10"
+          style={{ minHeight: '2.5rem' /* 약 40px 고정 공간 */ }}
+        >
+          {isTutorialMode && (
+            <p
+              className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800
+                         text-center bg-white/80 rounded-lg px-4 sm:px-5 py-2
+                         border-2 border-gray-800 shadow
+                         whitespace-normal break-keep max-w-[90%]"
+            >
+              아래 카드 중에서 하나를 골라요!
+            </p>
+          )}
         </div>
 
         {/* 선택지 */}
@@ -129,67 +198,68 @@ const AdventurePage = () => {
             <button
               key={index}
               onClick={() => handleOptionClick(option)}
-              disabled={isAnswered || wrongAnswers.includes(option) || isAnimating}  // 정답 완료, 이미 틀린 답, 애니메이션 중 비활성화
+              disabled={
+                isAnswered ||
+                wrongAnswers.includes(option) ||
+                isAnimating ||
+                isTutorialMode
+              }
               className={`
-                w-28 h-28
-                sm:w-36 sm:h-36
-                md:w-40 md:h-40
-                bg-white
-                rounded-2xl md:rounded-3xl
-                shadow-xl
-                border-4 sm:border-5
-                border-gray-800
+                w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40
+                bg-white rounded-2xl md:rounded-3xl shadow-xl
+                border-4 sm:border-5 border-gray-800
                 flex items-center justify-center
-                text-5xl sm:text-6xl md:text-7xl
-                font-bold text-gray-800
-                ${!isAnswered && !wrongAnswers.includes(option) && !isAnimating ? 'hover:scale-105 cursor-pointer' : 'cursor-default'}
-                active:scale-95
-                transition-all duration-200
-                relative
+                text-5xl sm:text-6xl md:text-7xl font-bold text-gray-800
+                transition-all duration-200 relative
+                ${
+                  !isAnswered &&
+                  !wrongAnswers.includes(option) &&
+                  !isAnimating &&
+                  !isTutorialMode
+                    ? 'hover:scale-105 active:scale-95 cursor-pointer'
+                    : 'cursor-default pointer-events-none'
+                }
               `}
             >
-              {/* 글자 - 정답이거나 오답이면 흐리게 */}
-              <span className={isCorrect(option) || wrongAnswers.includes(option) ? 'opacity-20' : ''}>
+              <span
+                className={
+                  isCorrect(option) || wrongAnswers.includes(option)
+                    ? 'opacity-20'
+                    : ''
+                }
+              >
                 {option}
               </span>
-              
-              {/* 정답 O 표시 */}
               {isCorrect(option) && <AnswerFeedback isCorrect={true} />}
-              
-              {/* 오답 X 표시 - wrongAnswers에 포함되어 있으면 표시 */}
-              {wrongAnswers.includes(option) && <AnswerFeedback isCorrect={false} />}
+              {wrongAnswers.includes(option) && (
+                <AnswerFeedback isCorrect={false} />
+              )}
             </button>
           ))}
         </div>
       </main>
 
-      {/* 캐릭터 이미지 - 우측 하단 */}
+      {/* 캐릭터 이미지 */}
       {(isAnswered || selectedAnswer) && (
         <div className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-10 animate-bounce-in">
           <img
-            src={isQuestionCorrect ? '/adventurepage/happy_eco.png' : '/adventurepage/question_eco.png'}
+            src={
+              isQuestionCorrect
+                ? '/adventurepage/happy_eco.png'
+                : '/adventurepage/question_eco.png'
+            }
             alt={isQuestionCorrect ? '정답 캐릭터' : '오답 캐릭터'}
             className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 object-contain"
           />
         </div>
       )}
 
-      {/* 애니메이션을 위한 스타일 추가 */}
       <style>{`
         @keyframes bounce-in {
-          0% {
-            transform: scale(0) translateY(20px);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.1) translateY(-10px);
-          }
-          100% {
-            transform: scale(1) translateY(0);
-            opacity: 1;
-          }
+          0% { transform: scale(0) translateY(20px); opacity: 0; }
+          50% { transform: scale(1.1) translateY(-10px); }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
         }
-        
         .animate-bounce-in {
           animation: bounce-in 0.5s ease-out;
         }
