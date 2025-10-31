@@ -40,6 +40,11 @@ logging:
     org.hibernate.SQL: debug
     org.hibernate.type.descriptor.sql: trace
 
+oauth2:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+
 # Swagger (SpringDoc OpenAPI) 설정
 springdoc:
   swagger-ui:
