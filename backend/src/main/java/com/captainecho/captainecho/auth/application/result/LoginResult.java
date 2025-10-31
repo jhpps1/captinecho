@@ -1,4 +1,4 @@
-package com.captainecho.captainecho.protector.application.result;
+package com.captainecho.captainecho.auth.application.result;
 
 public record LoginResult(
         Long protectorId,

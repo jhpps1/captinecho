@@ -1,7 +1,7 @@
 package com.captainecho.captainecho.common.util;
 
 import com.captainecho.captainecho.exception.EchoException;
-import com.captainecho.captainecho.exception.code.CommonErrorCode;
+import com.captainecho.captainecho.exception.code.AuthErrorCode;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -29,14 +29,15 @@ public class GoogleTokenVerifier {
         try {
             GoogleIdToken googleIdToken = verifier.verify(idToken);
             if (googleIdToken == null) {
-                throw new EchoException(CommonErrorCode.INVALID_TOKEN);
+                throw new EchoException(AuthErrorCode.INVALID_TOKEN);
             }
 
             GoogleIdToken.Payload payload = googleIdToken.getPayload();
 
             return payload.getSubject();
         } catch (Exception e) {
-            throw new EchoException(CommonErrorCode.INVALID_TOKEN);
+            throw new EchoException(AuthErrorCode.INVALID_TOKEN);
         }
     }
 }
+

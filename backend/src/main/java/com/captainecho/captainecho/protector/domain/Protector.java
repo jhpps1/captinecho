@@ -20,11 +20,12 @@ public class Protector {
     @Column(name = "protector_id")
     private Long protectorId;
 
-    @Column(name = "parent_pin", length = 6)
-    private String parentPin;
+    @Column(name = "protector_pin", length = 6)
+    private String protectorPin;
 
     @Column(name = "provider", nullable = false, length = 10)
-    private String provider;
+    @Enumerated(EnumType.STRING)
+    private Provider provider;
 
     @Column(name = "social_id", nullable = false)
     private String socialId;
@@ -45,8 +46,8 @@ public class Protector {
     private LocalDateTime deletedAt;
 
     @Builder
-    public Protector(String parentPin, String provider, String socialId, Short maxStudentCount) {
-        this.parentPin = parentPin;
+    public Protector(String protectorPin, Provider provider, String socialId, Short maxStudentCount) {
+        this.protectorPin = protectorPin;
         this.provider = provider;
         this.socialId = socialId;
         this.maxStudentCount = maxStudentCount != null ? maxStudentCount : 2;
@@ -59,8 +60,8 @@ public class Protector {
         this.deletedAt = LocalDateTime.now();
     }
 
-    public void updateParentPin(String newPin) {
-        this.parentPin = newPin;
+    public void updateProtectorPin(String newPin) {
+        this.protectorPin = newPin;
     }
 
     public void updateMaxStudentCount(Short count) {
