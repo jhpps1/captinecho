@@ -1,10 +1,12 @@
 -- ==============================================
--- Captain Echo PostgreSQL 초기화 스크립트
+-- Captain Echo PostgreSQL 초기화 스크립트 (ERD 기반)
 -- ==============================================
 -- 프로젝트: Captain Echo (꼬마선장 에코)
 -- 목적: 난독증 어린이를 위한 게임형 학습 플랫폼
--- 생성일: 2025-10-20
+-- 생성일: 2025-10-31
+-- ERD 기반 스키마 버전: 2.0
 -- 이 스크립트는 Docker 컨테이너 최초 실행시 자동으로 실행됩니다
+-- ==============================================
 
 -- ==============================================
 -- 확장 기능 설치
@@ -13,335 +15,408 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
 
 -- ==============================================
--- 1. 사용자 및 권한 테이블
+-- ENUM 타입 정의
 -- ==============================================
 
--- 부모 계정 (사용자)
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    phone VARCHAR(20),
-    profile_image_url VARCHAR(500),
-    email_verified BOOLEAN DEFAULT FALSE,
-    status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    last_login_at TIMESTAMP
-);
+-- 성별
+CREATE TYPE gender_type AS ENUM ('남', '여');
 
--- 자녀 프로필 (넷플릭스 스타일 다중 프로필)
-CREATE TABLE children (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    nickname VARCHAR(50),
-    birth_date DATE,
-    avatar_url VARCHAR(500),
-    grade VARCHAR(20), -- 초등학교 저학년, 고학년 등
-    diagnosis_level VARCHAR(50), -- 난독증 진단 레벨
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT TRUE
-);
+-- 학년
+CREATE TYPE grade_type AS ENUM ('미취학', '1학년', '2학년', '3학년', '4학년', '5학년', '6학년');
 
--- 자녀 선호도 및 설정
-CREATE TABLE child_preferences (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    difficulty_level INTEGER DEFAULT 5 CHECK (difficulty_level BETWEEN 1 AND 10),
-    daily_goal_minutes INTEGER DEFAULT 20, -- 일일 학습 목표 (분)
-    preferred_study_time VARCHAR(20), -- 선호 학습 시간 (아침, 오후, 저녁)
-    sound_effects_enabled BOOLEAN DEFAULT TRUE,
-    background_music_enabled BOOLEAN DEFAULT TRUE,
-    tts_speed FLOAT DEFAULT 1.0, -- TTS 속도 (0.5 ~ 2.0)
-    parent_notes TEXT, -- 부모의 특이사항 메모
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(child_id)
-);
+-- 소셜 로그인 제공자
+CREATE TYPE provider_type AS ENUM ('GOOGLE', 'KAKAO');
+
+-- 초기 진단 문제 유형 (나중에 값 추가 예정)
+CREATE TYPE diagnosis_type AS ENUM ();
+
+-- 보호자 학습 목표
+CREATE TYPE protector_goal_type AS ENUM ('자모 학습', '받침학습', '단어 연습', '취약점 위주');
+
+-- 학습 유형
+CREATE TYPE study_type AS ENUM ('DAILY', 'SUPPLE');
 
 -- ==============================================
--- 2. 메아리 동굴 (학습 컨텐츠)
+-- 1. 보호자 (PROTECTOR)
 -- ==============================================
 
--- 동굴 정보 (4개 고정)
-CREATE TABLE caves (
-    id SERIAL PRIMARY KEY,
-    cave_number INTEGER UNIQUE NOT NULL CHECK (cave_number BETWEEN 1 AND 4),
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    learning_type VARCHAR(50) NOT NULL, -- PHONEME_SEGMENTATION, PHONEME_SYNTHESIS, WORD_READING, SENTENCE_READING
-    icon_url VARCHAR(500),
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE protector (
+    protector_id SERIAL PRIMARY KEY,
+    parent_pin CHAR(6),
+    provider provider_type NOT NULL,
+    social_id VARCHAR(255) NOT NULL,
+    max_student_count SMALLINT DEFAULT 2,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    is_deleted BOOLEAN DEFAULT false NOT NULL,
+    deleted_at TIMESTAMP,
+    UNIQUE(provider, social_id)
 );
 
--- 초기 동굴 데이터 삽입
-INSERT INTO caves (cave_number, name, description, learning_type) VALUES
-(1, '음소 분절 동굴', '소리를 나누는 동굴이에요', 'PHONEME_SEGMENTATION'),
-(2, '음소 합성 동굴', '소리를 모으는 동굴이에요', 'PHONEME_SYNTHESIS'),
-(3, '단어 읽기 동굴', '단어를 읽는 동굴이에요', 'WORD_READING'),
-(4, '문장 읽기 동굴', '문장을 읽는 동굴이에요', 'SENTENCE_READING');
+COMMENT ON TABLE protector IS '보호자 계정';
+COMMENT ON COLUMN protector.parent_pin IS '부모용 대시보드 암호';
+COMMENT ON COLUMN protector.provider IS '소셜 로그인 제공자 (GOOGLE, KAKAO)';
+COMMENT ON COLUMN protector.social_id IS '소셜 로그인 고유 ID';
+COMMENT ON COLUMN protector.max_student_count IS '최대 연결 가능한 학생 수';
 
--- 학습 문제 (콘텐츠)
-CREATE TABLE learning_problems (
-    id SERIAL PRIMARY KEY,
-    cave_id INTEGER REFERENCES caves(id) ON DELETE CASCADE,
-    difficulty_level INTEGER CHECK (difficulty_level BETWEEN 1 AND 10),
-    problem_text TEXT NOT NULL, -- 문제 텍스트
-    correct_answer TEXT NOT NULL, -- 정답
-    phoneme_breakdown TEXT, -- 음소 분해 (JSON 형태)
-    audio_url VARCHAR(500), -- TTS 생성된 오디오 URL (S3)
-    created_by VARCHAR(50) DEFAULT 'AI', -- AI 또는 ADMIN
-    created_at TIMESTAMP DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT TRUE
+-- ==============================================
+-- 2. 학생 (STUDENT)
+-- ==============================================
+
+CREATE TABLE student (
+    student_id SERIAL PRIMARY KEY,
+    protector_id INTEGER NOT NULL REFERENCES protector(protector_id) ON DELETE CASCADE,
+    name VARCHAR(30) NOT NULL,
+    gender gender_type,
+    birth DATE NOT NULL,
+    profile_image VARCHAR(2048),
+    coin INTEGER DEFAULT 0 NOT NULL CHECK (coin >= 0),
+    grade grade_type NOT NULL,
+    level SMALLINT CHECK (level >= 0),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP,
+    expired_at TIMESTAMP
 );
 
+COMMENT ON TABLE student IS '학생 정보';
+COMMENT ON COLUMN student.gender IS '성별 (선호 단어 추천에 활용)';
+COMMENT ON COLUMN student.birth IS '생년월일 (YYYY-MM-DD)';
+COMMENT ON COLUMN student.coin IS '학습 보상 코인';
+COMMENT ON COLUMN student.grade IS '학년 (미취학, 1학년~6학년)';
+COMMENT ON COLUMN student.level IS '레벨 (NULL이면 초기진단 필요)';
+
 -- ==============================================
--- 3. 학습 세션 및 진행도
+-- 3. 관심사 (INTEREST)
 -- ==============================================
 
--- 학습 세션 (동굴 입장 ~ 퇴장)
-CREATE TABLE learning_sessions (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    cave_id INTEGER REFERENCES caves(id),
-    started_at TIMESTAMP DEFAULT NOW(),
-    ended_at TIMESTAMP,
-    total_problems INTEGER DEFAULT 0, -- 총 문제 수
-    correct_count INTEGER DEFAULT 0, -- 정답 수
-    incorrect_count INTEGER DEFAULT 0, -- 오답 수
-    accuracy_rate FLOAT, -- 정답률 (0.0 ~ 1.0)
-    total_time_seconds INTEGER, -- 총 소요 시간 (초)
-    session_status VARCHAR(20) DEFAULT 'IN_PROGRESS' CHECK (session_status IN ('IN_PROGRESS', 'COMPLETED', 'ABANDONED'))
+-- 대분류 관심사
+CREATE TABLE major_interest (
+    major_interest_id SMALLSERIAL PRIMARY KEY,
+    major_interest_name VARCHAR(50) NOT NULL
 );
 
--- 개별 문제 풀이 기록
-CREATE TABLE problem_attempts (
-    id SERIAL PRIMARY KEY,
-    session_id INTEGER REFERENCES learning_sessions(id) ON DELETE CASCADE,
-    problem_id INTEGER REFERENCES learning_problems(id),
-    child_answer TEXT, -- 아이의 답변 (STT 인식 결과)
-    is_correct BOOLEAN,
-    attempt_number INTEGER DEFAULT 1, -- 시도 횟수
-    time_taken_seconds INTEGER, -- 소요 시간 (초)
-    hint_used BOOLEAN DEFAULT FALSE,
-    voice_recording_url VARCHAR(500), -- S3에 저장된 음성 파일 URL
-    confidence_score FLOAT, -- STT 신뢰도 (0.0 ~ 1.0)
-    created_at TIMESTAMP DEFAULT NOW()
+COMMENT ON TABLE major_interest IS '대분류 관심사';
+COMMENT ON COLUMN major_interest.major_interest_name IS '대분류 이름 (예: 동물, 과학)';
+
+-- 소분류 관심사
+CREATE TABLE sub_interest (
+    sub_interest_id SMALLSERIAL PRIMARY KEY,
+    major_interest_id SMALLINT NOT NULL REFERENCES major_interest(major_interest_id) ON DELETE CASCADE,
+    small_interest_name VARCHAR(50) NOT NULL
 );
 
--- 동굴별 진행도
-CREATE TABLE cave_progress (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    cave_id INTEGER REFERENCES caves(id),
-    completed_problems INTEGER DEFAULT 0,
-    total_problems INTEGER DEFAULT 0,
-    completion_rate FLOAT DEFAULT 0.0, -- 완료율 (0.0 ~ 1.0)
-    highest_difficulty INTEGER DEFAULT 1,
-    last_studied_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(child_id, cave_id)
+COMMENT ON TABLE sub_interest IS '소분류 관심사';
+COMMENT ON COLUMN sub_interest.small_interest_name IS '소분류 이름 (예: 공룡, 우주)';
+
+-- 학생 관심사 연결
+CREATE TABLE student_interest (
+    student_interest_id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    interest_id SMALLINT REFERENCES sub_interest(sub_interest_id) ON DELETE SET NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+COMMENT ON TABLE student_interest IS '학생-관심사 연결 테이블';
+
 -- ==============================================
--- 4. 음성 녹음 파일 관리
+-- 4. 탐험 유형 (ADVENTURE_TYPE)
 -- ==============================================
 
--- 음성 녹음 메타데이터
-CREATE TABLE voice_recordings (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    problem_attempt_id INTEGER REFERENCES problem_attempts(id),
-    s3_url VARCHAR(500) NOT NULL,
-    s3_key VARCHAR(500) NOT NULL,
-    file_size_bytes BIGINT,
-    duration_seconds FLOAT,
-    format VARCHAR(20), -- WAV, MP3, etc.
-    stt_result TEXT, -- STT 인식 결과
-    stt_confidence FLOAT, -- STT 신뢰도
-    uploaded_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE adventure_type (
+    adventure_type_id SERIAL PRIMARY KEY,
+    adventure_name VARCHAR(50) NOT NULL,
+    adventure_info VARCHAR(500) NOT NULL,
+    adventure_info_image VARCHAR(2048)
 );
 
+COMMENT ON TABLE adventure_type IS '탐험 유형 (동굴 1, 2, 3, 4 등)';
+COMMENT ON COLUMN adventure_type.adventure_name IS '탐험 이름';
+COMMENT ON COLUMN adventure_type.adventure_info IS '탐험 설명';
+
 -- ==============================================
--- 5. AI Agent 협상 시스템
+-- 5. 일일 문제 (DAY_PROBLEM)
 -- ==============================================
 
--- AI Agent 학습 계획 (매일 생성)
-CREATE TABLE ai_learning_plans (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    plan_date DATE NOT NULL,
-    academic_agent_proposal TEXT, -- Academic Agent 제안
-    wellbeing_agent_proposal TEXT, -- Wellbeing Agent 제안
-    parent_agent_proposal TEXT, -- Parent Agent 제안
-    final_consensus TEXT NOT NULL, -- 최종 합의 결과
-    recommended_cave_id INTEGER REFERENCES caves(id),
-    recommended_difficulty INTEGER,
-    recommended_duration_minutes INTEGER,
-    recommended_problems_count INTEGER,
-    negotiation_log TEXT, -- 협상 과정 로그 (JSON)
-    created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(child_id, plan_date)
+CREATE TABLE day_problem (
+    day_problem_id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    interest_id SMALLINT REFERENCES sub_interest(sub_interest_id) ON DELETE SET NULL,
+    adventure_type_id INTEGER NOT NULL REFERENCES adventure_type(adventure_type_id) ON DELETE CASCADE,
+    assigned_date DATE NOT NULL,
+    seq_no SMALLINT NOT NULL CHECK (seq_no BETWEEN 1 AND 10),
+    level SMALLINT NOT NULL CHECK (level >= 0),
+    question_text VARCHAR(150) NOT NULL,
+    hint VARCHAR(300),
+    image_url VARCHAR(2048),
+    sound_url VARCHAR(2048) NOT NULL,
+    question_phonemes TEXT[] NOT NULL,
+    blank_position VARCHAR(20),
+    blank_phoneme VARCHAR(5),
+    choices TEXT[],
+    correct_answer VARCHAR(5),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    is_completed BOOLEAN DEFAULT false NOT NULL
 );
 
--- AI 생성 리포트
-CREATE TABLE ai_reports (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    report_type VARCHAR(50) NOT NULL, -- DAILY, WEEKLY, MONTHLY
-    report_period_start DATE NOT NULL,
-    report_period_end DATE NOT NULL,
-    strengths TEXT, -- 강점 영역
-    weaknesses TEXT, -- 약점 영역
-    recommendations TEXT, -- 개선 권장사항
-    overall_progress TEXT, -- 전체 진도 분석
-    generated_by_agent VARCHAR(50), -- 생성한 Agent
-    generated_at TIMESTAMP DEFAULT NOW()
+COMMENT ON TABLE day_problem IS '학생별 일일 학습 문제';
+COMMENT ON COLUMN day_problem.seq_no IS '문제 순서 (1-10)';
+COMMENT ON COLUMN day_problem.question_text IS '문제 텍스트 (예: 고구마, 별똥별이 떨어진다)';
+COMMENT ON COLUMN day_problem.question_phonemes IS '음소 배열 (예: [[ㄱ,ㅏ], [ㄱ,ㅗ,ㅇ,ㄹ,ㅛ,ㅇ]])';
+COMMENT ON COLUMN day_problem.blank_position IS '탐험 1 전용, 빈칸 위치 (초성/중성/종성)';
+COMMENT ON COLUMN day_problem.blank_phoneme IS '탐험 1,2 전용, 빈칸에 들어갈 음소';
+COMMENT ON COLUMN day_problem.choices IS '탐험 1,2,3 전용, 선택지 배열';
+COMMENT ON COLUMN day_problem.correct_answer IS '탐험 1,2,3 전용, 정답';
+
+-- ==============================================
+-- 6. 학습 세션 (LEARNING_SESSION)
+-- ==============================================
+
+CREATE TABLE learning_session (
+    session_id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    study_type study_type NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+COMMENT ON TABLE learning_session IS '학습 세션 (학습 시작~종료)';
+COMMENT ON COLUMN learning_session.study_type IS '학습 유형 (DAILY: 일일학습, SUPPLE: 보충학습)';
+COMMENT ON COLUMN learning_session.start_time IS '학습 시작 시간';
+COMMENT ON COLUMN learning_session.end_time IS '학습 종료 시간';
+
 -- ==============================================
--- 6. 약점 분석
+-- 7. 세션 상세 (SESSION_DETAIL)
 -- ==============================================
 
--- 음소별 약점 분석
-CREATE TABLE phoneme_weaknesses (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    phoneme VARCHAR(10) NOT NULL, -- 음소 (예: 'ㄱ', 'ㅏ', '가')
-    error_count INTEGER DEFAULT 0,
-    total_attempts INTEGER DEFAULT 0,
-    error_rate FLOAT, -- 오류율 (0.0 ~ 1.0)
-    last_error_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(child_id, phoneme)
+CREATE TABLE session_detail (
+    session_detail_id SERIAL PRIMARY KEY,
+    session_id INTEGER NOT NULL REFERENCES learning_session(session_id) ON DELETE CASCADE,
+    day_problem_id INTEGER NOT NULL REFERENCES day_problem(day_problem_id) ON DELETE CASCADE,
+    used_hint BOOLEAN DEFAULT false NOT NULL,
+    attempt_no SMALLINT NOT NULL CHECK (attempt_no > 0),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 단어 유형별 약점 분석
-CREATE TABLE word_type_weaknesses (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    word_type VARCHAR(50) NOT NULL, -- EASY, MEDIUM, HARD, SIMILAR_SOUNDS, etc.
-    error_count INTEGER DEFAULT 0,
-    total_attempts INTEGER DEFAULT 0,
-    error_rate FLOAT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(child_id, word_type)
+COMMENT ON TABLE session_detail IS '세션별 문제 풀이 상세';
+COMMENT ON COLUMN session_detail.used_hint IS '힌트 사용 여부';
+COMMENT ON COLUMN session_detail.attempt_no IS '시도 횟수';
+
+-- ==============================================
+-- 8. 오류 패턴 (ERROR_PATTERN)
+-- ==============================================
+
+CREATE TABLE error_pattern (
+    error_pattern_id SERIAL PRIMARY KEY,
+    session_detail_id INTEGER NOT NULL REFERENCES session_detail(session_detail_id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    real_jamo CHAR(1) NOT NULL,
+    confusion_jamo CHAR(1) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    phoneme_position VARCHAR(10) NOT NULL,
+    syllable_type VARCHAR(10) NOT NULL
 );
 
+COMMENT ON TABLE error_pattern IS '학생의 오류 패턴 분석';
+COMMENT ON COLUMN error_pattern.real_jamo IS '정답 자모';
+COMMENT ON COLUMN error_pattern.confusion_jamo IS '혼동한 자모';
+COMMENT ON COLUMN error_pattern.phoneme_position IS '음소 위치 (초성/중성/종성)';
+COMMENT ON COLUMN error_pattern.syllable_type IS '음절 유형 (의미/무의미)';
+
 -- ==============================================
--- 7. 업적 및 보상 시스템
+-- 9. 자모 통계 (JAMO_STAT)
 -- ==============================================
 
--- 업적 정의
-CREATE TABLE achievements (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    badge_icon_url VARCHAR(500),
-    achievement_type VARCHAR(50), -- CAVE_COMPLETION, STREAK, ACCURACY, etc.
-    requirement_value INTEGER, -- 요구 조건 값
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE jamo_stat (
+    stat_id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    jamo VARCHAR(5) NOT NULL,
+    total_attempts SMALLINT DEFAULT 0 NOT NULL CHECK (total_attempts >= 0),
+    fail_count SMALLINT DEFAULT 0 NOT NULL CHECK (fail_count >= 0),
+    weekly_fail_rate DOUBLE PRECISION NOT NULL,
+    weekly_accuracy_rate DOUBLE PRECISION NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(student_id, jamo)
 );
 
--- 자녀 업적 달성 기록
-CREATE TABLE child_achievements (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    achievement_id INTEGER REFERENCES achievements(id),
-    achieved_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(child_id, achievement_id)
+COMMENT ON TABLE jamo_stat IS '학생별 자모 학습 통계';
+COMMENT ON COLUMN jamo_stat.jamo IS '자음 또는 모음 (예: ㄱ, ㅏ)';
+COMMENT ON COLUMN jamo_stat.total_attempts IS '총 시도 횟수';
+COMMENT ON COLUMN jamo_stat.fail_count IS '실패 횟수';
+COMMENT ON COLUMN jamo_stat.weekly_fail_rate IS '주간 실패율';
+COMMENT ON COLUMN jamo_stat.weekly_accuracy_rate IS '주간 정확도';
+
+-- ==============================================
+-- 10. 주간 개인 리포트 (WEEKLY_PERSONAL_REPORT)
+-- ==============================================
+
+CREATE TABLE weekly_personal_report (
+    report_id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    total_time INTEGER DEFAULT 0 NOT NULL CHECK (total_time >= 0),
+    error_rate DOUBLE PRECISION NOT NULL,
+    improvement_rate DOUBLE PRECISION NOT NULL,
+    curriculum TEXT NOT NULL,
+    discussion_log TEXT NOT NULL,
+    protector_goal protector_goal_type,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 일일 출석 및 연속 학습 기록
-CREATE TABLE daily_streaks (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    study_date DATE NOT NULL,
-    minutes_studied INTEGER DEFAULT 0,
-    problems_solved INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(child_id, study_date)
+COMMENT ON TABLE weekly_personal_report IS '주간 학습 리포트';
+COMMENT ON COLUMN weekly_personal_report.total_time IS '총 학습 시간 (초 단위)';
+COMMENT ON COLUMN weekly_personal_report.error_rate IS '오류율';
+COMMENT ON COLUMN weekly_personal_report.improvement_rate IS '직전 주 대비 개선율';
+COMMENT ON COLUMN weekly_personal_report.curriculum IS 'AI가 제안한 커리큘럼';
+COMMENT ON COLUMN weekly_personal_report.discussion_log IS 'AI 에이전트 협의 내용 및 결론';
+COMMENT ON COLUMN weekly_personal_report.protector_goal IS '보호자가 선택한 학습 목표';
+COMMENT ON COLUMN weekly_personal_report.created_at IS '주간 리포트 생성일';
+
+-- ==============================================
+-- 11. 주간 자모 통계 (WEEKELY_JAMO_STAT)
+-- ==============================================
+
+CREATE TABLE weekely_jamo_stat (
+    stat_id SERIAL PRIMARY KEY,
+    report_id INTEGER NOT NULL REFERENCES weekly_personal_report(report_id) ON DELETE CASCADE,
+    jamo VARCHAR(5) NOT NULL,
+    total_attempts SMALLINT DEFAULT 0 NOT NULL CHECK (total_attempts >= 0),
+    fail_count SMALLINT DEFAULT 0 NOT NULL CHECK (fail_count >= 0),
+    weekly_fail_rate DOUBLE PRECISION NOT NULL,
+    weekly_accuracy_rate DOUBLE PRECISION NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+COMMENT ON TABLE weekely_jamo_stat IS '주간 리포트별 자모 통계';
+COMMENT ON COLUMN weekely_jamo_stat.jamo IS '자음 또는 모음';
+
 -- ==============================================
--- 8. 부모 대시보드 데이터
+-- 12. 레벨 변경 이력 (LEVEL_HISTORY)
 -- ==============================================
 
--- 부모 알림 설정
-CREATE TABLE parent_notifications (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    notification_type VARCHAR(50) NOT NULL, -- DAILY_REPORT, WEEKLY_SUMMARY, ACHIEVEMENT, etc.
-    is_enabled BOOLEAN DEFAULT TRUE,
-    notification_time TIME, -- 알림 시간
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE level_history (
+    level_history_id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    prev_level SMALLINT NOT NULL CHECK (prev_level >= 0),
+    new_level SMALLINT NOT NULL CHECK (new_level >= 0),
+    reason VARCHAR(300) NOT NULL,
+    changed_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- 학습 목표 설정 (부모가 설정)
-CREATE TABLE learning_goals (
-    id SERIAL PRIMARY KEY,
-    child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
-    goal_type VARCHAR(50) NOT NULL, -- DAILY_MINUTES, WEEKLY_PROBLEMS, ACCURACY_TARGET, etc.
-    target_value INTEGER NOT NULL,
-    current_value INTEGER DEFAULT 0,
-    start_date DATE NOT NULL,
-    end_date DATE,
-    is_achieved BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+COMMENT ON TABLE level_history IS '학생 레벨 변경 이력';
+COMMENT ON COLUMN level_history.reason IS '레벨 변경 사유 (예: 관리자 조정, 커리큘럼 결과)';
+
+-- ==============================================
+-- 13. 초기 진단 (DIAGNOSIS)
+-- ==============================================
+
+-- 초기 진단 세션
+CREATE TABLE diagnosis_session (
+    student_id INTEGER PRIMARY KEY REFERENCES student(student_id) ON DELETE CASCADE,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP
 );
 
--- ==============================================
--- 9. 인덱스 생성 (성능 최적화)
--- ==============================================
+COMMENT ON TABLE diagnosis_session IS '학생별 초기 진단 세션';
 
--- Users
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_status ON users(status);
+-- 초기 진단 문제
+CREATE TABLE initial_diagnosis_problem (
+    initial_diagnosis_problem_id SERIAL PRIMARY KEY,
+    diagnosis_type diagnosis_type,
+    problem TEXT NOT NULL,
+    problem_image_url VARCHAR(2048),
+    problem_sound_url VARCHAR(2048),
+    correct_answer TEXT
+);
 
--- Children
-CREATE INDEX idx_children_user_id ON children(user_id);
-CREATE INDEX idx_children_is_active ON children(is_active);
+COMMENT ON TABLE initial_diagnosis_problem IS '초기 진단 문제 풀';
+COMMENT ON COLUMN initial_diagnosis_problem.problem_sound_url IS '모범 발음 오디오';
 
--- Learning Sessions
-CREATE INDEX idx_learning_sessions_child_id ON learning_sessions(child_id);
-CREATE INDEX idx_learning_sessions_cave_id ON learning_sessions(cave_id);
-CREATE INDEX idx_learning_sessions_started_at ON learning_sessions(started_at);
+-- 초기 진단 결과
+CREATE TABLE initial_diagnosis_result (
+    initial_diagnosis_result_id SERIAL PRIMARY KEY,
+    initial_diagnosis_problem_id INTEGER NOT NULL REFERENCES initial_diagnosis_problem(initial_diagnosis_problem_id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    student_answer TEXT NOT NULL,
+    is_correct BOOLEAN NOT NULL
+);
 
--- Problem Attempts
-CREATE INDEX idx_problem_attempts_session_id ON problem_attempts(session_id);
-CREATE INDEX idx_problem_attempts_problem_id ON problem_attempts(problem_id);
-CREATE INDEX idx_problem_attempts_is_correct ON problem_attempts(is_correct);
-
--- Cave Progress
-CREATE INDEX idx_cave_progress_child_id ON cave_progress(child_id);
-CREATE INDEX idx_cave_progress_cave_id ON cave_progress(cave_id);
-
--- Voice Recordings
-CREATE INDEX idx_voice_recordings_child_id ON voice_recordings(child_id);
-CREATE INDEX idx_voice_recordings_uploaded_at ON voice_recordings(uploaded_at);
-
--- AI Learning Plans
-CREATE INDEX idx_ai_learning_plans_child_id ON ai_learning_plans(child_id);
-CREATE INDEX idx_ai_learning_plans_plan_date ON ai_learning_plans(plan_date);
-
--- Phoneme Weaknesses
-CREATE INDEX idx_phoneme_weaknesses_child_id ON phoneme_weaknesses(child_id);
-CREATE INDEX idx_phoneme_weaknesses_error_rate ON phoneme_weaknesses(error_rate DESC);
-
--- Daily Streaks
-CREATE INDEX idx_daily_streaks_child_id ON daily_streaks(child_id);
-CREATE INDEX idx_daily_streaks_study_date ON daily_streaks(study_date);
+COMMENT ON TABLE initial_diagnosis_result IS '학생별 초기 진단 결과';
 
 -- ==============================================
--- 10. 트리거 함수 (자동 업데이트)
+-- 14. 음소 특성 (PHONEME_FEATURE)
+-- ==============================================
+
+CREATE TABLE phoneme_feature (
+    phoneme CHAR(1) PRIMARY KEY,
+    is_vowel BOOLEAN NOT NULL,
+    place VARCHAR(10) NOT NULL,
+    manner VARCHAR(10) NOT NULL
+);
+
+COMMENT ON TABLE phoneme_feature IS '한글 음소별 언어학적 특성';
+COMMENT ON COLUMN phoneme_feature.phoneme IS '음소 (예: ㄱ, ㄴ, ㅏ, ㅑ)';
+COMMENT ON COLUMN phoneme_feature.is_vowel IS '모음 여부';
+COMMENT ON COLUMN phoneme_feature.place IS '조음 위치 (예: 양순음, 경구개음)';
+COMMENT ON COLUMN phoneme_feature.manner IS '조음 방법 (예: 파열음, 마찰음)';
+
+-- ==============================================
+-- 15. 인덱스 생성 (성능 최적화)
+-- ==============================================
+
+-- PROTECTOR
+CREATE INDEX idx_protector_provider_social_id ON protector(provider, social_id);
+CREATE INDEX idx_protector_is_deleted ON protector(is_deleted);
+
+-- STUDENT
+CREATE INDEX idx_student_protector_id ON student(protector_id);
+CREATE INDEX idx_student_level ON student(level);
+CREATE INDEX idx_student_deleted_at ON student(deleted_at);
+
+-- STUDENT_INTEREST
+CREATE INDEX idx_student_interest_student_id ON student_interest(student_id);
+CREATE INDEX idx_student_interest_interest_id ON student_interest(interest_id);
+
+-- DAY_PROBLEM
+CREATE INDEX idx_day_problem_student_id ON day_problem(student_id);
+CREATE INDEX idx_day_problem_assigned_date ON day_problem(assigned_date);
+CREATE INDEX idx_day_problem_adventure_type_id ON day_problem(adventure_type_id);
+CREATE INDEX idx_day_problem_is_completed ON day_problem(is_completed);
+
+-- LEARNING_SESSION
+CREATE INDEX idx_learning_session_student_id ON learning_session(student_id);
+CREATE INDEX idx_learning_session_start_time ON learning_session(start_time);
+CREATE INDEX idx_learning_session_study_type ON learning_session(study_type);
+
+-- SESSION_DETAIL
+CREATE INDEX idx_session_detail_session_id ON session_detail(session_id);
+CREATE INDEX idx_session_detail_day_problem_id ON session_detail(day_problem_id);
+
+-- ERROR_PATTERN
+CREATE INDEX idx_error_pattern_student_id ON error_pattern(student_id);
+CREATE INDEX idx_error_pattern_session_detail_id ON error_pattern(session_detail_id);
+CREATE INDEX idx_error_pattern_real_jamo ON error_pattern(real_jamo);
+
+-- JAMO_STAT
+CREATE INDEX idx_jamo_stat_student_id ON jamo_stat(student_id);
+CREATE INDEX idx_jamo_stat_jamo ON jamo_stat(jamo);
+
+-- WEEKLY_PERSONAL_REPORT
+CREATE INDEX idx_weekly_report_student_id ON weekly_personal_report(student_id);
+CREATE INDEX idx_weekly_report_created_at ON weekly_personal_report(created_at);
+
+-- WEEKELY_JAMO_STAT
+CREATE INDEX idx_weekely_jamo_stat_report_id ON weekely_jamo_stat(report_id);
+
+-- LEVEL_HISTORY
+CREATE INDEX idx_level_history_student_id ON level_history(student_id);
+CREATE INDEX idx_level_history_changed_at ON level_history(changed_at);
+
+-- INITIAL_DIAGNOSIS_RESULT
+CREATE INDEX idx_diagnosis_result_student_id ON initial_diagnosis_result(student_id);
+CREATE INDEX idx_diagnosis_result_problem_id ON initial_diagnosis_result(initial_diagnosis_problem_id);
+
+-- ==============================================
+-- 16. 트리거 함수 (자동 업데이트)
 -- ==============================================
 
 -- updated_at 자동 업데이트 함수
@@ -353,46 +428,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 트리거 적용
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_children_updated_at BEFORE UPDATE ON children
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_child_preferences_updated_at BEFORE UPDATE ON child_preferences
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_cave_progress_updated_at BEFORE UPDATE ON cave_progress
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_phoneme_weaknesses_updated_at BEFORE UPDATE ON phoneme_weaknesses
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_word_type_weaknesses_updated_at BEFORE UPDATE ON word_type_weaknesses
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_learning_goals_updated_at BEFORE UPDATE ON learning_goals
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- jamo_stat 테이블에 트리거 적용
+CREATE TRIGGER update_jamo_stat_updated_at
+BEFORE UPDATE ON jamo_stat
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ==============================================
--- 11. 샘플 데이터 (개발용)
--- ==============================================
-
--- 샘플 업적 데이터
-INSERT INTO achievements (name, description, achievement_type, requirement_value) VALUES
-('첫 걸음', '첫 번째 문제를 풀었어요!', 'FIRST_PROBLEM', 1),
-('동굴 정복자 1', '음소 분절 동굴을 완료했어요!', 'CAVE_COMPLETION', 1),
-('동굴 정복자 2', '음소 합성 동굴을 완료했어요!', 'CAVE_COMPLETION', 2),
-('동굴 정복자 3', '단어 읽기 동굴을 완료했어요!', 'CAVE_COMPLETION', 3),
-('동굴 정복자 4', '문장 읽기 동굴을 완료했어요!', 'CAVE_COMPLETION', 4),
-('모든 동굴 마스터', '모든 동굴을 완료했어요!', 'ALL_CAVES_COMPLETE', 4),
-('꾸준이', '7일 연속 학습했어요!', 'STREAK', 7),
-('완벽주의자', '정확도 95% 이상 달성!', 'ACCURACY', 95),
-('스피드 러너', '문제를 빠르게 풀었어요!', 'SPEED', 1);
-
--- ==============================================
--- 12. 권한 설정
+-- 17. 권한 설정
 -- ==============================================
 
 -- captain_echo 데이터베이스에 대한 권한 부여
@@ -401,14 +443,17 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO doonki;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO doonki;
 
 -- ==============================================
--- 완료 메시지
+-- 18. 완료 메시지
 -- ==============================================
 
 DO $$
 BEGIN
     RAISE NOTICE '==============================================';
-    RAISE NOTICE 'Captain Echo 데이터베이스 초기화 완료!';
+    RAISE NOTICE 'Captain Echo 데이터베이스 초기화 완료! (ERD 기반)';
     RAISE NOTICE '데이터베이스: captain_echo';
     RAISE NOTICE '사용자: doonki';
+    RAISE NOTICE '테이블: 19개';
+    RAISE NOTICE 'ENUM 타입: 6개';
+    RAISE NOTICE '스키마 버전: 2.0';
     RAISE NOTICE '==============================================';
 END $$;
