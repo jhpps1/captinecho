@@ -406,9 +406,18 @@ const AdventurePage = () => {
           style={{ minHeight: '2.5rem' }}
         >
           {isTutorialMode && (
-            <p className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 text-center bg-white/80 rounded-lg px-4 sm:px-5 py-2 border-2 border-gray-800 shadow whitespace-normal break-keep max-w-[90%]">
-              아래 카드 중에서 하나를 골라요!
-            </p>
+<p
+  className="
+    text-lg sm:text-xl md:text-2xl font-semibold text-gray-800
+    text-center bg-white/80 rounded-lg px-4 sm:px-5 py-2
+    border-2 border-gray-800 shadow
+    whitespace-nowrap  /* <- 이거 추가 */
+    break-keep
+    max-w-none         /* <- 이것도 넣어주면 가로폭 제한 없어짐 */
+  "
+>
+  아래 카드 중에서 하나를 골라요!
+</p>
           )}
         </div>
 
