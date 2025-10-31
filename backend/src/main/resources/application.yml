@@ -35,11 +35,6 @@ jwt:
   secret: ${JWT_SECRET}
   access-token-validity-ms: ${JWT_ACCESS_TOKEN_EXPIRY}
 
-# Google OAuth2 설정 (GoogleTokenVerifier용)
-oauth2:
-  google:
-    client-id: ${GOOGLE_CLIENT_ID}
-
 logging:
   level:
     org.hibernate.SQL: debug
