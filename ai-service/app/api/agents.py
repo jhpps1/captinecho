@@ -8,6 +8,9 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+
+# dyslexia_crew 모듈을 가져옵니다.
+from app.src.dyslexia_crew.main import run_crew_analysis
 import uuid
 
 router = APIRouter()
@@ -16,7 +19,7 @@ router = APIRouter()
 class AgentRequest(BaseModel):
     """에이전트 실행 요청 모델"""
     task_type: str  # curriculum, feedback, quiz, etc.
-    input_data: Dict[str, Any]
+    input_data: Dict[str, Any] # 예: {"student_id": 1}
     user_id: Optional[str] = None
     session_id: Optional[str] = None
 
@@ -74,13 +77,21 @@ async def process_agent_task(task_id: str, task_type: str, input_data: Dict[str,
         # 작업 상태 업데이트
         tasks_store[task_id].status = "processing"
 
-        # 실제 CrewAI 에이전트 실행 로직
-        # TODO: CrewAI 에이전트 통합
-        result = {
-            "task_type": task_type,
-            "processed_data": input_data,
-            "ai_output": "This is a placeholder for AI-generated content"
-        }
+        result = {}
+        # task_type에 따라 적절한 crew 실행
+        if task_type == "dyslexia_analysis":
+            student_id = input_data.get("student_id")
+            if student_id:
+                # dyslexia_crew/main.py에서 가져온 함수를 사용합니다.
+                # 실제 DB에서 데이터를 가져오도록 dyslexia_crew/main.py의 get_student_data 함수를 구현해야 합니다.
+                # 지금은 예시 데이터를 사용합니다.
+                student_data_for_crew = f"학생 ID: {student_id}, 이름: 김철수, 최근 학습 성공률: 65%, 출석률: 90%"
+                result = run_crew_analysis(student_data=student_data_for_crew)
+            else:
+                raise ValueError("student_id is required for dyslexia_analysis")
+        else:
+            # 다른 작업 유형에 대한 처리
+            raise NotImplementedError(f"Task type '{task_type}' is not implemented.")
 
         # 작업 완료
         tasks_store[task_id].status = "completed"
@@ -88,6 +99,7 @@ async def process_agent_task(task_id: str, task_type: str, input_data: Dict[str,
         tasks_store[task_id].completed_at = datetime.utcnow()
 
     except Exception as e:
+        print(f"Error processing task {task_id}: {e}") # 디버깅을 위한 로그
         tasks_store[task_id].status = "failed"
         tasks_store[task_id].result = {"error": str(e)}
         tasks_store[task_id].completed_at = datetime.utcnow()

@@ -1,5 +1,5 @@
 # agents/__init__.py
 
-from .academic import build as build_academic_agent
-from .wellbeing import build as build_wellbeing_agent
-from .parent import build as build_parent_agent
+from app.src.dyslexia_crew.agents.academic import build as build_academic_agent
+from app.src.dyslexia_crew.agents.wellbeing import build as build_wellbeing_agent
+from app.src.dyslexia_crew.agents.parent import build as build_parent_agent

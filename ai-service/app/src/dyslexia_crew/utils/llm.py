@@ -1,19 +1,18 @@
-import os
-from dotenv import load_dotenv
 from crewai import LLM
+from app.core.config import settings
 
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-nano")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+# 더 이상 load_dotenv()와 os.getenv()를 직접 사용하지 않습니다.
+# 모든 설정은 중앙 config 객체에서 가져옵니다.
 
-print("Loaded OPENAI_API_KEY:", OPENAI_API_KEY)
-print("Loaded OPENAI_MODEL:", OPENAI_MODEL)
-print("Loaded OPENAI_BASE_URL:", OPENAI_BASE_URL)
+print("Using OPENAI_API_KEY from settings.")
+print("Using OPENAI_MODEL_NAME from settings:", settings.OPENAI_MODEL_NAME)
+print("Using OPENAI_BASE_URL from settings:", settings.OPENAI_BASE_URL)
 
 llm = LLM(
-    api_key=OPENAI_API_KEY,
-    model=OPENAI_MODEL,
-    base_url=OPENAI_BASE_URL      # 여기가 중요!
+    # crewai v1.0.0 이상에서는 LLM 대신 ChatOpenAI를 사용하는 것이 좋습니다.
+    # 여기서는 기존 LLM 클래스를 유지하되, 설정만 중앙에서 가져옵니다.
+    api_key=settings.OPENAI_API_KEY,
+    model=settings.OPENAI_MODEL_NAME,
+    base_url=settings.OPENAI_BASE_URL
 )
 print("LLM object:", llm)
