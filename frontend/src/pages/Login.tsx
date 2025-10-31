@@ -1,53 +1,92 @@
-import BeforeNavbar from '../components/BeforeLoginNavbar'; 
+import { useNavigate } from 'react-router-dom';
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import BeforeNavbar from '../components/BeforeLoginNavbar';
+
+// 백엔드 응답 타입 (Swagger 기반)
+interface LoginResponse {
+  protectorId: number;
+  accessToken: string;
+}
 
 const Login = () => {
-    
-  // 1. 구글 로그인 버튼 클릭 시 실행될 함수
-  const handleLoginClick = () => {
-    window.location.href = 'YOUR_BACKEND_GOOGLE_AUTH_URL';
+  const navigate = useNavigate();
+
+  // 1. 구글 로그인 성공 시 호출될 콜백 함수
+  const handleLoginSuccess = async (credentialResponse: CredentialResponse) => {
+    // 'credential' 필드에 idToken이 담겨 옵니다.
+    const idToken = credentialResponse.credential;
+
+    if (!idToken) {
+      console.error('❌ Google로부터 idToken을 받지 못했습니다.');
+      return;
+    }
+
+    try {
+      // 2. idToken을 백엔드 서버로 전송
+      console.log('🚀 백엔드(/api/protector/login)로 idToken 전송 시도...');
+      const response = await axios.post<LoginResponse>(
+        '/api/protector/login', // (vite.config.ts 프록시 설정이 되어있어야 함)
+        {
+          idToken: idToken,
+          provider: 'google',
+        }
+      );
+
+      // 3. 백엔드 응답에서 AccessToken 추출
+      const { accessToken } = response.data;
+
+      if (accessToken) {
+        // 4. AccessToken을 쿠키에 저장
+        Cookies.set('accessToken', accessToken, { expires: 7, path: '/' });
+
+        // 5. /select-profile 페이지로 리디렉션
+        navigate('/select-profile');
+      } else {
+        console.error('❌ 백엔드 응답에 AccessToken이 없습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 백엔드 로그인 요청 실패:', error);
+      // (여기서 401 오류가 뜬다면 백엔드 측의 idToken 검증 로직 확인 필요)
+    }
+  };
+
+  // 2. 구글 로그인 실패 시
+  const handleLoginError = () => {
+    console.error('❌ Google 로그인에 실패했습니다.');
   };
 
   return (
-    <div 
-      className="flex flex-col h-screen relative overflow-hidden" 
+    <div
+      className="flex flex-col h-screen relative overflow-hidden font-sans"
       style={{
         backgroundImage: `url('/introduce/background.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundRepeat: 'no-repeat',
       }}
     >
-      
       <BeforeNavbar />
 
       <div className="flex-grow flex justify-center items-center z-10 p-4">
-        
         <div className="text-center">
-          
-          <h1 className="text-4xl font-bold mb-8 text-gray-800">
-            로그인 페이지
+          <h1 className="text-4xl font-extrabold mb-10 text-gray-900 tracking-tight">
+            로그인
           </h1>
           
-          <button 
-            onClick={handleLoginClick} 
-            className="inline-flex items-center bg-white border border-gray-300 rounded-lg px-6 py-3 text-lg font-medium text-gray-700 shadow-lg hover:shadow-xl transition-shadow duration-200"
-          >
-            {/* SVG 아이콘... */}
-            <svg className="w-6 h-6" viewBox="0 0 48 48">
+          {/* 3. 기존 버튼 대신 GoogleLogin 컴포넌트 사용 */}
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleLoginSuccess}
+              onError={handleLoginError}
+              useOneTap={false} // 원탭 로그인 비활성화 (버튼 클릭 방식만 사용)
+              shape="pill"
+              theme="outline"
+              size="large"
+            />
+          </div>
 
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v8.51h12.8c-.57 2.81-2.22 5.25-4.8 6.94l6.98 5.38c4.1-3.79 6.4-9.33 6.4-16.28z"></path>
-
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"></path>
-
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-6.98-5.38c-2.11 1.45-4.8 2.3-7.91 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-
-              <path d="M0 0h48v48H0z" fill="none"></path>
-
-            </svg>
-            <span className="ml-4">Google 계정으로 로그인</span>
-          </button>
         </div>
       </div>
     </div>
