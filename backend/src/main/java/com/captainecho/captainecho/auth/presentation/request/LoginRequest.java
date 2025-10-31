@@ -1,6 +1,6 @@
-package com.captainecho.captainecho.protector.presentation.request;
+package com.captainecho.captainecho.auth.presentation.request;
 
-import com.captainecho.captainecho.protector.application.command.LoginCommand;
+import com.captainecho.captainecho.auth.application.command.LoginCommand;
 import jakarta.validation.constraints.NotBlank;
 
 public record LoginRequest(

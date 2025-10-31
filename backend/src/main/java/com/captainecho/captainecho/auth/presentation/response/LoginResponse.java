@@ -1,6 +1,6 @@
-package com.captainecho.captainecho.protector.presentation.response;
+package com.captainecho.captainecho.auth.presentation.response;
 
-import com.captainecho.captainecho.protector.application.result.LoginResult;
+import com.captainecho.captainecho.auth.application.result.LoginResult;
 
 public record LoginResponse(
         Long protectorId,

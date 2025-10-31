@@ -1,4 +1,4 @@
-package com.captainecho.captainecho.protector.application.command;
+package com.captainecho.captainecho.auth.application.command;
 
 public record LoginCommand(
         String idToken,
