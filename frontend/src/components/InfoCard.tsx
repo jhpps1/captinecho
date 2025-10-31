@@ -3,9 +3,8 @@ interface InfoCardProps {
   description: string;
 }
 
-const InfoCard: React.FC<InfoCardProps> = ({ title, description }) => {
+const InfoCard = ({ title, description }: InfoCardProps) => {
   return (
-    // 1. 바깥쪽 알약 컨테이너
     <div
       className="flex items-center w-full 
                  bg-white bg-opacity-80 backdrop-blur-sm 
