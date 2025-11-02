@@ -3,6 +3,7 @@ import MainPage from '../pages/MainPage.tsx';
 import Introduction from '../pages/Introduce.tsx';
 import Login from '../pages/Login.tsx';
 import SelectProfile from '../pages/SelectProfile.tsx';
+import Adventure1Page from '../pages/Adventure1Page.tsx';
 
 const router = createBrowserRouter([
   {
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
   {
     path: '/select-profile',
     element: <SelectProfile />,
+  },
+  {
+    path: '/adventure/1',
+    element: <Adventure1Page />,
   },
 ]);
 
