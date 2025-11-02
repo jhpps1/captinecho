@@ -21,7 +21,7 @@ import { ProblemCard } from '../components/ProblemCard';
 import { OptionsList } from '../components/OptionsList';
 import { FeedbackCharacter } from '../components/FeedbackCharacter';
 
-const AdventurePage = () => {
+const Adventure1Page = () => {
   // -------- 더미 문제 데이터 (실제 API 응답 형태에 가깝게) --------
   const problems: ProblemData[] = [
     {
@@ -243,4 +243,4 @@ const AdventurePage = () => {
   );
 };
 
-export default AdventurePage;
+export default Adventure1Page;
