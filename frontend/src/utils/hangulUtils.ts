@@ -1,6 +1,6 @@
-// 복합/단일 모음을 화면에 배치하기 위한 분해 유틸
+// 복합/단일 모음을 화면에 배치하기 위한 한글 분해 유틸
 export function splitVowelForLayout(vowel: string) {
-  // 복합 모음들은 top / bottom 두 파트로 쪼개서 보여줄 거야
+  // 복합 모음들은 top / bottom 두 파트로 쪼개서 보여줄 것
   switch (vowel) {
     case 'ㅘ':
       return { type: 'complex', top: 'ㅏ', bottom: 'ㅗ' };

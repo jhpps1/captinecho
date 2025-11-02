@@ -1,3 +1,4 @@
+// 문제 유형
 export type ProblemData = {
   id: number;
   initial: string;        // 초성 (예: 'ㅇ')

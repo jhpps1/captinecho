@@ -1,3 +1,5 @@
+// 튜토리얼 음성
+// Web TTS 사용
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export function useTutorialVoice() {
