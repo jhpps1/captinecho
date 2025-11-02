@@ -1,9 +1,12 @@
 services:
   # ==============================================
-  # Nginx (리버스 프록시 & 웹서버)
+  # Nginx + Frontend (리버스 프록시 & 웹서버)
   # ==============================================
   nginx:
-    image: nginx:alpine
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    image: captain-echo-frontend:latest
     container_name: nginx
     ports:
       - "80:80"
@@ -43,6 +46,10 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8000}
       - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_EXPIRY=${JWT_ACCESS_TOKEN_EXPIRY:-3600000}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
     depends_on:
       postgres:
         condition: service_healthy

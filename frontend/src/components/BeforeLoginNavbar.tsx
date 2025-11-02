@@ -1,10 +1,9 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 
 /**
  * 로그인 전 사용되는 상단 네비게이션 바 컴포넌트
  */
-const BeforeLoginNavbar: React.FC = () => {
+const BeforeLoginNavbar = () => {
   return (
     <nav className="w-full bg-white px-6 py-3 flex justify-between items-center shadow-sm">
       
@@ -19,7 +18,7 @@ const BeforeLoginNavbar: React.FC = () => {
         
         <Link 
           to="/introduction" // '소개' 페이지 라우트 경로 (예시)
-          className="text-gray-700 hover:text-blue-600 text-lg font-medium"
+          className="text-gray-700 hover:text-blue-600 text-lg font-medium font-peach ps-10"
         >
           소개
         </Link>
@@ -28,7 +27,7 @@ const BeforeLoginNavbar: React.FC = () => {
       <div>
         <Link 
           to="/login" // '시작하기' 페이지 라우트 경로 (예시: 로그인 또는 회원가입)
-          className="bg-blue-500 text-white font-semibold px-5 py-2 rounded-md hover:bg-blue-600 transition-colors"
+          className="bg-blue-500 text-white font-semibold px-5 py-2 rounded-md hover:bg-blue-600 transition-colors font-peach"
         >
           시작하기
         </Link>

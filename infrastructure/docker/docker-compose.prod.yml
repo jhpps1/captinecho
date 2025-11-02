@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   # ==============================================
-  # Nginx (프로덕션용 - CloudFlare 연동)
+  # Nginx + Frontend (프로덕션용 - CloudFlare 연동)
   # ==============================================
   nginx:
-    image: nginx:alpine
+    image: captain-echo-frontend:latest
     container_name: nginx
     ports:
       - "80:80"
@@ -49,8 +49,13 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - AI_SERVICE_URL=http://10.0.2.20:8000
       - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_EXPIRY=${JWT_ACCESS_TOKEN_EXPIRY:-3600000}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
       - LOG_LEVEL=INFO
     depends_on:
       postgres:
@@ -139,6 +144,7 @@ services:
       - "6379:6379"
     command: >
       redis-server
+      --requirepass ${REDIS_PASSWORD:-changeme}
       --appendonly yes
       --maxmemory 512mb
       --maxmemory-policy allkeys-lru
@@ -152,7 +158,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3

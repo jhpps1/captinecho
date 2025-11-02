@@ -205,15 +205,3 @@ scrape_configs:
       - source_labels: [__name__]
         regex: '(go_.*|process_.*|promhttp_.*)'
         action: drop
-
-# ==============================================
-# 글로벌 라벨링 규칙
-# ==============================================
-metric_relabel_configs:
-  # 환경 라벨 추가
-  - target_label: environment
-    replacement: 'development'  # production으로 변경
-
-  # 플랫폼 라벨 추가
-  - target_label: platform
-    replacement: 'edu-platform'
