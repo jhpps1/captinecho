@@ -39,6 +39,10 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.type.descriptor.sql: trace
+    com.captainecho.captainecho.auth.filter: DEBUG
+    com.captainecho.captainecho.jwt: DEBUG
+    com.captainecho.captainecho.protector: DEBUG
+    org.springframework.security: DEBUG
 
 oauth2:
   google:
