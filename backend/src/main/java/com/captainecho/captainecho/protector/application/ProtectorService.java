@@ -6,14 +6,14 @@ import com.captainecho.captainecho.protector.application.command.CreatePinComman
 import com.captainecho.captainecho.protector.application.result.CreatePinResult;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
-@Transactional(readOnly = true)
+@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProtectorService {
 
     private final ProtectorRepository protectorRepository;
