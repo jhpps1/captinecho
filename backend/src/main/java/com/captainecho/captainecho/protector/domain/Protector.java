@@ -20,7 +20,7 @@ public class Protector {
     @Column(name = "protector_id")
     private Long protectorId;
 
-    @Column(name = "protector_pin", length = 6)
+    @Column(name = "protector_pin", length = 60)
     private String protectorPin;
 
     @Column(name = "provider", nullable = false, length = 10)
