@@ -31,7 +31,6 @@ public class ProtectorService {
 
         // 2. PIN이 이미 설정되어 있는지 확인
         if (protector.getProtectorPin() != null && !protector.getProtectorPin().isEmpty()) {
-            log.error("PIN already exists for protector: {}", protector.getProtectorId());
             throw new EchoException(ProtectorErrorCode.PIN_ALREADY_EXISTS);
         }
 
@@ -54,16 +53,11 @@ public class ProtectorService {
         String storedPin = protector.getProtectorPin();
 
         if (storedPin == null || storedPin.isEmpty()) {
-            log.error("PIN not found in database for protectorId: {}", command.protectorId());
             throw new EchoException(ProtectorErrorCode.PIN_NOT_FOUND);
         }
 
         // 3. PIN 검증
         boolean isValid = passwordEncoder.matches(command.pin(), storedPin);
-
-        if (!isValid) {
-            log.warn("PIN verification failed for protectorId: {}", command.protectorId());
-        }
 
         return new VerifyPinResult(isValid);
     }

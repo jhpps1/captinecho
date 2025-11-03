@@ -49,7 +49,6 @@ public class ProtectorController {
             @Valid @RequestBody VerifyPinRequest request
     ) {
         if (principal == null) {
-            log.error("Principal is null - authentication failed");
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
