@@ -48,20 +48,14 @@ public class ProtectorController {
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @Valid @RequestBody VerifyPinRequest request
     ) {
-        log.info("=== PIN Verify Controller ===");
-        log.info("Principal: {}", principal);
-        log.info("Request PIN length: {}", request.pin() != null ? request.pin().length() : 0);
-
         if (principal == null) {
             log.error("Principal is null - authentication failed");
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
         Long protectorId = principal.getProtectorId();
-        log.info("ProtectorId from principal: {}", protectorId);
 
         VerifyPinResult result = protectorService.verifyPin(request.toCommand(protectorId));
-        log.info("PIN verification result: {}", result.isValid());
 
         VerifyPinResponse response = VerifyPinResponse.from(result);
 
