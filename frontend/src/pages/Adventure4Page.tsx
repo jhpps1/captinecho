@@ -11,20 +11,18 @@ interface SpeakProblem {
 // Hooks
 import { useTutorialVoice } from '../hooks/useTutorialVoice';
 
-// Components (Adventure1Page에서 쓰던 것 재사용 가정)
+// Components
 import { TutorialOverlay } from '../components/TutorialOverlay';
 import { TopActionsBar } from '../components/TopActionsBar';
 import { TutorialBubble } from '../components/TutorialBubble';
-
-// 아직 없는 컴포넌트들(말풍선 외 UI 버튼 등)은 나중에 분리 가능하지만,
-// 우선 스피커 버튼 / 마이크 버튼을 이 페이지 안에서 임시로 만든다.
+import { FeedbackCharacter } from '../components/FeedbackCharacter';
 
 const Adventure4Page = () => {
   // ---- 더미 문제 데이터 (말하기/따라 말하기 유형) ----
   const problems: SpeakProblem[] = [
     {
       id: 1,
-      word: '단 어',
+      word: '테스트',
       audioUrl: '/audio/sample1.mp3',
     },
     {
@@ -44,10 +42,27 @@ const Adventure4Page = () => {
   // 녹음 중인지 상태 (마이크 버튼 UI용)
   const [isRecording, setIsRecording] = useState(false);
 
+  // 시도 횟수 관리
+  const [attemptCount, setAttemptCount] = useState(0);
+
+  // 스피커 버튼 표시 여부 (3회 시도 후 힌트)
+  const [showSpeakerButton, setShowSpeakerButton] = useState(false);
+
+  // 백엔드 분석 중 상태
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // 발음 유사도 OK → 카드에 웨이브 이펙트
+  // (아직은 가짜 상태: 정답이라고 판단되면 true로 set)
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // 피드백 표시 상태
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isCorrectAnswer, setIsCorrectAnswer] = useState(false);
+
   // 음성 helper (튜토리얼 음성 안내)
   const { playVoice, stopVoice } = useTutorialVoice();
 
-  // ESC 누르면 튜토리얼 끄기 (Adventure1Page와 동일 패턴)
+  // ESC 누르면 튜토리얼 끄기
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isTutorialMode) {
@@ -59,7 +74,7 @@ const Adventure4Page = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTutorialMode, stopVoice]);
 
-  // 상단 물음표 버튼 눌렀을 때(TopActionsBar에서 불릴 함수)
+  // 상단 물음표 버튼 눌렀을 때
   const handleTutorialClick = () => {
     const goingToTutorial = !isTutorialMode;
     setIsTutorialMode(goingToTutorial);
@@ -76,26 +91,23 @@ const Adventure4Page = () => {
 
   // 🔊 스피커 버튼 눌렀을 때: 단어 음성 재생
   const handlePlayWordAudio = () => {
-    // 여기선 실제 오디오 재생 로직은 아직 없음
-    // 나중에 HTMLAudioElement나 custom hook 연결
     console.log('play audio:', currentProblem.audioUrl);
   };
 
   // 🎤 마이크 버튼 눌렀을 때: 녹음 시작 / 종료 토글
   const handleMicClick = () => {
     setIsRecording((prev) => !prev);
-    // 나중에 실제 음성인식 hook 연결
+    // 실제로는 여기서 녹음 시작/종료를 트리거하고
+    // 녹음이 끝나면 isAnalyzing -> 백엔드 -> 유사도 결과 -> isSpeaking=true 같은 흐름
   };
 
   return (
     <div
       className="flex flex-col h-screen relative"
       style={{
-        // Adventure1Page와 비슷하게 background 설정
         backgroundImage: 'url(/adventurepage/adventure_4_background.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        // 첫번째 스샷 배경은 정글 느낌이라 약간 초록/갈색 톤
         backgroundColor: '#4A5A2A',
       }}
     >
@@ -121,64 +133,77 @@ const Adventure4Page = () => {
         </div>
 
         {/* 중앙 단어 카드 + 스피커 버튼 영역 */}
-        <section className="flex flex-col items-center mb-10 sm:mb-12 md:mb-14">
+        <section className="flex items-center justify-center mb-10 sm:mb-12 md:mb-14 relative">
+          {/* 이 컨테이너에 wave-effect를 조건부로 붙여준다 */}
           <div
-            className="
-              flex items-center justify-center
-              bg-[#FDF6E3]
-              border-[4px] sm:border-[5px] md:border-[6px]
-              border-[#B87344]
-              rounded-xl sm:rounded-2xl
-              shadow-[0_8px_0_rgba(0,0,0,0.3)]
-              px-6 sm:px-10 md:px-12
-              py-4 sm:py-6 md:py-8
-              relative
-            "
-            style={{
-              minWidth: '220px',
-              boxShadow: '0 8px 0 rgba(0,0,0,0.3)',
-            }}
+            className={`relative flex items-center justify-center ${
+              isSpeaking ? 'wave-effect' : ''
+            }`}
           >
-            {/* 실제 단어 (큰 글자) */}
-            <span
-              className="text-black font-bold leading-none"
+            {/* 단어 카드 */}
+            <div
+              className="
+                flex items-center justify-center
+                bg-[#FDF6E3]
+                border-[4px] sm:border-[5px] md:border-[6px]
+                border-[#B87344]
+                rounded-xl sm:rounded-2xl
+                shadow-[0_8px_0_rgba(0,0,0,0.3)]
+                px-6 sm:px-10 md:px-12
+                py-4 sm:py-6 md:py-8
+              "
               style={{
-                fontSize: 'clamp(2rem, 2vw + 1.5rem, 4rem)',
-                lineHeight: 1.1,
-                whiteSpace: 'pre-wrap',
-                textAlign: 'center',
+                minWidth: '220px',
+                boxShadow: '0 8px 0 rgba(0,0,0,0.3)',
+                position: 'relative',
+                zIndex: 4,
               }}
             >
-              {currentProblem.word}
-            </span>
-
-            {/* 오른쪽 🔊 버튼 (스샷처럼 카드 오른쪽에 동그란 파란 버튼) */}
-            <button
-              onClick={handlePlayWordAudio}
-              className="
-                absolute
-                right-[-3rem] sm:right-[-3.5rem] md:right-[-4rem]
-                top-1/2 -translate-y-1/2
-                w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20
-                rounded-full
-                bg-blue-400
-                border-[3px] border-blue-700
-                shadow-[0_6px_0_rgba(0,0,0,0.25)]
-                flex items-center justify-center
-                active:translate-y-[2px] active:shadow-[0_4px_0_rgba(0,0,0,0.25)]
-              "
-            >
-              {/* 아이콘은 나중에 실제 SVG로 교체 가능 */}
+              {/* 실제 단어 (큰 글자) */}
               <span
-                className="text-white font-bold"
+                className="text-black font-bold leading-none"
                 style={{
-                  fontSize: 'clamp(1.25rem, 1vw + 1rem, 2rem)',
-                  lineHeight: 1,
+                  fontSize: 'clamp(2rem, 2vw + 1.5rem, 4rem)',
+                  lineHeight: 1.1,
+                  whiteSpace: 'pre-wrap',
+                  textAlign: 'center',
+                  letterSpacing: '0.15em',
                 }}
               >
-                🔊
+                {currentProblem.word}
               </span>
-            </button>
+            </div>
+
+            {/* 오른쪽 🔊 버튼 (3회 시도 후 힌트) */}
+            {showSpeakerButton && (
+              <button
+                onClick={handlePlayWordAudio}
+                className="
+                  absolute
+                  left-[calc(100%+1rem)]
+                  w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20
+                  rounded-full
+                  bg-blue-400
+                  border-[3px] border-blue-700
+                  shadow-[0_8px_0_rgba(0,0,0,0.3)]
+                  flex items-center justify-center
+                  active:translate-y-[2px] active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
+                  transition-all duration-200
+                  hover:brightness-110
+                "
+                style={{ zIndex: 3 }}
+              >
+                <span
+                  className="text-white font-bold"
+                  style={{
+                    fontSize: 'clamp(1.25rem, 1vw + 1rem, 2rem)',
+                    lineHeight: 1,
+                  }}
+                >
+                  🔊
+                </span>
+              </button>
+            )}
           </div>
         </section>
 
@@ -210,17 +235,74 @@ const Adventure4Page = () => {
             </span>
           </button>
 
-          {/* 녹음 상태 텍스트 (선택) */}
+          {/* 녹음 상태 텍스트 */}
           <div className="mt-3 text-white text-lg sm:text-xl font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]">
-            {isRecording ? '말하는 중...' : '눌러서 말해요'}
+            {isAnalyzing
+              ? '분석 중...'
+              : isRecording
+              ? '녹음 중...'
+              : '눌러서 말해요'}
           </div>
         </section>
       </main>
 
-      {/* 특수 효과나 캐릭터가 필요하면 여기서 추가할 수 있음
-         Adventure1Page 에서는 FeedbackCharacter 같은 영역이 여기였어.
-         Adventure4 는 스샷에서 그런 캐릭터는 안 보여서 일단 비워둔다.
-      */}
+      {/* 우측 하단 캐릭터 (피드백 캐릭터) */}
+      <FeedbackCharacter
+        visible={showFeedback}
+        isCorrect={isCorrectAnswer}
+      />
+
+      {/* 개발 테스트용 버튼 - 나중에 제거 */}
+      <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 z-10">
+        <button
+          onClick={() => {
+            // 정답 케이스: 캐릭터 O, 웨이브도 보여주기
+            setShowFeedback(true);
+            setIsCorrectAnswer(true);
+            setIsSpeaking(true); // 웨이브 on
+            setTimeout(() => {
+              setShowFeedback(false);
+            }, 2000);
+            setTimeout(() => {
+              setIsSpeaking(false); // 웨이브 자동 종료
+            }, 2000);
+          }}
+          className="px-4 py-2 bg-green-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-green-600"
+        >
+          ✅ 정답(웨이브)
+        </button>
+
+        <button
+          onClick={() => {
+            // 오답 케이스: 캐릭터 X
+            setShowFeedback(true);
+            setIsCorrectAnswer(false);
+            setAttemptCount(prev => prev + 1);
+            if (attemptCount >= 2) setShowSpeakerButton(true);
+            setTimeout(() => setShowFeedback(false), 2000);
+          }}
+          className="px-4 py-2 bg-red-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-red-600"
+        >
+          ❌ 오답
+        </button>
+
+        <button
+          onClick={() => setShowSpeakerButton(prev => !prev)}
+          className="px-4 py-2 bg-blue-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-blue-600"
+        >
+          🔊 스피커 토글
+        </button>
+
+        <button
+          onClick={() => {
+            // 수동으로 웨이브만 테스트
+            setIsSpeaking((prev) => !prev);
+          }}
+          className="px-4 py-2 bg-orange-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-orange-600"
+        >
+          🌊 웨이브 토글
+        </button>
+      </div>
 
       {/* 페이지 전용 스타일 (ex: 애니메이션) */}
       <style>{`
@@ -231,6 +313,42 @@ const Adventure4Page = () => {
         }
         .animate-pulse {
           animation: pulse 0.8s ease-in-out infinite;
+        }
+
+        /* ====== 웨이브 효과 영역 ====== */
+        .wave-effect::before,
+        .wave-effect::after {
+          content: '';
+          position: absolute;
+          border: 4px solid rgba(255, 140, 0, 1); /* 주황빛 라인 */
+          border-radius: 50%;
+          top: 50%;
+          left: 50%;
+          width: 200px;
+          height: 200px;
+          transform: translate(-50%, -50%) scale(0.8);
+          opacity: 0.3;
+          z-index: 3;
+          pointer-events: none; /* 클릭 방해 안 하도록 */
+        }
+
+        .wave-effect::before {
+          animation: wave-burst 1.5s ease-out infinite;
+        }
+
+        .wave-effect::after {
+          animation: wave-burst 1.5s ease-out infinite 0.5s;
+        }
+
+        @keyframes wave-burst {
+          0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.8;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.6);
+            opacity: 0;
+          }
         }
       `}</style>
     </div>
