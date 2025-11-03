@@ -5,18 +5,23 @@ import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.protector.application.ProtectorService;
 import com.captainecho.captainecho.protector.application.result.CreatePinResult;
+import com.captainecho.captainecho.protector.application.result.UpdatePinResult;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinRequest;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinResponse;
 import com.captainecho.captainecho.protector.presentation.request.CreatePinRequest;
+import com.captainecho.captainecho.protector.presentation.request.UpdatePinRequest;
 import com.captainecho.captainecho.protector.presentation.response.CreatePinResponse;
+import com.captainecho.captainecho.protector.presentation.response.UpdatePinResponse;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,6 +62,24 @@ public class ProtectorController {
         VerifyPinResult result = protectorService.verifyPin(request.toCommand(protectorId));
 
         VerifyPinResponse response = VerifyPinResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/pin")
+    public ResponseEntity<UpdatePinResponse> updatePin(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @Valid @RequestBody UpdatePinRequest request
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        UpdatePinResult result = protectorService.updatePin(request.toCommand(protectorId));
+
+        UpdatePinResponse response = UpdatePinResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
