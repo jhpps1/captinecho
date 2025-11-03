@@ -3,9 +3,9 @@ package com.captainecho.captainecho.protector.presentation.dto;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 
 public record VerifyPinResponse(
-        Boolean isValid
+        Boolean success
 ) {
     public static VerifyPinResponse from(VerifyPinResult result) {
-        return new VerifyPinResponse(result.isValid());
+        return new VerifyPinResponse(result.success());
     }
 }
