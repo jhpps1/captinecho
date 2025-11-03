@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 import StudentSidebar from '../components/protector/StudentSidebar';
 import StudentCard from '../components/protector/StudentCard';
 import StreakCalendar from '../components/protector/StreakCalendar';
@@ -25,6 +26,7 @@ export default function AIAgentLogPage() {
         onLogout={() => {
           localStorage.removeItem('accessToken');
           sessionStorage.removeItem('accessToken');
+          Cookies.remove('accessToken');
           navigate('/');
         }}
       />
