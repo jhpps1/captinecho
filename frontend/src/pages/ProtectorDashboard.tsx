@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 import PINInputModal from '../components/protector/PINInputModal';
 import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
 import StudentSidebar from '../components/protector/StudentSidebar';
@@ -135,9 +136,13 @@ export default function ProtectorDashboard() {
             onSelectStudent={setSelectedStudent}
             onSettings={() => navigate('/protector/settings')}
             onLogout={() => {
-              setIsAuthenticated(false);
-              setSelectedStudent(null);
-              setShowPinModal(true);
+              // 액세스 토큰 삭제
+              localStorage.removeItem('accessToken');
+              sessionStorage.removeItem('accessToken');
+              Cookies.remove('accessToken');
+
+              // 홈 화면으로 리다이렉트
+              navigate('/');
             }}
           />
 

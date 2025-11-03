@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 import StudentSidebar from '../components/protector/StudentSidebar';
 import PINInputModal from '../components/protector/PINInputModal';
 import { mockStudents } from '../mocks/protectorData';
@@ -84,7 +85,12 @@ export default function SettingsPage() {
         selectedStudent={null}
         onSelectStudent={() => {}}
         onSettings={() => {}}
-        onLogout={() => navigate('/protector')}
+        onLogout={() => {
+          localStorage.removeItem('accessToken');
+          sessionStorage.removeItem('accessToken');
+          Cookies.remove('accessToken');
+          navigate('/');
+        }}
       />
 
       {/* 메인 컨텐츠 영역 */}
