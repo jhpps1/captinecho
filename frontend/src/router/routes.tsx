@@ -9,6 +9,7 @@ import LearningAnalysisDetailPage from '../pages/LearningAnalysisDetailPage.tsx'
 import SettingsPage from '../pages/SettingsPage.tsx';
 import AIAgentLogPage from '../pages/AIAgentLogPage.tsx';
 import ManageStudentsPage from '../pages/ManageStudentsPage.tsx';
+import StudentDashboard from '../pages/StudentDashboard.tsx';
 
 const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
   {
     path: '/select-profile',
     element: <SelectProfile />,
+  },
+  {
+    path: '/student',
+    element: <StudentDashboard />,
   },
   {
     path: '/adventure/1',
@@ -50,7 +55,7 @@ const router = createBrowserRouter([
   {
     path: '/protector/manage-students',
     element: <ManageStudentsPage />,
-  },
+  }
 ]);
 
 export default router;
