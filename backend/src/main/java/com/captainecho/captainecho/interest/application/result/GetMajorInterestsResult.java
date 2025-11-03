@@ -4,14 +4,14 @@ import com.captainecho.captainecho.interest.domain.MajorInterest;
 
 import java.util.List;
 
-public record MajorInterestResult(
+public record GetMajorInterestsResult(
         List<MajorInterestInfo> majorInterests
 ) {
-    public static MajorInterestResult from(List<MajorInterest> majorInterests) {
+    public static GetMajorInterestsResult from(List<MajorInterest> majorInterests) {
         List<MajorInterestInfo> majorInterestInfos = majorInterests.stream()
                 .map(MajorInterestInfo::from)
                 .toList();
-        return new MajorInterestResult(majorInterestInfos);
+        return new GetMajorInterestsResult(majorInterestInfos);
     }
 
     public record MajorInterestInfo(

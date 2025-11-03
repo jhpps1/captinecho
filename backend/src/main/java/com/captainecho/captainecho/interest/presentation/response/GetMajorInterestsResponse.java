@@ -1,17 +1,17 @@
 package com.captainecho.captainecho.interest.presentation.response;
 
-import com.captainecho.captainecho.interest.application.result.MajorInterestResult;
+import com.captainecho.captainecho.interest.application.result.GetMajorInterestsResult;
 
 import java.util.List;
 
-public record MajorInterestResponse(
+public record GetMajorInterestsResponse(
         List<MajorInterestInfo> majorInterests
 ) {
-    public static MajorInterestResponse from(MajorInterestResult result) {
+    public static GetMajorInterestsResponse from(GetMajorInterestsResult result) {
         List<MajorInterestInfo> majorInterestInfos = result.majorInterests().stream()
                 .map(info -> new MajorInterestInfo(info.majorInterestId(), info.majorInterestName()))
                 .toList();
-        return new MajorInterestResponse(majorInterestInfos);
+        return new GetMajorInterestsResponse(majorInterestInfos);
     }
 
     public record MajorInterestInfo(

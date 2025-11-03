@@ -9,13 +9,13 @@ import com.captainecho.captainecho.auth.application.result.LoginResult;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.domain.Provider;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
-@Transactional(readOnly = true)
+@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class AuthService {
 
     private final ProtectorRepository protectorRepository;
