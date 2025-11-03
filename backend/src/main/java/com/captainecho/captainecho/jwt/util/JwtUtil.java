@@ -1,8 +1,12 @@
 package com.captainecho.captainecho.jwt.util;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +14,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+@Slf4j
 @Component
 public class JwtUtil {
     private final SecretKey secretKey;
@@ -51,8 +56,13 @@ public class JwtUtil {
         try {
             parseToken(token);
             return true;
+        } catch (ExpiredJwtException e) {
+            log.debug("Token expired");
+        } catch (SignatureException | MalformedJwtException | IllegalArgumentException e) {
+            log.debug("Invalid token: {}", e.getClass().getSimpleName());
         } catch (Exception e) {
-            return false;
+            log.error("Unexpected token validation error", e);
         }
+        return false;
     }
 }
