@@ -27,7 +27,11 @@ export default function LearningAnalysisDetailPage() {
         selectedStudent={selectedStudent}
         onSelectStudent={() => {}}
         onSettings={() => navigate('/protector/settings')}
-        onLogout={() => navigate('/protector')}
+        onLogout={() => {
+          localStorage.removeItem('accessToken');
+          sessionStorage.removeItem('accessToken');
+          navigate('/');
+        }}
       />
 
       {/* 메인 컨텐츠 영역 */}
