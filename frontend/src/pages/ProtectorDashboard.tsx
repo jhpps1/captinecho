@@ -1,12 +1,23 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PINInputModal from '../components/protector/PINInputModal';
 import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
 import StudentSidebar from '../components/protector/StudentSidebar';
 import StudentCard from '../components/protector/StudentCard';
+import StreakCalendar from '../components/protector/StreakCalendar';
+import StudyGoalsCard from '../components/protector/StudyGoalsCard';
+import WeeklyLearningSection from '../components/protector/WeeklyLearningSection';
+import AIAgentSection from '../components/protector/AIAgentSection';
 import type { Student } from '../mocks/protectorData';
-import { mockStudents } from '../mocks/protectorData';
+import {
+  mockStudents,
+  mockWeeklyActivity,
+  mockStudyGoals,
+  mockJamoStats
+} from '../mocks/protectorData';
 
 export default function ProtectorDashboard() {
+  const navigate = useNavigate();
   const [showPinModal, setShowPinModal] = useState(false); // 임시로 false로 변경
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [showNewPinModal, setShowNewPinModal] = useState(false);
@@ -122,7 +133,7 @@ export default function ProtectorDashboard() {
             students={mockStudents}
             selectedStudent={selectedStudent}
             onSelectStudent={setSelectedStudent}
-            onSettings={() => alert('설정 페이지 (준비 중)')}
+            onSettings={() => navigate('/protector/settings')}
             onLogout={() => {
               setIsAuthenticated(false);
               setSelectedStudent(null);
@@ -138,22 +149,37 @@ export default function ProtectorDashboard() {
               onSettingsClick={() => alert('학생 설정 (준비 중)')}
             />
 
-            {/* TODO: 나머지 컴포넌트들 추가 예정 */}
+            {/* 메인 콘텐츠 */}
             {selectedStudent && (
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <p className="text-gray-500 text-center">
-                  학습 통계 및 활동 정보가 여기에 표시됩니다.
-                </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 왼쪽 컬럼 */}
+                <div className="space-y-6">
+                  {/* 연속 학습 캘린더 */}
+                  <StreakCalendar
+                    weeklyActivity={mockWeeklyActivity}
+                    streak={selectedStudent.streak}
+                  />
+
+                  {/* 학습 목표 카드 */}
+                  <StudyGoalsCard goals={mockStudyGoals} />
+
+                  {/* 지난주 학습 분석 */}
+                  <WeeklyLearningSection
+                    averageAccuracy={83}
+                    difficultJamos={mockJamoStats}
+                    onDetailClick={() => navigate('/protector/learning-analysis')}
+                  />
+                </div>
+
+                {/* 오른쪽 컬럼 */}
+                <div className="space-y-6">
+                  {/* AI Agent 섹션 */}
+                  <AIAgentSection
+                    onLogClick={() => navigate('/protector/ai-agent-log')}
+                  />
+                </div>
               </div>
             )}
-
-            {/* 테스트용: PIN 모달 다시 열기 버튼 */}
-            <button
-              onClick={() => setShowPinModal(true)}
-              className="mt-4 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              PIN 모달 다시 열기 (테스트용)
-            </button>
           </div>
         </div>
       )}
