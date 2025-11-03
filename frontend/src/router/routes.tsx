@@ -4,6 +4,7 @@ import Introduction from '../pages/Introduce.tsx';
 import Login from '../pages/Login.tsx';
 import SelectProfile from '../pages/SelectProfile.tsx';
 import Adventure1Page from '../pages/Adventure1Page.tsx';
+import ProtectorDashboard from '../pages/ProtectorDashboard.tsx';
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
   {
     path: '/adventure/1',
     element: <Adventure1Page />,
+  },
+  {
+    path: '/protector',
+    element: <ProtectorDashboard />,
   },
 ]);
 
