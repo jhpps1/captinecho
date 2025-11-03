@@ -16,6 +16,9 @@ import { TutorialOverlay } from '../components/TutorialOverlay';
 import { TopActionsBar } from '../components/TopActionsBar';
 import { TutorialBubble } from '../components/TutorialBubble';
 import { FeedbackCharacter } from '../components/FeedbackCharacter';
+import { WordCard } from '../components/WordCard';
+import { MicrophoneButton } from '../components/MicrophoneButton';
+import { DevTestButtons } from '../components/DevTestButtons'; // ⚠️ 개발용 - 이후 삭제 예정
 
 const Adventure4Page = () => {
   // ---- 더미 문제 데이터 (말하기/따라 말하기 유형) ----
@@ -116,134 +119,54 @@ const Adventure4Page = () => {
 
       {/* 상단 아이콘 바 (물음표 / 나가기) */}
       <TopActionsBar onTutorialClick={handleTutorialClick} />
-
+      
       {/* 메인 콘텐츠 영역 */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20 relative z-[2]">
-        {/* 튜토리얼 말풍선 (상단 가이드) */}
-        <div
-          className="flex items-center justify-center mb-4 sm:mb-6"
-          style={{ minHeight: '3rem' }}
-        >
-          {isTutorialMode && (
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-8 pb-6 relative z-[2]">
+        {/* 튜토리얼 말풍선 (양피지 위에 표시) */}
+        {isTutorialMode && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
             <TutorialBubble
               text="이 단어를 들어보고 따라 말해요!"
               className="max-w-[90%] text-center"
             />
-          )}
-        </div>
-
-        {/* 중앙 단어 카드 + 스피커 버튼 영역 */}
-        <section className="flex items-center justify-center mb-10 sm:mb-12 md:mb-14 relative">
-          {/* 이 컨테이너에 wave-effect를 조건부로 붙여준다 */}
-          <div
-            className={`relative flex items-center justify-center ${
-              isSpeaking ? 'wave-effect' : ''
-            }`}
-          >
-            {/* 단어 카드 */}
-            <div
-              className="
-                flex items-center justify-center
-                bg-[#FDF6E3]
-                border-[4px] sm:border-[5px] md:border-[6px]
-                border-[#B87344]
-                rounded-xl sm:rounded-2xl
-                shadow-[0_8px_0_rgba(0,0,0,0.3)]
-                px-6 sm:px-10 md:px-12
-                py-4 sm:py-6 md:py-8
-              "
-              style={{
-                minWidth: '220px',
-                boxShadow: '0 8px 0 rgba(0,0,0,0.3)',
-                position: 'relative',
-                zIndex: 4,
-              }}
-            >
-              {/* 실제 단어 (큰 글자) */}
-              <span
-                className="text-black font-bold leading-none"
-                style={{
-                  fontSize: 'clamp(2rem, 2vw + 1.5rem, 4rem)',
-                  lineHeight: 1.1,
-                  whiteSpace: 'pre-wrap',
-                  textAlign: 'center',
-                  letterSpacing: '0.15em',
-                }}
-              >
-                {currentProblem.word}
-              </span>
-            </div>
-
-            {/* 오른쪽 🔊 버튼 (3회 시도 후 힌트) */}
-            {showSpeakerButton && (
-              <button
-                onClick={handlePlayWordAudio}
-                className="
-                  absolute
-                  left-[calc(100%+1rem)]
-                  w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20
-                  rounded-full
-                  bg-blue-400
-                  border-[3px] border-blue-700
-                  shadow-[0_8px_0_rgba(0,0,0,0.3)]
-                  flex items-center justify-center
-                  active:translate-y-[2px] active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
-                  transition-all duration-200
-                  hover:brightness-110
-                "
-                style={{ zIndex: 3 }}
-              >
-                <span
-                  className="text-white font-bold"
-                  style={{
-                    fontSize: 'clamp(1.25rem, 1vw + 1rem, 2rem)',
-                    lineHeight: 1,
-                  }}
-                >
-                  🔊
-                </span>
-              </button>
-            )}
           </div>
-        </section>
+        )}
 
-        {/* 하단 마이크 버튼 */}
-        <section className="flex flex-col items-center">
-          <button
+  {/* (2) 양피지 컨테이너: 지도+콘텐츠 동일 스케일 */}
+  <div
+    className="relative"
+    style={{
+      backgroundImage: 'url(/adventurepage/map_background.png)', // map_background여도 OK
+      backgroundSize: 'contain',
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      width: 'clamp(800px, 96vw, 1400px)',
+      aspectRatio: '16 / 9',      // 업로드한 이미지 비율 그대로
+      padding: 'clamp(20px, 4vw, 56px) clamp(24px, 5vw, 72px)',
+      overflow: 'hidden',
+    }}
+  >
+    {/* (3) 세이프존: 테두리 안쪽 퍼센트 영역 */}
+    <div
+      className="absolute flex flex-col items-center justify-center gap-[6%]"
+      style={{ inset: '10% 8%' }}   // 상하 10%, 좌우 8% 안쪽만 사용
+    >
+          {/* 단어 카드 + 스피커 버튼 */}
+          <WordCard
+            word={currentProblem.word}
+            showSpeaker={showSpeakerButton}
+            onSpeakerClick={handlePlayWordAudio}
+            isSpeaking={isSpeaking}
+          />
+
+          {/* 마이크 버튼 */}
+          <MicrophoneButton
+            isRecording={isRecording}
+            isAnalyzing={isAnalyzing}
             onClick={handleMicClick}
-            className="
-              w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28
-              rounded-full
-              bg-gradient-to-b from-[#FFE29A] to-[#FF9F2E]
-              border-[4px] border-[#C4601B]
-              shadow-[0_8px_0_rgba(0,0,0,0.3)]
-              flex items-center justify-center
-              active:translate-y-[2px] active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
-            "
-          >
-            <span
-              className={`
-                font-bold text-white
-                ${isRecording ? 'animate-pulse' : ''}
-              `}
-              style={{
-                fontSize: 'clamp(2rem, 1vw + 1.5rem, 3rem)',
-                lineHeight: 1,
-              }}
-            >
-              🎙
-            </span>
-          </button>
-
-          {/* 녹음 상태 텍스트 */}
-          <div className="mt-3 text-white text-lg sm:text-xl font-semibold drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)]">
-            {isAnalyzing
-              ? '분석 중...'
-              : isRecording
-              ? '녹음 중...'
-              : '눌러서 말해요'}
-          </div>
-        </section>
+          />
+        </div>
+      </div>
       </main>
 
       {/* 우측 하단 캐릭터 (피드백 캐릭터) */}
@@ -252,105 +175,31 @@ const Adventure4Page = () => {
         isCorrect={isCorrectAnswer}
       />
 
-      {/* 개발 테스트용 버튼 - 나중에 제거 */}
-      <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 z-10">
-        <button
-          onClick={() => {
-            // 정답 케이스: 캐릭터 O, 웨이브도 보여주기
-            setShowFeedback(true);
-            setIsCorrectAnswer(true);
-            setIsSpeaking(true); // 웨이브 on
-            setTimeout(() => {
-              setShowFeedback(false);
-            }, 2000);
-            setTimeout(() => {
-              setIsSpeaking(false); // 웨이브 자동 종료
-            }, 2000);
-          }}
-          className="px-4 py-2 bg-green-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-green-600"
-        >
-          ✅ 정답(웨이브)
-        </button>
-
-        <button
-          onClick={() => {
-            // 오답 케이스: 캐릭터 X
-            setShowFeedback(true);
-            setIsCorrectAnswer(false);
-            setAttemptCount(prev => prev + 1);
-            if (attemptCount >= 2) setShowSpeakerButton(true);
-            setTimeout(() => setShowFeedback(false), 2000);
-          }}
-          className="px-4 py-2 bg-red-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-red-600"
-        >
-          ❌ 오답
-        </button>
-
-        <button
-          onClick={() => setShowSpeakerButton(prev => !prev)}
-          className="px-4 py-2 bg-blue-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-blue-600"
-        >
-          🔊 스피커 토글
-        </button>
-
-        <button
-          onClick={() => {
-            // 수동으로 웨이브만 테스트
-            setIsSpeaking((prev) => !prev);
-          }}
-          className="px-4 py-2 bg-orange-500 text-white rounded text-sm font-semibold shadow-lg hover:bg-orange-600"
-        >
-          🌊 웨이브 토글
-        </button>
-      </div>
-
-      {/* 페이지 전용 스타일 (ex: 애니메이션) */}
-      <style>{`
-        @keyframes pulse {
-          0%   { transform: scale(1); }
-          50%  { transform: scale(1.08); }
-          100% { transform: scale(1); }
-        }
-        .animate-pulse {
-          animation: pulse 0.8s ease-in-out infinite;
-        }
-
-        /* ====== 웨이브 효과 영역 ====== */
-        .wave-effect::before,
-        .wave-effect::after {
-          content: '';
-          position: absolute;
-          border: 4px solid rgba(255, 140, 0, 1); /* 주황빛 라인 */
-          border-radius: 50%;
-          top: 50%;
-          left: 50%;
-          width: 200px;
-          height: 200px;
-          transform: translate(-50%, -50%) scale(0.8);
-          opacity: 0.3;
-          z-index: 3;
-          pointer-events: none; /* 클릭 방해 안 하도록 */
-        }
-
-        .wave-effect::before {
-          animation: wave-burst 1.5s ease-out infinite;
-        }
-
-        .wave-effect::after {
-          animation: wave-burst 1.5s ease-out infinite 0.5s;
-        }
-
-        @keyframes wave-burst {
-          0% {
-            transform: translate(-50%, -50%) scale(0.8);
-            opacity: 0.8;
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1.6);
-            opacity: 0;
-          }
-        }
-      `}</style>
+      {/* ⚠️ 개발 테스트용 버튼 - 실제 기능 구현 후 삭제 예정 ⚠️ */}
+      <DevTestButtons
+        onCorrect={() => {
+          // 정답 케이스: 캐릭터 O, 웨이브도 보여주기
+          setShowFeedback(true);
+          setIsCorrectAnswer(true);
+          setIsSpeaking(true); // 웨이브 on
+          setTimeout(() => {
+            setShowFeedback(false);
+          }, 2000);
+          setTimeout(() => {
+            setIsSpeaking(false); // 웨이브 자동 종료
+          }, 2000);
+        }}
+        onWrong={() => {
+          // 오답 케이스: 캐릭터 X
+          setShowFeedback(true);
+          setIsCorrectAnswer(false);
+          setAttemptCount(prev => prev + 1);
+          if (attemptCount >= 2) setShowSpeakerButton(true);
+          setTimeout(() => setShowFeedback(false), 2000);
+        }}
+        onToggleSpeaker={() => setShowSpeakerButton(prev => !prev)}
+        onToggleWave={() => setIsSpeaking(prev => !prev)}
+      />
     </div>
   );
 };
