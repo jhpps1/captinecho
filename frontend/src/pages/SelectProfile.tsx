@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // 1. useNavigate 훅 import
 import Cookies from 'js-cookie'; // 2. js-cookie import
+import PINInputModal from '../components/protector/PINInputModal';
+import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
 
 // --- 더미 데이터 (조건 4 & 5) ---
 // 백엔드 API 연동 전까지 사용할 임시 프로필 데이터입니다.
@@ -23,6 +25,71 @@ const SelectProfile = () => {
   const [profiles, setProfiles] = useState(DUMMY_PROFILES_DATA);
   const [currentPage, setCurrentPage] = useState(0); // 1. 현재 페이지 상태
   const navigate = useNavigate(); // 2. 로그아웃 후 이동을 위한 navigate
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [showNewPinModal, setShowNewPinModal] = useState(false);
+  const [showConfirmPinModal, setShowConfirmPinModal] = useState(false);
+  const [newPin, setNewPin] = useState('');
+
+  const handlePinSubmit = (pin: string) => {
+    console.log('PIN 입력:', pin);
+    // TODO: 실제 PIN 인증 API 호출
+    // 임시로 아무 PIN이나 허용
+    alert(`PIN 인증 성공: ${pin}`);
+    setShowPinModal(false);
+    navigate('/protector'); // 인증 성공 시 보호자 대시보드로 이동
+  };
+
+  const handleForgotPin = () => {
+    setShowPinModal(false);
+    setShowRecoveryModal(true);
+  };
+
+  const handleVerificationSubmit = (code: string) => {
+    console.log('인증 코드:', code);
+    // TODO: 실제 인증 코드 검증 API 호출
+    setShowRecoveryModal(false);
+    setShowNewPinModal(true);
+  };
+
+  const handleNewPinSubmit = (pin: string) => {
+    console.log('새 PIN:', pin);
+    setNewPin(pin);
+    setShowNewPinModal(false);
+    setShowConfirmPinModal(true);
+  };
+
+  const handleConfirmPinSubmit = (pin: string) => {
+    console.log('PIN 확인:', pin);
+    if (pin === newPin) {
+      alert('PIN이 성공적으로 변경되었습니다!');
+      // TODO: 실제 PIN 변경 API 호출
+      setShowConfirmPinModal(false);
+      setShowPinModal(true);
+      setNewPin('');
+    } else {
+      alert('PIN이 일치하지 않습니다. 다시 입력해주세요.');
+      setShowConfirmPinModal(false);
+      setShowNewPinModal(true);
+    }
+  };
+
+  const handleResendCode = () => {
+    alert('인증 번호가 재발송되었습니다.');
+    // TODO: 실제 인증 번호 재발송 API 호출
+  };
+
+  const handleRecoveryCancel = () => {
+    setShowRecoveryModal(false);
+    setShowPinModal(true);
+  };
+
+  const handleClose = () => {
+    setShowPinModal(false);
+    // alert('PIN 입력이 취소되었습니다.'); // SelectProfile 에서는 단순 닫기
+  };
+  // --- PIN 모달 로직 끝 ---
 
   // --- 1. 페이지네이션 로직 ---
   const totalProfiles = profiles.length;
@@ -68,8 +135,12 @@ const SelectProfile = () => {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <header className="absolute top-0 right-0 p-6 z-10">
-        <button className="bg-white text-gray-700 px-6 py-2 rounded-lg shadow-md font-semibold hover:bg-gray-100 transition-colors duration-200">
+      <header className="absolute top-0 right-0 p-6 z-20">
+        {/* '보호자' 버튼에 onClick 이벤트 핸들러 추가 */}
+        <button
+          onClick={() => setShowPinModal(true)}
+          className="bg-white text-gray-700 px-6 py-2 rounded-lg shadow-md font-semibold hover:bg-gray-100 transition-colors duration-200"
+        >
           보호자
         </button>
       </header>
@@ -85,7 +156,6 @@ const SelectProfile = () => {
 
             {/* --- 1. 페이지네이션 래퍼 --- */}
             <div className="flex items-center justify-center gap-4 w-full max-w-5xl">
-              
               {/* 좌측 버튼 (5개 이상일 때만 보임) */}
               <button
                 onClick={handlePrevPage}
@@ -94,8 +164,19 @@ const SelectProfile = () => {
                 }`}
                 disabled={!showPagination}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
 
@@ -123,7 +204,7 @@ const SelectProfile = () => {
                   </div>
                 ))}
               </div>
-              
+
               {/* 우측 버튼 (5개 이상일 때만 보임) */}
               <button
                 onClick={handleNextPage}
@@ -132,8 +213,19 @@ const SelectProfile = () => {
                 }`}
                 disabled={!showPagination}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </button>
             </div>
@@ -150,9 +242,11 @@ const SelectProfile = () => {
           // --- 조건 2: 저장된 프로필이 없을 때 (2번째 사진) ---
           <>
             <h1 className="text-4xl font-bold text-gray-900 text-center leading-relaxed">
-              보호자로 로그인하여<br />새로운 프로필을 생성해주세요.
+              보호자로 로그인하여
+              <br />
+              새로운 프로필을 생성해주세요.
             </h1>
-            
+
             {/* --- 2. 로그아웃 버튼 추가 (프로필 없을 때) --- */}
             <button
               onClick={handleLogout}
@@ -163,8 +257,52 @@ const SelectProfile = () => {
           </>
         )}
       </main>
+
+      {(showPinModal || showRecoveryModal || showNewPinModal || showConfirmPinModal) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          {/* PIN 입력 모달 */}
+          {showPinModal && (
+            <PINInputModal
+              onSubmit={handlePinSubmit}
+              onForgotPin={handleForgotPin}
+              onClose={handleClose}
+            />
+          )}
+
+          {/* PIN 복구 모달 */}
+          {showRecoveryModal && (
+            <PINRecoveryModal
+              onSubmit={handleVerificationSubmit}
+              onResend={handleResendCode}
+              onCancel={handleRecoveryCancel}
+            />
+          )}
+
+          {/* 새 PIN 설정 모달 (Wireframe 3) */}
+          {showNewPinModal && (
+            <PINInputModal
+              title="설정"
+              subtitle="보호자 PIN 번호"
+              description="새 비밀번호을 입력해주세요"
+              onSubmit={handleNewPinSubmit}
+            />
+          )}
+
+          {/* PIN 확인 모달 (Wireframe 4) */}
+          {showConfirmPinModal && (
+            <PINInputModal
+              title="설정"
+              subtitle="보호자 PIN 번호"
+              description="변경된 비밀번호를 한번 더 입력해주세요"
+              onSubmit={handleConfirmPinSubmit}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default SelectProfile;
+
+
