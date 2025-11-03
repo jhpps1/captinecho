@@ -64,8 +64,9 @@ export const mockStudents: Student[] = [
   }
 ];
 
-// 자모별 학습 통계
+// 자모별 학습 통계 (자음 + 모음)
 export const mockJamoStats: JamoStat[] = [
+  // 자음
   { jamo: 'ㄱ', progress: 85 },
   { jamo: 'ㄴ', progress: 90 },
   { jamo: 'ㄷ', progress: 75 },
@@ -79,7 +80,32 @@ export const mockJamoStats: JamoStat[] = [
   { jamo: 'ㅋ', progress: 82 },
   { jamo: 'ㅌ', progress: 77 },
   { jamo: 'ㅍ', progress: 73 },
-  { jamo: 'ㅎ', progress: 85 }
+  { jamo: 'ㅎ', progress: 85 },
+
+  // 기본 모음
+  { jamo: 'ㅏ', progress: 88 },
+  { jamo: 'ㅑ', progress: 72 },
+  { jamo: 'ㅓ', progress: 84 },
+  { jamo: 'ㅕ', progress: 68 },
+  { jamo: 'ㅗ', progress: 91 },
+  { jamo: 'ㅛ', progress: 76 },
+  { jamo: 'ㅜ', progress: 83 },
+  { jamo: 'ㅠ', progress: 69 },
+  { jamo: 'ㅡ', progress: 87 },
+  { jamo: 'ㅣ', progress: 93 },
+
+  // 복합 모음
+  { jamo: 'ㅐ', progress: 74 },
+  { jamo: 'ㅒ', progress: 62 },
+  { jamo: 'ㅔ', progress: 79 },
+  { jamo: 'ㅖ', progress: 64 },
+  { jamo: 'ㅘ', progress: 71 },
+  { jamo: 'ㅙ', progress: 58 },
+  { jamo: 'ㅚ', progress: 66 },
+  { jamo: 'ㅝ', progress: 73 },
+  { jamo: 'ㅞ', progress: 60 },
+  { jamo: 'ㅟ', progress: 67 },
+  { jamo: 'ㅢ', progress: 55 }
 ];
 
 // 주간 활동 (최근 7일)
@@ -99,7 +125,13 @@ export const mockStudyGoals: StudyGoal[] = [
     type: 'daily',
     target: 20,
     current: 15,
-    unit: '분'
+    unit: '개'  // 문제 개수
+  },
+  {
+    type: 'daily',
+    target: 30,
+    current: 25,
+    unit: '분'  // 학습 시간 (분)
   },
   {
     type: 'weekly',

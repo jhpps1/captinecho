@@ -16,18 +16,18 @@ export default function StudentSidebar({
   onLogout
 }: StudentSidebarProps) {
   return (
-    <div className="fixed left-0 top-0 h-screen w-24 bg-white shadow-lg flex flex-col items-center py-6 z-40">
+    <div className="fixed left-0 top-0 h-screen w-24 bg-white shadow-lg flex flex-col items-center py-6 z-40 overflow-x-hidden">
       {/* 상단: 학생 버튼들 */}
-      <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col gap-4 overflow-y-auto overflow-x-hidden w-full items-center px-2">
         {students.map((student) => (
           <button
             key={student.id}
             onClick={() => onSelectStudent(student)}
-            className={`w-16 h-16 rounded-full flex items-center justify-center
-                     text-2xl font-bold transition-all
+            className={`w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0
+                     text-xl font-bold transition-all
                      ${
                        selectedStudent?.id === student.id
-                         ? 'bg-blue-500 text-white shadow-lg scale-110'
+                         ? 'bg-blue-500 text-white shadow-lg'
                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                      }`}
           >
