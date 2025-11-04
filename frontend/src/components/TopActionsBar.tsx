@@ -13,6 +13,7 @@ export const TopActionsBar = ({ onTutorialClick }: TopActionsBarProps) => {
       <button
         className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
         onClick={onTutorialClick}
+        aria-label="튜토리얼 보기"
       >
         <HelpCircle className="text-gray-700" size={24} />
       </button>
@@ -21,6 +22,7 @@ export const TopActionsBar = ({ onTutorialClick }: TopActionsBarProps) => {
       <Link
         to="/"
         className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+        aria-label="나가기"
       >
         <DoorOpen className="text-gray-700" size={24} />
       </Link>
