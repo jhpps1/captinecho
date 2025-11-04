@@ -37,8 +37,11 @@ jwt:
 
 logging:
   level:
-    org.hibernate.SQL: debug
-    org.hibernate.type.descriptor.sql: trace
+    org.hibernate.SQL: info
+    com.captainecho.captainecho.auth.filter: info
+    com.captainecho.captainecho.jwt: info
+    com.captainecho.captainecho.protector: info
+    org.springframework.security: warn
 
 oauth2:
   google:

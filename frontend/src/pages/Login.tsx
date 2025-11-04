@@ -27,7 +27,7 @@ const Login = () => {
       // 2. idToken을 백엔드 서버로 전송
       console.log('🚀 백엔드(/api/protector/login)로 idToken 전송 시도...');
       const response = await axios.post<LoginResponse>(
-        '/api/protector/login', // (vite.config.ts 프록시 설정이 되어있어야 함)
+        '/api/auth/login', // (vite.config.ts 프록시 설정이 되어있어야 함)
         {
           idToken: idToken,
           provider: 'google',
