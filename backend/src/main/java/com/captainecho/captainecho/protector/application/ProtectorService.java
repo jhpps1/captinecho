@@ -8,6 +8,10 @@ import com.captainecho.captainecho.protector.application.result.CreatePinResult;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
+import com.captainecho.captainecho.student.domain.Student;
+import com.captainecho.captainecho.student.persistence.StudentRepository;
+import com.captainecho.captainecho.protector.application.result.StudentListResult;
+import com.captainecho.captainecho.protector.application.result.StudentDto;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +19,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProtectorService {
 
     private final ProtectorRepository protectorRepository;
+    private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -60,5 +68,29 @@ public class ProtectorService {
         boolean isValid = passwordEncoder.matches(command.pin(), storedPin);
 
         return new VerifyPinResult(isValid);
+    }
+
+    /**
+     * 보호자의 학생 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public StudentListResult getStudents(Long protectorId) {
+        // 1. 학생 목록 조회
+        List<Student> students = studentRepository.findByProtector_ProtectorId(protectorId);
+
+        // 2. DTO 변환
+        List<StudentDto> studentDtos = students.stream()
+                .map(student -> StudentDto.builder()
+                        .studentId(student.getStudentId())
+                        .name(student.getName())
+                        .gender(student.getGender() != null ? student.getGender().name() : null)
+                        .profileImage(student.getProfileImage())
+                        .grade(student.getGrade() != null ? student.getGrade().name() : null)
+                        .level(student.getLevel() != null ? student.getLevel().intValue() : null)
+                        .coin(student.getCoin())
+                        .build())
+                .collect(Collectors.toList());
+
+        return new StudentListResult(studentDtos);
     }
 }

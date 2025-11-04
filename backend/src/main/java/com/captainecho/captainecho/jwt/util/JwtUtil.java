@@ -54,14 +54,21 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
+            log.info("Validating JWT token (length: {})", token.length());
             parseToken(token);
+            log.info("Token validation SUCCESS");
             return true;
         } catch (ExpiredJwtException e) {
-            log.debug("Token expired");
-        } catch (SignatureException | MalformedJwtException | IllegalArgumentException e) {
-            log.debug("Invalid token: {}", e.getClass().getSimpleName());
+            log.warn("Token validation FAILED: Token expired - Issued: {}, Expiration: {}",
+                e.getClaims().getIssuedAt(), e.getClaims().getExpiration());
+        } catch (SignatureException e) {
+            log.warn("Token validation FAILED: Invalid signature - {}", e.getMessage());
+        } catch (MalformedJwtException e) {
+            log.warn("Token validation FAILED: Malformed token - {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("Token validation FAILED: Illegal argument - {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected token validation error", e);
+            log.error("Token validation FAILED: Unexpected error", e);
         }
         return false;
     }

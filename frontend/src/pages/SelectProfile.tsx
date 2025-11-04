@@ -1,29 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // 1. useNavigate 훅 import
 import Cookies from 'js-cookie'; // 2. js-cookie import
 import PINInputModal from '../components/protector/PINInputModal';
 import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
+import { getStudents } from '../api/protectorApi';
 
-// --- 더미 데이터 (조건 4 & 5) ---
-// 백엔드 API 연동 전까지 사용할 임시 프로필 데이터입니다.
-// [테스트] 페이지네이션을 테스트하려면 5개 이상으로 만드세요.
-const DUMMY_PROFILES_DATA = [
-  { id: 1, name: '존슨제', imageUrl: '/selectpage/image 11.png' },
-  { id: 2, name: '쿈욘쿈', imageUrl: '/selectpage/image 13.png' },
-  { id: 3, name: '파크준횽', imageUrl: '/selectpage/image 11.png' }, // 예시
-  { id: 4, name: '키무큐미', imageUrl: '/selectpage/image 13.png' }, // 예시
-  { id: 5, name: '키무헤민', imageUrl: '/selectpage/image 11.png' }, // 5번째 예시
-  { id: 6, name: '호완쥰키', imageUrl: '/selectpage/image 13.png' }, // 6번째 예시
-];
-// ------------------------------
+// 프로필 타입 정의
+interface Profile {
+  id: number;
+  name: string;
+  imageUrl: string;
+}
 
 // --- 1. 페이지네이션 설정 ---
 const PROFILES_PER_PAGE = 4; // 한 페이지에 4개씩 표시
 
 const SelectProfile = () => {
-  // [테스트] 프로필이 없는 상태(2번째 사진)를 보려면 DUMMY_PROFILES_DATA 대신 빈 배열 []을 넣어보세요.
-  const [profiles, setProfiles] = useState(DUMMY_PROFILES_DATA);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentPage, setCurrentPage] = useState(0); // 1. 현재 페이지 상태
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate(); // 2. 로그아웃 후 이동을 위한 navigate
 
   const [showPinModal, setShowPinModal] = useState(false);
@@ -90,6 +85,33 @@ const SelectProfile = () => {
     // alert('PIN 입력이 취소되었습니다.'); // SelectProfile 에서는 단순 닫기
   };
   // --- PIN 모달 로직 끝 ---
+
+  // 학생 목록 불러오기
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      setIsLoading(true);
+      try {
+        const response = await getStudents();
+
+        // API 응답을 Profile 타입으로 변환
+        const profileList: Profile[] = response.students.map(student => ({
+          id: student.studentId,
+          name: student.name,
+          imageUrl: student.profileImage || '/selectpage/image 11.png' // 기본 이미지
+        }));
+
+        setProfiles(profileList);
+        console.log('✅ 학생 프로필 로드 완료:', profileList);
+      } catch (error) {
+        console.error('❌ 학생 프로필 로드 실패:', error);
+        setProfiles([]); // 에러 시 빈 배열
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfiles();
+  }, []);
 
   // --- 1. 페이지네이션 로직 ---
   const totalProfiles = profiles.length;

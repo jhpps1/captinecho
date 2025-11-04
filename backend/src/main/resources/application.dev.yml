@@ -44,6 +44,8 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.type.descriptor.sql: trace
+    com.captainecho.captainecho.jwt: debug
+    com.captainecho.captainecho.auth.filter: debug
 
 # Swagger (SpringDoc OpenAPI) 설정
 springdoc:
