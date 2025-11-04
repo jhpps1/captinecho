@@ -10,6 +10,9 @@ import com.captainecho.captainecho.dashboard.presentation.response.DiscussionRes
 import com.captainecho.captainecho.dashboard.presentation.response.LearningTimeResponse;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
+import com.captainecho.captainecho.student.application.StudentService;
+import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
+import com.captainecho.captainecho.student.presentation.response.GetDailyGoalCountResponse;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final StudentService studentService;
 
     /**
      * 금주 커리큘럼 조회
@@ -87,6 +91,27 @@ public class DashboardController {
 
         LearningTimeResult result = dashboardService.getLearningTime(protectorId, studentId);
         LearningTimeResponse response = LearningTimeResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 오늘 목표 문제 수 조회
+     * GET /api/student/{studentId}/dashboard/daily/plan
+     */
+    @GetMapping("/daily/plan")
+    public ResponseEntity<GetDailyGoalCountResponse> getDailyGoalCount(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("studentId") Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        GetDailyGoalCountResult result = studentService.getDailyGoalCount(protectorId, studentId);
+        GetDailyGoalCountResponse response = GetDailyGoalCountResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
