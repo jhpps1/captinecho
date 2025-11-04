@@ -7,4 +7,6 @@ import java.time.LocalDate;
 
 public interface DayProblemRepository extends JpaRepository<DayProblem, Integer> {
     Integer countByStudent_StudentIdAndAssignedDate(Integer studentId, LocalDate assignedDate);
+
+    Integer countByStudent_StudentIdAndAssignedDateAndIsCompleted(Integer studentId, LocalDate assignedDate, Boolean isCompleted);
 }
