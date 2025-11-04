@@ -11,6 +11,7 @@ import ManageStudentsPage from '../pages/ManageStudentsPage.tsx';
 import StudentDashboard from '../pages/StudentDashboard.tsx';
 import Adventure1Page from '../pages/Adventure1Page.tsx';
 import Adventure4Page from '../pages/Adventure4Page.tsx';
+import NewUserTerms from '../pages/NewUserTerms.tsx';
 
 const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />,
+  },
+  {
+    path: '/new-user-terms',
+    element: <NewUserTerms />,
   },
   {
     path: '/select-profile',

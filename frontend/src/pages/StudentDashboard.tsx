@@ -5,10 +5,10 @@ import Cookies from 'js-cookie';
 
 // 오른쪽 나무 버튼 데이터를 배열로 관리하면 편리합니다.
 const woodenButtons = [
-  { id: 1, label: '순서맞추기' },
-  { id: 2, label: '글자합치기' },
-  { id: 3, label: '읽어보기' },
-  { id: 4, label: '문장 읽기' },
+  { id: 1, label: '자모맞추기' },
+  { id: 2, label: '빈칸맞추기' },
+  { id: 3, label: '단어맞추기' },
+  { id: 4, label: '단어읽기' },
 ];
 
 // 설정 아이콘 컴포넌트 (SVG)
