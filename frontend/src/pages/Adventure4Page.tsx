@@ -65,6 +65,13 @@ const Adventure4Page = () => {
   // 음성 helper (튜토리얼 음성 안내)
   const { playVoice, stopVoice } = useTutorialVoice();
 
+  // 문제 전환 시 상태 초기화
+  useEffect(() => {
+    setAttemptCount(0);
+    setShowSpeakerButton(false);
+    setIsSpeaking(false);
+  }, [currentIndex]);
+
   // ESC 누르면 튜토리얼 끄기
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -85,23 +92,91 @@ const Adventure4Page = () => {
     if (goingToTutorial) {
       playVoice(
         'tutorial',
-        '이 단어를 들어보고 똑같이 말해보세요!'
+        '단어를 보고 똑같이 말해보세요!'
       );
     } else {
       stopVoice();
     }
   };
 
+  // 🏆 다음 문제로 이동
+  const moveToNextProblem = () => {
+    if (currentIndex < problems.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      // 모든 문제 완료
+      console.log('🎉 모든 문제 완료!');
+      // TODO: 결과 페이지로 이동 또는 완료 처리
+    }
+  };
+
+  // ✅ 정답/오답 처리 함수
+  const handleAnswer = (isCorrect: boolean, similarity?: number) => {
+    console.log(`답변 처리: ${isCorrect ? '정답' : '오답'}, 유사도: ${similarity}%`);
+
+    if (isCorrect) {
+      // 정답 처리
+      setIsSpeaking(true);
+      setShowFeedback(true);
+      setIsCorrectAnswer(true);
+
+      setTimeout(() => {
+        setShowFeedback(false);
+        setIsSpeaking(false);
+        moveToNextProblem();
+      }, 2000);
+    } else {
+      // 오답 처리
+      setShowFeedback(true);
+      setIsCorrectAnswer(false);
+
+      setAttemptCount(prev => {
+        const newCount = prev + 1;
+        if (newCount >= 3) setShowSpeakerButton(true);
+        return newCount;
+      });
+
+      setTimeout(() => setShowFeedback(false), 2000);
+    }
+  };
+
   // 🔊 스피커 버튼 눌렀을 때: 단어 음성 재생
   const handlePlayWordAudio = () => {
-    console.log('play audio:', currentProblem.audioUrl);
+    // TODO: 백엔드에서 오디오 파일 받아서 재생
+    // const audioUrl = await fetchAudioFromBackend(currentProblem.id);
+    const audio = new Audio(currentProblem.audioUrl);
+    audio.play().catch(err => {
+      console.error('오디오 재생 실패:', err);
+    });
   };
 
   // 🎤 마이크 버튼 눌렀을 때: 녹음 시작 / 종료 토글
-  const handleMicClick = () => {
-    setIsRecording((prev) => !prev);
-    // 실제로는 여기서 녹음 시작/종료를 트리거하고
-    // 녹음이 끝나면 isAnalyzing -> 백엔드 -> 유사도 결과 -> isSpeaking=true 같은 흐름
+  const handleMicClick = async () => {
+    if (isRecording) {
+      // 녹음 종료
+      setIsRecording(false);
+      setIsAnalyzing(true);
+
+      // TODO: 실제 녹음 중지 및 데이터 가져오기
+      // const audioBlob = stopRecording();
+
+      // TODO: 백엔드로 음성 전송 및 결과 받기
+      // const result = await sendAudioToBackend(audioBlob, currentProblem.word);
+      // setIsAnalyzing(false);
+      // handleAnswer(result.isCorrect, result.similarity);
+
+      // 임시: 2초 후 랜덤 결과
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        const randomCorrect = Math.random() > 0.5;
+        handleAnswer(randomCorrect, randomCorrect ? 90 : 60);
+      }, 2000);
+    } else {
+      // 녹음 시작
+      setIsRecording(true);
+      // TODO: 실제 녹음 시작
+      // startRecording();
+    }
   };
 
   return (
@@ -126,7 +201,7 @@ const Adventure4Page = () => {
         {isTutorialMode && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
             <TutorialBubble
-              text="이 단어를 들어보고 따라 말해요!"
+              text="단어를 보고 똑같이 말해보세요!"
               className="max-w-[90%] text-center"
             />
           </div>
@@ -177,26 +252,8 @@ const Adventure4Page = () => {
 
       {/* ⚠️ 개발 테스트용 버튼 - 실제 기능 구현 후 삭제 예정 ⚠️ */}
       <DevTestButtons
-        onCorrect={() => {
-          // 정답 케이스: 캐릭터 O, 웨이브도 보여주기
-          setShowFeedback(true);
-          setIsCorrectAnswer(true);
-          setIsSpeaking(true); // 웨이브 on
-          setTimeout(() => {
-            setShowFeedback(false);
-          }, 2000);
-          setTimeout(() => {
-            setIsSpeaking(false); // 웨이브 자동 종료
-          }, 2000);
-        }}
-        onWrong={() => {
-          // 오답 케이스: 캐릭터 X
-          setShowFeedback(true);
-          setIsCorrectAnswer(false);
-          setAttemptCount(prev => prev + 1);
-          if (attemptCount >= 2) setShowSpeakerButton(true);
-          setTimeout(() => setShowFeedback(false), 2000);
-        }}
+        onCorrect={() => handleAnswer(true, 95)}
+        onWrong={() => handleAnswer(false, 60)}
         onToggleSpeaker={() => setShowSpeakerButton(prev => !prev)}
         onToggleWave={() => setIsSpeaking(prev => !prev)}
       />

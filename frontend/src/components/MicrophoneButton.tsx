@@ -23,34 +23,25 @@ export const MicrophoneButton = ({
     <>
       <section className="flex flex-col items-center">
         {/* 마이크 버튼 */}
-        {/* <button
+        <button
           onClick={onClick}
           className="
-            w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28
             rounded-full
             bg-gradient-to-b from-[#FFE29A] to-[#FF9F2E]
             border-[4px] border-[#C4601B]
             shadow-[0_8px_0_rgba(0,0,0,0.3)]
             flex items-center justify-center
-            active:translate-y-[2px] active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
+            active:translate-y-[2px]
+            active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
+            hover:scale-105 cursor-pointer
+            transition-all duration-200
           "
-        > */}
-        <button
-  onClick={onClick}
-  className="
-    rounded-full
-    bg-gradient-to-b from-[#FFE29A] to-[#FF9F2E]
-    border-[4px] border-[#C4601B]
-    shadow-[0_8px_0_rgba(0,0,0,0.3)]
-    flex items-center justify-center
-    active:translate-y-[2px]
-    active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
-  "
-  style={{
-    width: 'min(16vw, 110px)',   // ✅ 화면에 비례해 작아지게
-    height: 'min(16vw, 110px)',
-  }}
->
+          style={{
+            width: 'min(16vw, 110px)',
+            height: 'min(16vw, 110px)',
+          }}
+          aria-label={isRecording ? '녹음 중지' : '녹음 시작'}
+        >
           <span
             className={`
               font-bold text-white

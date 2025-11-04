@@ -70,9 +70,10 @@ export const WordCard = ({
               flex items-center justify-center
               active:translate-y-[2px] active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
               transition-all duration-200
-              hover:brightness-110
+              hover:scale-105 cursor-pointer
             "
             style={{ zIndex: 3 }}
+            aria-label="단어 발음 듣기"
           >
             <span
               className="text-white font-bold"
@@ -97,8 +98,8 @@ export const WordCard = ({
           border-radius: 50%;
           top: 50%;
           left: 50%;
-          width: 200px;
-          height: 200px;
+          width: 400px;
+          height: 400px;
           transform: translate(-50%, -50%) scale(0.8);
           opacity: 0.3;
           z-index: 3;
@@ -119,7 +120,7 @@ export const WordCard = ({
             opacity: 0.8;
           }
           100% {
-            transform: translate(-50%, -50%) scale(1.6);
+            transform: translate(-50%, -50%) scale(2.5);
             opacity: 0;
           }
         }
