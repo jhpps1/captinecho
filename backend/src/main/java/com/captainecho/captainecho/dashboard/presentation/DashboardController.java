@@ -13,10 +13,13 @@ import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.StudentService;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
+import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
+import com.captainecho.captainecho.student.application.result.GetWeeklyGoalPercentResult;
 import com.captainecho.captainecho.student.presentation.response.GetDailyCompletedCountResponse;
 import com.captainecho.captainecho.student.presentation.response.GetDailyGoalCountResponse;
+import com.captainecho.captainecho.student.presentation.response.GetWeeklyGoalPercentResponse;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -137,6 +140,27 @@ public class DashboardController {
         GetDailyCompletedCountCommand command = new GetDailyCompletedCountCommand(studentId, protectorId);
         GetDailyCompletedCountResult result = studentService.getDailyCompletedCount(command);
         GetDailyCompletedCountResponse response = GetDailyCompletedCountResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 주간 목표 도달률 조회
+     * GET /api/student/{studentId}/dashboard/weekly/plan
+     */
+    @GetMapping("/weekly/plan")
+    public ResponseEntity<GetWeeklyGoalPercentResponse> getWeeklyGoalPercent(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("studentId") Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+        GetWeeklyGoalPercentCommand command = new GetWeeklyGoalPercentCommand(studentId, protectorId);
+        GetWeeklyGoalPercentResult result = studentService.getWeeklyGoalPercent(command);
+        GetWeeklyGoalPercentResponse response = GetWeeklyGoalPercentResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
