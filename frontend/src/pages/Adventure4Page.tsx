@@ -183,12 +183,14 @@ const Adventure4Page = () => {
 
   return (
     <div
-      className="flex flex-col h-screen relative"
+      className="flex flex-col min-h-screen relative"
       style={{
         backgroundImage: 'url(/adventurepage/adventure_4_background.png)',
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
         backgroundColor: '#4A5A2A',
+        minWidth: '100vw',
       }}
     >
       {/* 화면 어둡게 하는 오버레이 (튜토리얼 모드일 때) */}

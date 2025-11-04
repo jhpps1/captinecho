@@ -162,12 +162,14 @@ const Adventure1Page = () => {
   // ====== 렌더 시작 ======
   return (
     <div
-      className="flex flex-col h-screen relative"
+      className="flex flex-col min-h-screen relative"
       style={{
         backgroundImage: 'url(/adventurepage/adventure_1_background.png)',
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
         backgroundColor: '#D4B896',
+        minWidth: '100vw',
       }}
     >
       {/* 어두운 배경 오버레이 - 튜토리얼 모드 */}
