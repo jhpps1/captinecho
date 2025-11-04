@@ -37,7 +37,7 @@ public class ProtectorService {
         }
 
         // 3. PIN 암호화
-    String encodedPin = passwordEncoder.encode(command.pin());
+        String encodedPin = passwordEncoder.encode(command.pin());
 
         // 4. PIN 저장
         protector.updateProtectorPin(encodedPin);
