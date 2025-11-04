@@ -20,7 +20,7 @@ export const TopActionsBar = ({ onTutorialClick }: TopActionsBarProps) => {
 
       {/* 나가기 */}
       <Link
-        to="/"
+        to="/student"
         className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
         aria-label="나가기"
       >
