@@ -12,13 +12,13 @@ interface SpeakProblem {
 import { useTutorialVoice } from '../hooks/useTutorialVoice';
 
 // Components
-import { TutorialOverlay } from '../components/TutorialOverlay';
-import { TopActionsBar } from '../components/TopActionsBar';
-import { TutorialBubble } from '../components/TutorialBubble';
-import { FeedbackCharacter } from '../components/FeedbackCharacter';
-import { WordCard } from '../components/WordCard';
-import { MicrophoneButton } from '../components/MicrophoneButton';
-import { DevTestButtons } from '../components/DevTestButtons'; // ⚠️ 개발용 - 이후 삭제 예정
+import { TutorialOverlay } from '../components/adventure/TutorialOverlay';
+import { TopActionsBar } from '../components/adventure/TopActionsBar';
+import { TutorialBubble } from '../components/adventure/TutorialBubble';
+import { FeedbackCharacter } from '../components/adventure/FeedbackCharacter';
+import { WordCard } from '../components/adventure/WordCard';
+import { MicrophoneButton } from '../components/adventure/MicrophoneButton';
+import { DevTestButtons } from '../components/adventure/DevTestButtons'; // ⚠️ 개발용 - 이후 삭제 예정
 
 const Adventure4Page = () => {
   // ---- 더미 문제 데이터 (말하기/따라 말하기 유형) ----

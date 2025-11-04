@@ -14,12 +14,12 @@ import {
 import { useTutorialVoice } from '../hooks/useTutorialVoice';
 
 // Components
-import { TutorialOverlay } from '../components/TutorialOverlay';
-import { TopActionsBar } from '../components/TopActionsBar';
-import { TutorialBubble } from '../components/TutorialBubble';
-import { ProblemCard } from '../components/ProblemCard';
-import { OptionsList } from '../components/OptionsList';
-import { FeedbackCharacter } from '../components/FeedbackCharacter';
+import { TutorialOverlay } from '../components/adventure/TutorialOverlay';
+import { TopActionsBar } from '../components/adventure/TopActionsBar';
+import { TutorialBubble } from '../components/adventure/TutorialBubble';
+import { ProblemCard } from '../components/adventure/ProblemCard';
+import { OptionsList } from '../components/adventure/OptionsList';
+import { FeedbackCharacter } from '../components/adventure/FeedbackCharacter';
 
 const Adventure1Page = () => {
   // -------- 더미 문제 데이터 (실제 API 응답 형태에 가깝게) --------

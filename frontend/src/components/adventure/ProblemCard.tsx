@@ -1,7 +1,7 @@
 // 문제 카드
 // 탐험 1,2에서 사용
-import type { ProblemData } from '../types/problem';
-import { bottomMostLineClass, getTopBlockClass } from '../utils/hangulUtils';
+import type { ProblemData } from '../../types/problem';
+import { bottomMostLineClass, getTopBlockClass } from '../../utils/hangulUtils';
 
 type ProblemCardProps = {
   problem: ProblemData;
