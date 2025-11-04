@@ -21,6 +21,9 @@ import { MicrophoneButton } from '../components/adventure/MicrophoneButton';
 import { DevTestButtons } from '../components/adventure/DevTestButtons'; // ⚠️ 개발용 - 이후 삭제 예정
 
 const Adventure4Page = () => {
+  // -------- 완료 상태 관리 --------
+  const [isAllCompleted, setIsAllCompleted] = useState(false);
+
   // ---- 더미 문제 데이터 (말하기/따라 말하기 유형) ----
   const problems: SpeakProblem[] = [
     {
@@ -104,9 +107,8 @@ const Adventure4Page = () => {
     if (currentIndex < problems.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      // 모든 문제 완료
-      console.log('🎉 모든 문제 완료!');
-      // TODO: 결과 페이지로 이동 또는 완료 처리
+      // 모든 문제 완료 (10개 기준)
+      setIsAllCompleted(true);
     }
   };
 
@@ -193,7 +195,7 @@ const Adventure4Page = () => {
       <TutorialOverlay active={isTutorialMode} />
 
       {/* 상단 아이콘 바 (물음표 / 나가기) */}
-      <TopActionsBar onTutorialClick={handleTutorialClick} />
+      <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
       
       {/* 메인 콘텐츠 영역 */}
       <main className="flex-1 flex items-center justify-center px-4 sm:px-8 pb-6 relative z-[2]">

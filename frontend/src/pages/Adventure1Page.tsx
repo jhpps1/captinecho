@@ -22,6 +22,9 @@ import { OptionsList } from '../components/adventure/OptionsList';
 import { FeedbackCharacter } from '../components/adventure/FeedbackCharacter';
 
 const Adventure1Page = () => {
+  // -------- 완료 상태 관리 --------
+  const [isAllCompleted, setIsAllCompleted] = useState(false);
+
   // -------- 더미 문제 데이터 (실제 API 응답 형태에 가깝게) --------
   const problems: ProblemData[] = [
     {
@@ -102,7 +105,8 @@ const Adventure1Page = () => {
           setWrongAnswers([]);
           setIsAnswered(false);
         } else {
-          alert('🎉 모든 문제를 완료했습니다!');
+          // 모든 문제 완료 (10개 기준)
+          setIsAllCompleted(true);
         }
       }, 1000);
     } else {
@@ -170,7 +174,7 @@ const Adventure1Page = () => {
       <TutorialOverlay active={isTutorialMode} />
 
       {/* 상단 아이콘 영역 */}
-      <TopActionsBar onTutorialClick={handleTutorialClick} />
+      <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
 
       {/* 메인 콘텐츠 */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20 relative z-[2]">
