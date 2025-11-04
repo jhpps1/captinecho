@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>맞춤 보호자 에이전트 생성 테스트</title>
+</head>
+<body>
+    <h2>맞춤 보호자 에이전트 생성</h2>
+    <form id="agentForm">
+        <label>학생 ID:
+            <input type="text" name="student_id" required>
+        </label><br><br>
+        <label>현재 학습 단계(level):
+            <input type="number" name="level" min="1" max="5" required>
+        </label><br><br>
+        <label>보호자 목표(protector_goal):
+            <input type="text" name="protector_goal" required>
+        </label><br><br>
+        <label>흥미(소분류, small_interest_name):
+            <input type="text" name="small_interest_name">
+        </label><br><br>
+        <button type="submit">에이전트 만들기</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+    document.getElementById('agentForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = {};
+        for(const [k,v] of formData.entries()) data[k]=v;
+
+        // 실사용에선 아래 API URL(예: Flask/FastAPI 엔드포인트) 맞게 고쳐줘!
+        const res = await fetch('http://127.0.0.1:8000/api/build-parent-agent', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(data)
+        });
+        const text = await res.text();
+        document.getElementById('result').innerText = text;
+    }
+    </script>
+</body>
+</html>

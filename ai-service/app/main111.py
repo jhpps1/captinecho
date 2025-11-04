@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
 import structlog
 
-from app.core.config import settings
+from app.src.core.config import settings
 from app.api import health, agents, curriculum
 
 # 구조화된 로깅 설정

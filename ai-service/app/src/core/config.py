@@ -1,3 +1,5 @@
+#src/core/config.py
+
 """
 Application Configuration
 =========================
@@ -40,11 +42,15 @@ class Settings(BaseSettings):
 
     # OpenAI 설정 (CrewAI용)
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
-    OPENAI_MODEL_NAME: str = Field(default="gpt-4o-mini", env="OPENAI_MODEL_NAME")
-    OPENAI_MODEL: str = Field(default="openai/gpt-4.1-nano", env="OPENAI_MODEL")  # ← 꼭 추가!
+    OPENAI_MODEL_NAME: str = Field(default="gpt-4.1", env="OPENAI_MODEL_NAME")
+    OPENAI_MODEL: str = Field(default="openai/gpt-4.1", env="OPENAI_MODEL")  # ← 꼭 추가!
     OPENAI_BASE_URL: Optional[str] = Field(default=None, env="OPENAI_BASE_URL")
     OPENAI_TEMPERATURE: float = Field(default=0.7, env="OPENAI_TEMPERATURE")
     OPENAI_MAX_TOKENS: int = Field(default=4000, env="OPENAI_MAX_TOKENS")
+
+    # Embedding(임베딩) 모델/엔드포인트 (gms 기반)
+    EMBEDDING_MODEL: str = Field(default="text-embedding-3-small", env="EMBEDDING_MODEL")
+    EMBEDDING_BASE_URL: str = Field(default="https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings", env="EMBEDDING_BASE_URL")
 
     # CrewAI 설정
     CREWAI_TELEMETRY_OPT_OUT: bool = Field(default=True, env="CREWAI_TELEMETRY_OPT_OUT")

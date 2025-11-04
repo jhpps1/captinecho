@@ -1,5 +1,7 @@
+#src/utils/llm.py
+
 from crewai import LLM
-from app.core.config import settings
+from app.src.core.config import settings
 
 # 더 이상 load_dotenv()와 os.getenv()를 직접 사용하지 않습니다.
 # 모든 설정은 중앙 config 객체에서 가져옵니다.

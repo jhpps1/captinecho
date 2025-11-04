@@ -1,6 +1,7 @@
-# src/dyslexia_crew/agents/wellbeing.py
+# src/agents/wellbeing.py
+
 from crewai import Agent
-from app.src.dyslexia_crew.utils.llm import llm
+from app.src.utils.llm import llm
 
 def build():
     return Agent(
@@ -21,5 +22,6 @@ def build():
         verbose=0,
         allow_delegation=True,
         memory=True,
+        language="Korean",
         allowed_agents=["academic_agent", "parent_agent"]
     )
