@@ -37,7 +37,7 @@ public class ProtectorService {
         }
 
         // 3. PIN 암호화
-        String encodedPin = passwordEncoder.encode(command.pin());
+    String encodedPin = passwordEncoder.encode(command.pin());
 
         // 4. PIN 저장
         protector.updateProtectorPin(encodedPin);
@@ -61,7 +61,12 @@ public class ProtectorService {
         // 3. PIN 검증
         boolean isValid = passwordEncoder.matches(command.pin(), storedPin);
 
-        return new VerifyPinResult(isValid);
+        // 4. PIN 불일치 시 예외 발생
+        if (!isValid) {
+            throw new EchoException(ProtectorErrorCode.PIN_NOT_MATCH);
+        }
+
+        return new VerifyPinResult(true);
     }
 
     @Transactional
