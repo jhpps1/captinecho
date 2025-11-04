@@ -1,8 +1,16 @@
 interface AIAgentSectionProps {
+  curriculum?: string;
+  discussion?: string;
+  isLoading?: boolean;
   onLogClick?: () => void;
 }
 
-export default function AIAgentSection({ onLogClick }: AIAgentSectionProps) {
+export default function AIAgentSection({
+  curriculum = '',
+  discussion = '',
+  isLoading = false,
+  onLogClick
+}: AIAgentSectionProps) {
   return (
     <div className="bg-white rounded-2xl p-6">
       <div className="flex justify-between items-center mb-6">
@@ -18,17 +26,35 @@ export default function AIAgentSection({ onLogClick }: AIAgentSectionProps) {
 
       <div className="space-y-4">
         {/* 커리큘럼 설명 카드 */}
-        <div className="bg-yellow-100 rounded-xl p-6 min-h-[150px] flex items-center justify-center">
-          <p className="text-lg font-semibold text-gray-800 text-center">
-            커리큘럼 설명하는 것
-          </p>
+        <div className="bg-yellow-100 rounded-xl p-6 min-h-[150px] flex items-center">
+          {isLoading ? (
+            <div className="w-full text-center text-gray-500">
+              로딩 중...
+            </div>
+          ) : (
+            <div className="w-full">
+              <h4 className="text-sm font-bold text-gray-700 mb-2">금주 커리큘럼</h4>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                {curriculum || '커리큘럼 데이터가 없습니다.'}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* 부모 의사 선택 카드 */}
-        <div className="bg-yellow-100 rounded-xl p-6 min-h-[150px] flex items-center justify-center">
-          <p className="text-lg font-semibold text-gray-800 text-center">
-            부모 의사 선택하는 것
-          </p>
+        {/* 부모 의사 협의 로그 카드 */}
+        <div className="bg-yellow-100 rounded-xl p-6 min-h-[150px] flex items-center">
+          {isLoading ? (
+            <div className="w-full text-center text-gray-500">
+              로딩 중...
+            </div>
+          ) : (
+            <div className="w-full">
+              <h4 className="text-sm font-bold text-gray-700 mb-2">협의 로그</h4>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                {discussion || '협의 로그가 없습니다.'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

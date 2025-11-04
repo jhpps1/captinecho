@@ -27,15 +27,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
+        log.info("=== JWT Filter - Request: {} ===", requestURI);
+
         // 1. Authorization 헤더에서 토큰 추출
         String token = extractToken(request);
+        log.info("Token extracted: {}", token != null ? "YES (length: " + token.length() + ")" : "NO");
 
         // 2. 토큰이 있고 유효하면 인증 정보 설정
         if (token != null) {
             boolean isValid = jwtUtil.validateToken(token);
+            log.info("Token validation result: {}", isValid ? "VALID" : "INVALID");
 
             if (isValid) {
                 Long protectorId = jwtUtil.getProtectorId(token);
+                log.info("Authenticated protectorId: {}", protectorId);
 
                 ProtectorPrincipal principal = new ProtectorPrincipal(protectorId);
 
@@ -46,7 +52,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("Authentication set successfully for protectorId: {}", protectorId);
+            } else {
+                log.warn("Token validation failed for request: {}", requestURI);
             }
+        } else {
+            log.warn("No token found in request: {}", requestURI);
         }
 
         filterChain.doFilter(request, response);
