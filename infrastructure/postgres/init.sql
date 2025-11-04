@@ -4,7 +4,7 @@
 -- 프로젝트: Captain Echo (꼬마선장 에코)
 -- 목적: 난독증 어린이를 위한 게임형 학습 플랫폼
 -- 생성일: 2025-10-31
--- ERD 기반 스키마 버전: 2.1 (ENUM 영어 식별자 적용)
+-- ERD 기반 스키마 버전: 2.2 (Protector Email 컬럼 추가)
 -- 이 스크립트는 Docker 컨테이너 최초 실행시 자동으로 실행됩니다
 -- ==============================================
 
@@ -42,9 +42,10 @@ CREATE TYPE study_type AS ENUM ('DAILY', 'SUPPLE');
 
 CREATE TABLE protector (
     protector_id SERIAL PRIMARY KEY,
-    protector_pin CHAR(100), -- 변경: parent_pin -> protector_pin, CHAR(6) -> CHAR(100)
+    protector_pin CHAR(100),
     provider provider_type NOT NULL,
     social_id VARCHAR(255) NOT NULL,
+    email VARCHAR(500), -- 👈 [수정] email 컬럼 추가
     max_student_count SMALLINT DEFAULT 2,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     is_deleted BOOLEAN DEFAULT false NOT NULL,
@@ -53,9 +54,10 @@ CREATE TABLE protector (
 );
 
 COMMENT ON TABLE protector IS '보호자 계정';
-COMMENT ON COLUMN protector.protector_pin IS '부모용 대시보드 암호';
+COMMENT ON COLUMN protector.protector_pin IS '부모용 대시_보드 암호';
 COMMENT ON COLUMN protector.provider IS '소셜 로그인 제공자 (GOOGLE, KAKAO)';
 COMMENT ON COLUMN protector.social_id IS '소셜 로그인 고유 ID';
+COMMENT ON COLUMN protector.email IS '보호자 이메일'; -- 👈 [수정] email 주석 추가
 COMMENT ON COLUMN protector.max_student_count IS '최대 연결 가능한 학생 수';
 
 -- ==============================================
@@ -71,7 +73,7 @@ CREATE TABLE student (
     profile_image VARCHAR(2048),
     coin INTEGER DEFAULT 0 NOT NULL CHECK (coin >= 0),
     grade grade_type NOT NULL,
-    level SMALLINT, -- 변경: CHECK (level >= 0) 제약조건 제거
+    level SMALLINT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP,
     expired_at TIMESTAMP
@@ -144,17 +146,16 @@ CREATE TABLE day_problem (
     assigned_date DATE NOT NULL,
     seq_no SMALLINT NOT NULL CHECK (seq_no BETWEEN 1 AND 10),
     level SMALLINT NOT NULL CHECK (level >= 0),
-    problem_text VARCHAR(150) NOT NULL, -- 변경: question_text -> problem_text
+    problem_text VARCHAR(150) NOT NULL,
     image_url VARCHAR(2048),
-    sound_url VARCHAR(2048), -- 변경: NOT NULL 제거
-    problem_phonemes TEXT[] NOT NULL, -- 변경: question_phonemes -> problem_phonemes
+    sound_url VARCHAR(2048),
+    problem_phonemes TEXT[] NOT NULL,
     blank_position VARCHAR(20),
     blank_phoneme VARCHAR(5),
     choices TEXT[],
-    correct_answer VARCHAR(100), -- 변경: VARCHAR(5) -> VARCHAR(100)
+    correct_answer VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     is_completed BOOLEAN DEFAULT false NOT NULL
-    -- 변경: hint 컬럼 제거
 );
 
 COMMENT ON TABLE day_problem IS '학생별 일일 학습 문제';
@@ -253,12 +254,11 @@ COMMENT ON COLUMN jamo_stat.weekly_accuracy_rate IS '주간 정확도';
 CREATE TABLE weekly_personal_report (
     report_id SERIAL PRIMARY KEY,
     student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
-    total_time INTEGER DEFAULT 0, -- 변경: NOT NULL 및 CHECK 제약조건 제거
-    curriculum TEXT, -- 변경: NOT NULL 제거
-    discussion_log TEXT, -- 변경: NOT NULL 제거
+    total_time INTEGER DEFAULT 0,
+    curriculum TEXT,
+    discussion_log TEXT,
     protector_goal protector_goal_type,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
-    -- 변경: error_rate, improvement_rate 컬럼 제거
 );
 
 COMMENT ON TABLE weekly_personal_report IS '주간 학습 리포트';
@@ -272,7 +272,7 @@ COMMENT ON COLUMN weekly_personal_report.created_at IS '주간 리포트 생성�
 -- 11. 주간 자모 통계 (WEEKLY_JAMO_STAT)
 -- ==============================================
 
-CREATE TABLE weekly_jamo_stat ( -- 변경: 테이블명 weekely -> weekly (오타 수정)
+CREATE TABLE weekly_jamo_stat (
     stat_id SERIAL PRIMARY KEY,
     report_id INTEGER NOT NULL REFERENCES weekly_personal_report(report_id) ON DELETE CASCADE,
     jamo VARCHAR(5) NOT NULL,
@@ -283,7 +283,7 @@ CREATE TABLE weekly_jamo_stat ( -- 변경: 테이블명 weekely -> weekly (오�
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE weekly_jamo_stat IS '주간 리포트별 자모 통계'; -- 변경: 테이블명 오타 수정
+COMMENT ON TABLE weekly_jamo_stat IS '주간 리포트별 자모 통계';
 COMMENT ON COLUMN weekly_jamo_stat.jamo IS '자음 또는 모음';
 
 -- ==============================================
@@ -300,7 +300,7 @@ CREATE TABLE level_history (
 );
 
 COMMENT ON TABLE level_history IS '학생 레벨 변경 이력';
-COMMENT ON COLUMN level_history.reason IS '레벨 변경 사유 (예: 관리자 조정, 커리큘럼 결과)';
+COMMENT ON COLUMN level_history.reason IS '레벨 변경 사유 (예: 관리자 조정, 커리큘큘럼 결과)';
 
 -- ==============================================
 -- 13. 초기 진단 (DIAGNOSIS)
@@ -317,13 +317,13 @@ COMMENT ON TABLE diagnosis_session IS '학생별 초기 진단 세션';
 
 -- 초기 진단 문제
 CREATE TABLE initial_diagnosis_problem (
-    Initial_diagnosis_problem_id SERIAL PRIMARY KEY, -- 변경: initial_diagnosis_problem_id -> Initial_diagnosis_problem_id (대문자 'I')
+    Initial_diagnosis_problem_id SERIAL PRIMARY KEY,
     diagnosis_type diagnosis_type,
-    problem VARCHAR(500) NOT NULL, -- 변경: TEXT -> VARCHAR(500)
-    choices TEXT[], -- 변경: 컬럼 추가
+    problem VARCHAR(500) NOT NULL,
+    choices TEXT[],
     problem_image_url VARCHAR(2048),
     problem_sound_url VARCHAR(2048),
-    corrrect_answer VARCHAR(500) NOT NULL -- 변경: correct_answer(TEXT) -> corrrect_answer(VARCHAR(500)) (오타 포함)
+    corrrect_answer VARCHAR(500) NOT NULL
 );
 
 COMMENT ON TABLE initial_diagnosis_problem IS '초기 진단 문제 풀';
@@ -332,9 +332,9 @@ COMMENT ON COLUMN initial_diagnosis_problem.problem_sound_url IS '모범 발음 
 -- 초기 진단 결과
 CREATE TABLE initial_diagnosis_result (
     initial_diagnosis_result_id SERIAL PRIMARY KEY,
-    Initial_diagnosis_problem_id INTEGER NOT NULL REFERENCES initial_diagnosis_problem(Initial_diagnosis_problem_id) ON DELETE CASCADE, -- 변경: FK 컬럼명 대/소문자 수정
+    Initial_diagnosis_problem_id INTEGER NOT NULL REFERENCES initial_diagnosis_problem(Initial_diagnosis_problem_id) ON DELETE CASCADE,
     student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
-    student_answer VARCHAR(500) NOT NULL, -- 변경: TEXT -> VARCHAR(500)
+    student_answer VARCHAR(500) NOT NULL,
     is_correct BOOLEAN NOT NULL
 );
 
@@ -364,6 +364,10 @@ COMMENT ON COLUMN phoneme_feature.manner IS '조음 방법 (예: 파열음, 마�
 -- PROTECTOR
 CREATE INDEX idx_protector_provider_social_id ON protector(provider, social_id);
 CREATE INDEX idx_protector_is_deleted ON protector(is_deleted);
+-- 
+-- 😾 Naming Convention에 어긋나지만, Email은 일단 보류
+-- CREATE UNIQUE INDEX idx_protector_email_unique ON protector(email);
+
 
 -- STUDENT
 CREATE INDEX idx_student_protector_id ON student(protector_id);
@@ -403,7 +407,7 @@ CREATE INDEX idx_weekly_report_student_id ON weekly_personal_report(student_id);
 CREATE INDEX idx_weekly_report_created_at ON weekly_personal_report(created_at);
 
 -- WEEKLY_JAMO_STAT
-CREATE INDEX idx_weekly_jamo_stat_report_id ON weekly_jamo_stat(report_id); -- 변경: 인덱스 및 테이블명 오타 수정
+CREATE INDEX idx_weekly_jamo_stat_report_id ON weekly_jamo_stat(report_id);
 
 -- LEVEL_HISTORY
 CREATE INDEX idx_level_history_student_id ON level_history(student_id);
@@ -411,7 +415,7 @@ CREATE INDEX idx_level_history_changed_at ON level_history(changed_at);
 
 -- INITIAL_DIAGNOSIS_RESULT
 CREATE INDEX idx_diagnosis_result_student_id ON initial_diagnosis_result(student_id);
-CREATE INDEX idx_diagnosis_result_problem_id ON initial_diagnosis_result(Initial_diagnosis_problem_id); -- 변경: 컬럼명 대/소문자 수정
+CREATE INDEX idx_diagnosis_result_problem_id ON initial_diagnosis_result(Initial_diagnosis_problem_id);
 
 -- ==============================================
 -- 16. 트리거 함수 (자동 업데이트)
@@ -431,7 +435,7 @@ CREATE TRIGGER update_jamo_stat_updated_at
 BEFORE UPDATE ON jamo_stat
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ==============================================
+-- =D============================================
 -- 17. 권한 설정
 -- ==============================================
 
@@ -452,6 +456,6 @@ BEGIN
     RAISE NOTICE '사용자: doonki';
     RAISE NOTICE '테이블: 19개';
     RAISE NOTICE 'ENUM 타입: 6개 (English)';
-    RAISE NOTICE '스키마 버전: 2.1';
+    RAISE NOTICE '스키마 버전: 2.2';
     RAISE NOTICE '==============================================';
 END $$;
