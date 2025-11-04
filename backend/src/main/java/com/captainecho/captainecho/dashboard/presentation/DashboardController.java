@@ -11,7 +11,11 @@ import com.captainecho.captainecho.dashboard.presentation.response.LearningTimeR
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.StudentService;
+import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
+import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
+import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
+import com.captainecho.captainecho.student.presentation.response.GetDailyCompletedCountResponse;
 import com.captainecho.captainecho.student.presentation.response.GetDailyGoalCountResponse;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -109,9 +113,30 @@ public class DashboardController {
         }
 
         Long protectorId = principal.getProtectorId();
-
-        GetDailyGoalCountResult result = studentService.getDailyGoalCount(protectorId, studentId);
+        GetDailyGoalCountCommand command = new GetDailyGoalCountCommand(studentId, protectorId);
+        GetDailyGoalCountResult result = studentService.getDailyGoalCount(command);
         GetDailyGoalCountResponse response = GetDailyGoalCountResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 오늘 완료한 문제 수 조회
+     * GET /api/student/{studentId}/dashboard/daily/count
+     */
+    @GetMapping("/daily/count")
+    public ResponseEntity<GetDailyCompletedCountResponse> getDailyCompletedCount(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("studentId") Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+        GetDailyCompletedCountCommand command = new GetDailyCompletedCountCommand(studentId, protectorId);
+        GetDailyCompletedCountResult result = studentService.getDailyCompletedCount(command);
+        GetDailyCompletedCountResponse response = GetDailyCompletedCountResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
