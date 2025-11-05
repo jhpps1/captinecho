@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum DiagnosisErrorCode implements ErrorCode {
     // 400 BAD REQUEST
     DIAGNOSIS_ALREADY_ENDED(HttpStatus.BAD_REQUEST, "DG40001", "이미 종료된 진단입니다"),
+    DIAGNOSIS_ALREADY_IN_PROGRESS(HttpStatus.BAD_REQUEST, "DG40002", "이미 진행 중인 진단이 있습니다"),
 
     // 404 NOT FOUND
     DIAGNOSIS_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "DG40401", "진단 세션을 찾을 수 없습니다"),
