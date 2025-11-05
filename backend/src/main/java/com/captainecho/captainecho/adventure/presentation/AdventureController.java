@@ -39,7 +39,6 @@ public class AdventureController {
     private final AdventureService adventureService;
 
     @GetMapping("/adventure/type")
-    @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<AdventureTypeListResponse> getAdventureTypes() {
         AdventureTypeListResult result = adventureTypeService.getAllAdventureTypes();
         AdventureTypeListResponse response = AdventureTypeListResponse.from(result);
