@@ -19,3 +19,4 @@ public enum DiagnosisErrorCode implements ErrorCode {
     private final String code;
     private final String message;
 }
+{}
