@@ -1,11 +1,17 @@
 package com.captainecho.captainecho.exception;
 
+import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import jakarta.validation.ConstraintViolationException;
+
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -30,7 +36,52 @@ public class GlobalExceptionHandler {
         }
 
         // 기본 검증 오류 처리
-        return ResponseEntity.badRequest()
-                .body(ErrorResponse.fail("VALIDATION_ERROR", defaultMessage != null ? defaultMessage : "입력값이 올바르지 않습니다"));
+        return ResponseEntity.status(CommonErrorCode.VALIDATION_ERROR.getHttpStatus())
+                .body(ErrorResponse.fail(
+                        CommonErrorCode.VALIDATION_ERROR.getCode(),
+                        defaultMessage != null ? defaultMessage : CommonErrorCode.VALIDATION_ERROR.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("Database constraint violation: ", e);
+
+        CommonErrorCode errorCode = CommonErrorCode.DB_CONSTRAINT_VIOLATION;
+
+        // 상세 에러 메시지 파싱
+        if (e.getMessage() != null) {
+            if (e.getMessage().contains("foreign key constraint")) {
+                errorCode = CommonErrorCode.DB_FOREIGN_KEY_VIOLATION;
+            } else if (e.getMessage().contains("unique constraint")) {
+                errorCode = CommonErrorCode.DB_UNIQUE_VIOLATION;
+            } else if (e.getMessage().contains("not-null")) {
+                errorCode = CommonErrorCode.DB_NOT_NULL_VIOLATION;
+            }
+        }
+
+        return ResponseEntity.status(errorCode.getHttpStatus())
+                .body(ErrorResponse.fail(errorCode.getCode(), errorCode.getMessage()));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException e) {
+        log.error("Constraint violation: ", e);
+
+        String message = e.getMessage() != null ? e.getMessage() : CommonErrorCode.CONSTRAINT_VIOLATION.getMessage();
+
+        return ResponseEntity.status(CommonErrorCode.CONSTRAINT_VIOLATION.getHttpStatus())
+                .body(ErrorResponse.fail(CommonErrorCode.CONSTRAINT_VIOLATION.getCode(), message));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneralException(Exception e) {
+        log.error("Unexpected error occurred: ", e);
+
+        return ResponseEntity.status(CommonErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus())
+                .body(ErrorResponse.fail(
+                        CommonErrorCode.INTERNAL_SERVER_ERROR.getCode(),
+                        CommonErrorCode.INTERNAL_SERVER_ERROR.getMessage()
+                ));
     }
 }
