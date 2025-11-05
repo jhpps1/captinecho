@@ -7,68 +7,68 @@ version: '3.8'
 # PostgreSQL은 EC2 #1(10.0.2.10:5432)에 연결합니다
 
 services:
-  # ==============================================
-  # FastAPI + CrewAI (AI Service Only)
-  # ==============================================
-  ai-service:
-    image: ${DOCKER_REGISTRY:-your-dockerhub}/ai-service:${IMAGE_TAG:-latest}
-    container_name: fastapi
-    ports:
-      - "8000:8000"
-    environment:
-      # OpenAI 설정
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
-      - OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE:-0.7}
+  # # ==============================================
+  # # FastAPI + CrewAI (AI Service Only)
+  # # ==============================================
+  # ai-service:
+  #   image: ${DOCKER_REGISTRY:-your-dockerhub}/ai-service:${IMAGE_TAG:-latest}
+  #   container_name: fastapi
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     # OpenAI 설정
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #     - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+  #     - OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE:-0.7}
 
-      # PostgreSQL 연결 (EC2 #1)
-      - DB_HOST=10.0.2.10
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_URL=postgresql://${DB_USER}:${DB_PASSWORD}@10.0.2.10:5432/${DB_NAME}
+  #     # PostgreSQL 연결 (EC2 #1)
+  #     - DB_HOST=10.0.2.10
+  #     - DB_PORT=5432
+  #     - DB_NAME=${DB_NAME}
+  #     - DB_USER=${DB_USER}
+  #     - DB_PASSWORD=${DB_PASSWORD}
+  #     - DB_URL=postgresql://${DB_USER}:${DB_PASSWORD}@10.0.2.10:5432/${DB_NAME}
 
-      # AI Service 설정
-      - LOG_LEVEL=INFO
-      - PYTHONPATH=/app
-      - PYTHONUNBUFFERED=1
+  #     # AI Service 설정
+  #     - LOG_LEVEL=INFO
+  #     - PYTHONPATH=/app
+  #     - PYTHONUNBUFFERED=1
 
-      # CrewAI 설정
-      - CREWAI_TELEMETRY_OPT_OUT=true
-      - CREWAI_LOG_LEVEL=WARNING
+  #     # CrewAI 설정
+  #     - CREWAI_TELEMETRY_OPT_OUT=true
+  #     - CREWAI_LOG_LEVEL=WARNING
 
-      # Agent Memory 설정
-      - AGENT_MEMORY_BACKEND=postgresql
-      - AGENT_MEMORY_CONNECTION_STRING=postgresql://${DB_USER}:${DB_PASSWORD}@10.0.2.10:5432/${DB_NAME}
+  #     # Agent Memory 설정
+  #     - AGENT_MEMORY_BACKEND=postgresql
+  #     - AGENT_MEMORY_CONNECTION_STRING=postgresql://${DB_USER}:${DB_PASSWORD}@10.0.2.10:5432/${DB_NAME}
 
-      # 성능 최적화
-      - WORKERS=2
-      - MAX_REQUESTS=1000
-      - MAX_REQUESTS_JITTER=50
-      - TIMEOUT=300
-    volumes:
-      - /var/log/app/ai:/app/logs
-    restart: unless-stopped
-    networks:
-      - ai-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 15s
-      retries: 3
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "5"
-    deploy:
-      resources:
-        limits:
-          memory: 1.5G
-        reservations:
-          memory: 1G
+  #     # 성능 최적화
+  #     - WORKERS=2
+  #     - MAX_REQUESTS=1000
+  #     - MAX_REQUESTS_JITTER=50
+  #     - TIMEOUT=300
+  #   volumes:
+  #     - /var/log/app/ai:/app/logs
+  #   restart: unless-stopped
+  #   networks:
+  #     - ai-network
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+  #     interval: 30s
+  #     timeout: 15s
+  #     retries: 3
+  #     start_period: 60s
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "100m"
+  #       max-file: "5"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1.5G
+  #       reservations:
+  #         memory: 1G
 
   # ==============================================
   # Node Exporter (시스템 메트릭)

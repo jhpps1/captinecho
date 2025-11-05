@@ -57,29 +57,46 @@ class ProtectorGoalType(enum.Enum):
     단어연습 = "단어 연습"
     취약점위주 = "취약점 위주"
 
+# 3. WEEKLY_PERSONAL_REPORT (네가 이미 쓰던 리포트)
 class WeeklyPersonalReport(Base):
     __tablename__ = "weekly_personal_report"
     report_id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("student.student_id"))
     total_time = Column(Integer)
-    error_rate = Column(Float)
-    improvement_rate = Column(Float)
     curriculum = Column(Text)
     discussion_log = Column(Text)
     protector_goal = Column(
         Enum(
             ProtectorGoalType,
-            # 이 부분을 추가하여 DB의 문자열 값과 Enum의 '값'을 매핑하도록 합니다.
             values_callable=lambda x: [e.value for e in x]
-        ), 
+        ),
         nullable=True
     )
     created_at = Column(DateTime)
 
-class WeekelyJamoStat(Base):
-    __tablename__ = "weekely_jamo_stat"
-    weekely_jamo_stat_id = Column(Integer, primary_key=True, autoincrement=True)
-    agent_dialogue_log = Column(JSON, nullable=True)
-    curriculum_plan = Column(JSON, nullable=True)
-    created_at = Column(DateTime)
+# 2. WEEKLY_JAMO_STAT (주간 자모 통계)
+class WeeklyJamoStat(Base):
+    __tablename__ = "weekly_jamo_stat"
+    stat_id = Column(Integer, primary_key=True)
+    student_id = Column(Integer, nullable=False)
+    report_id = Column(Integer, nullable=False)
+    jamo = Column(String(5), nullable=False)
+    total_attempts = Column(SmallInteger, nullable=False, default=0)
+    fail_count = Column(SmallInteger, nullable=False, default=0)
+    weekly_fail_rate = Column(Float, nullable=False)
+    weekly_accuracy_rate = Column(Float, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+
+    
+# JAMO_STAT (자모별 누적/주간 통계)
+class JamoStat(Base):
+    __tablename__ = "jamo_stat"
+    stat_id = Column(Integer, primary_key=True)  # ← 반드시 stat_id!
+    student_id = Column(Integer, ForeignKey("student.student_id"))
+    jamo = Column(String(10), nullable=False)
+    total_attempts = Column(Integer, default=0)
+    fail_count = Column(Integer, default=0)
+    weekly_fail_rate = Column(Float, default=0.0)
+    weekly_accuracy_rate = Column(Float, default=0.0)
     updated_at = Column(DateTime)
+

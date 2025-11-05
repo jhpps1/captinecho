@@ -5,13 +5,16 @@ import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.StudentService;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.presentation.request.AddStudentInterestRequest;
 import com.captainecho.captainecho.student.presentation.request.RegisterStudentRequest;
 import com.captainecho.captainecho.student.presentation.response.AddStudentInterestResponse;
+import com.captainecho.captainecho.student.presentation.response.DeleteStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -88,6 +91,26 @@ public class StudentController {
         AddStudentInterestResult result = studentService.addStudentInterest(command);
 
         AddStudentInterestResponse response = AddStudentInterestResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{studentId}/interests/{interestId}")
+    public ResponseEntity<DeleteStudentInterestResponse> deleteStudentInterest(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId,
+            @PathVariable Integer interestId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        DeleteStudentInterestCommand command = new DeleteStudentInterestCommand(studentId, interestId, protectorId);
+        DeleteStudentInterestResult result = studentService.deleteStudentInterest(command);
+
+        DeleteStudentInterestResponse response = DeleteStudentInterestResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
