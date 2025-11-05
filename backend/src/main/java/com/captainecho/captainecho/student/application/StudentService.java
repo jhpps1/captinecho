@@ -8,19 +8,15 @@ import com.captainecho.captainecho.interest.domain.SubInterest;
 import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
-import com.captainecho.captainecho.session.domain.LearningSession;
-import com.captainecho.captainecho.session.persistence.LearningSessionRepository;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
-import com.captainecho.captainecho.student.application.command.StartAdventureCommand;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
-import com.captainecho.captainecho.student.application.result.StartAdventureResult;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
 import com.captainecho.captainecho.student.persistence.StudentInterestRepository;
@@ -33,7 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,7 +42,6 @@ public class StudentService {
     private final ProtectorRepository protectorRepository;
     private final SubInterestRepository subInterestRepository;
     private final DayProblemRepository dayProblemRepository;
-    private final LearningSessionRepository learningSessionRepository;
 
     @Transactional
     public RegisterStudentResult registerStudent(RegisterStudentCommand command) {
@@ -217,29 +211,5 @@ public class StudentService {
                 .toList();
 
         return new GetStudentInterestResult(command.studentId(), interestInfos);
-    }
-
-    @Transactional
-    public StartAdventureResult startAdventure(StartAdventureCommand command) {
-        // 1. 학생 존재 여부 확인
-        Student student = studentRepository.findById(command.studentId())
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
-
-        // 2. 보호자-학생 관계 확인
-        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
-        }
-
-        // 3. LearningSession 생성 및 저장 (startTime만 설정, endTime은 null)
-        LearningSession session = LearningSession.builder()
-                .student(student)
-                .studyType(command.studyType())
-                .startTime(LocalDateTime.now())
-                .endTime(null)
-                .build();
-
-        learningSessionRepository.save(session);
-
-        return StartAdventureResult.from(true);
     }
 }
