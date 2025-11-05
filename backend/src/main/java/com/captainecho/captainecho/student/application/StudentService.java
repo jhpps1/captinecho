@@ -12,6 +12,7 @@ import com.captainecho.captainecho.student.application.command.GetDailyCompleted
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
+import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
@@ -19,6 +20,11 @@ import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
 import com.captainecho.captainecho.student.persistence.StudentInterestRepository;
 import com.captainecho.captainecho.student.application.result.GetWeeklyGoalPercentResult;
+import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
+import com.captainecho.captainecho.student.domain.Grade;
+import com.captainecho.captainecho.student.domain.Student;
+import com.captainecho.captainecho.student.domain.StudentInterest;
+import com.captainecho.captainecho.student.persistence.StudentInterestRepository;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.stream.Collectors;
 
