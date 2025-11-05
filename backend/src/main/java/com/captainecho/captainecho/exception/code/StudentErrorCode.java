@@ -13,6 +13,8 @@ public enum StudentErrorCode implements ErrorCode {
     INVALID_SUB_INTEREST(HttpStatus.BAD_REQUEST, "ST40002", "유효하지 않은 관심사입니다"),
     INVALID_INTEREST_COUNT(HttpStatus.BAD_REQUEST, "ST40003", "관심사는 최소 1개, 최대 5개까지 등록 가능합니다"),
     INVALID_GRADE(HttpStatus.BAD_REQUEST, "ST40004", "유효하지 않은 학년입니다"),
+    DUPLICATE_INTEREST(HttpStatus.BAD_REQUEST, "ST40005", "이미 등록된 관심사입니다"),
+    INTEREST_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "ST40006", "관심사는 최대 5개까지 등록 가능합니다"),
     SESSION_ALREADY_IN_PROGRESS(HttpStatus.BAD_REQUEST, "ST40005", "이미 진행 중인 학습 세션이 있습니다"),
 
     // 403 FORBIDDEN
