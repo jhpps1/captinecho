@@ -127,7 +127,7 @@ const Adventure3Page = () => {
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
-            width: 'clamp(800px, 96vw, 1400px)',
+            width: 'clamp(320px, 96vw, 1400px)',
             aspectRatio: '16 / 9',
             padding: 'clamp(20px, 4vw, 56px) clamp(24px, 5vw, 72px)',
             overflow: 'hidden',

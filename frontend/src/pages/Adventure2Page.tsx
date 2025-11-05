@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-
 // Hooks
 import { useTutorialVoice } from '../hooks/useTutorialVoice';
-
 // Components
 import { TutorialOverlay } from '../components/adventure/TutorialOverlay';
 import { TopActionsBar } from '../components/adventure/TopActionsBar';
@@ -139,10 +137,9 @@ const Adventure2Page = () => {
     }
   };
 
-
   return (
     <div
-      className="flex flex-col min-h-screen relative"
+      className="flex flex-col min-h-screen relative overflow-x-hidden"
       style={{
         backgroundImage: 'url(/adventurepage/adventure_2_background.png)',
         backgroundSize: 'cover',
@@ -178,7 +175,7 @@ const Adventure2Page = () => {
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
-            width: 'clamp(800px, 96vw, 1400px)',
+            width: 'clamp(320px, 96vw, 1400px)',
             aspectRatio: '16 / 9',
             padding: 'clamp(20px, 4vw, 56px) clamp(24px, 5vw, 72px)',
             overflow: 'hidden',
@@ -189,10 +186,10 @@ const Adventure2Page = () => {
             className="h-full w-full flex flex-col items-center justify-center"
             style={{ gap: 'clamp(24px, 3vh, 40px)' }}
           >
-            {/* 문제 영역: 이미지 카드 + 단어 카드 (좌우 배치) */}
-            <div className="flex flex-row items-center justify-center gap-6 sm:gap-8 md:gap-10">
+            {/* 문제 영역: 이미지 카드 + 단어 카드 (반응형 배치) */}
+            <div className="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-10 w-full"> {/* ✅ 핵심 변경 */}
               {/* 왼쪽: 이미지 카드 */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 w-full md:w-auto md:max-w-md"> {/* ✅ 모바일 전체폭, 데스크톱 최대 448px */}
                 <ImageProblemCard
                   imageUrl={currentProblem.imageUrl}
                   alt="문제 이미지"
@@ -200,7 +197,7 @@ const Adventure2Page = () => {
               </div>
 
               {/* 오른쪽: 단어 카드 */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 w-full md:w-auto"> {/* ✅ 모바일 전체폭 */}
                 <MultiSyllableCard
                   syllables={currentProblem.syllables}
                   isAnswered={isAnswered}
