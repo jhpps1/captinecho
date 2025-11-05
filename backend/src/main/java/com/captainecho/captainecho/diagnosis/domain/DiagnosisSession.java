@@ -36,4 +36,11 @@ public class DiagnosisSession {
         this.startTime = startTime;
         this.endTime = endTime;
     }
+
+    /**
+     * 진단 종료 시간 설정
+     */
+    public void endDiagnosis(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
 }
