@@ -8,19 +8,17 @@ import com.captainecho.captainecho.interest.domain.SubInterest;
 import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
-import com.captainecho.captainecho.session.domain.LearningSession;
-import com.captainecho.captainecho.session.persistence.LearningSessionRepository;
+import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
-import com.captainecho.captainecho.student.application.command.StartAdventureCommand;
+import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
-import com.captainecho.captainecho.student.application.result.StartAdventureResult;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
 import com.captainecho.captainecho.student.persistence.StudentInterestRepository;
@@ -33,9 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,7 +46,6 @@ public class StudentService {
     private final ProtectorRepository protectorRepository;
     private final SubInterestRepository subInterestRepository;
     private final DayProblemRepository dayProblemRepository;
-    private final LearningSessionRepository learningSessionRepository;
 
     @Transactional
     public RegisterStudentResult registerStudent(RegisterStudentCommand command) {
@@ -220,26 +218,57 @@ public class StudentService {
     }
 
     @Transactional
-    public StartAdventureResult startAdventure(StartAdventureCommand command) {
+    public AddStudentInterestResult addStudentInterest(AddStudentInterestCommand command) {
         // 1. 학생 존재 여부 확인
-        Student student = studentRepository.findById(command.studentId())
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
 
         // 2. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. LearningSession 생성 및 저장 (startTime만 설정, endTime은 null)
-        LearningSession session = LearningSession.builder()
-                .student(student)
-                .studyType(command.studyType())
-                .startTime(LocalDateTime.now())
-                .endTime(null)
-                .build();
+        // 3. 기존 관심사 조회
+        List<StudentInterest> existingInterests = studentInterestRepository.findByStudent_StudentId(command.studentId());
+        Set<Short> existingSubInterestIds = existingInterests.stream()
+                .map(si -> si.getSubInterest().getSubInterestId())
+                .collect(Collectors.toSet());
 
-        learningSessionRepository.save(session);
+        // 4. 중복 체크
+        for (Short subInterestId : command.subInterestIds()) {
+            if (existingSubInterestIds.contains(subInterestId)) {
+                throw new EchoException(StudentErrorCode.DUPLICATE_INTEREST);
+            }
+        }
 
-        return StartAdventureResult.from(true);
+        // 5. 최대 개수 체크 (기존 + 신규 <= 5)
+        int totalCount = existingInterests.size() + command.subInterestIds().size();
+        if (totalCount > 5) {
+            throw new EchoException(StudentErrorCode.INTEREST_LIMIT_EXCEEDED);
+        }
+
+        // 6. SubInterest 유효성 검증
+        List<SubInterest> subInterests = subInterestRepository.findAllById(command.subInterestIds());
+        if (subInterests.size() != command.subInterestIds().size()) {
+            throw new EchoException(StudentErrorCode.INVALID_SUB_INTEREST);
+        }
+
+        // 7. Student 엔티티 조회
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+        // 8. 새 StudentInterest 엔티티들 생성 및 저장
+        List<StudentInterest> newStudentInterests = subInterests.stream()
+                .map(subInterest -> StudentInterest.builder()
+                        .student(student)
+                        .subInterest(subInterest)
+                        .build())
+                .toList();
+
+        studentInterestRepository.saveAll(newStudentInterests);
+
+        // 9. 성공 결과 반환
+        return new AddStudentInterestResult(true);
     }
 }
