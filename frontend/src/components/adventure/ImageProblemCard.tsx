@@ -1,4 +1,4 @@
-// 이미지 문제 카드 컴포넌트
+// 이미지 문제 카드 컴포넌트(탐험3)
 // Adventure3에서 사용
 
 type ImageProblemCardProps = {
@@ -8,7 +8,7 @@ type ImageProblemCardProps = {
 
 export const ImageProblemCard = ({ imageUrl, alt }: ImageProblemCardProps) => {
   return (
-    <div className="w-full max-w-xs bg-white rounded-2xl shadow-xl border-4 border-gray-800 overflow-hidden">
+    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border-4 border-gray-800 overflow-hidden">
       <div className="aspect-video flex items-center justify-center bg-gray-100">
         {imageUrl ? (
           <img
