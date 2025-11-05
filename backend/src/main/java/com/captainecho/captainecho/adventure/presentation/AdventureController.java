@@ -39,7 +39,6 @@ public class AdventureController {
     private final AdventureService adventureService;
 
     @GetMapping("/adventure/type")
-    @Operation(summary = "탐험 타입 목록 조회", description = "모든 탐험 타입을 조회합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<AdventureTypeListResponse> getAdventureTypes() {
         AdventureTypeListResult result = adventureTypeService.getAllAdventureTypes();
@@ -52,7 +51,6 @@ public class AdventureController {
      * POST /api/student/{student-id}/adventure/start
      */
     @PostMapping("/student/{studentId}/adventure/start")
-    @Operation(summary = "탐험 시작", description = "학생의 탐험을 시작합니다.")
     public ResponseEntity<StartAdventureResponse> startAdventure(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable Integer studentId,
@@ -76,7 +74,6 @@ public class AdventureController {
      * POST /api/student/{student-id}/adventure/end
      */
     @PostMapping("/student/{studentId}/adventure/end")
-    @Operation(summary = "탐험 종료", description = "학생의 진행 중인 탐험을 종료합니다.")
     public ResponseEntity<EndAdventureResponse> endAdventure(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable Integer studentId
