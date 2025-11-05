@@ -4,10 +4,14 @@ import com.captainecho.captainecho.auth.domain.ProtectorPrincipal;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.StudentService;
+import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
+import com.captainecho.captainecho.student.presentation.request.AddStudentInterestRequest;
 import com.captainecho.captainecho.student.presentation.request.RegisterStudentRequest;
+import com.captainecho.captainecho.student.presentation.response.AddStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,6 +68,26 @@ public class StudentController {
         GetStudentInterestResult result = studentService.getStudentInterests(command);
 
         GetStudentInterestResponse response = GetStudentInterestResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{studentId}/interests")
+    public ResponseEntity<AddStudentInterestResponse> addStudentInterest(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId,
+            @Valid @RequestBody AddStudentInterestRequest request
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        AddStudentInterestCommand command = request.toCommand(studentId, protectorId);
+        AddStudentInterestResult result = studentService.addStudentInterest(command);
+
+        AddStudentInterestResponse response = AddStudentInterestResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
