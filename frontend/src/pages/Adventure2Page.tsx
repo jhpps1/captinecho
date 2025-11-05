@@ -149,27 +149,9 @@ const Adventure2Page = () => {
         minWidth: '100vw',
       }}
     >
-      {/* 튜토리얼 오버레이 */}
-      <TutorialOverlay active={isTutorialMode} />
-
-      {/* 상단 액션 바 */}
-      <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
-
-      {/* 메인 콘텐츠 */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-8 pb-6 relative z-[2]">
-        {/* 튜토리얼 말풍선 (양피지 위에 표시) */}
-        {isTutorialMode && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-            <TutorialBubble
-              text="그림을 보고 빈칸에 들어갈 글자를 선택하세요!"
-              className="max-w-[90%] text-center"
-            />
-          </div>
-        )}
-
-        {/* 양피지 배경 컨테이너 */}
+      {/* 양피지 배경 장식 */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
         <div
-          className="relative"
           style={{
             backgroundImage: 'url(/adventurepage/map_background.png)',
             backgroundSize: 'contain',
@@ -177,48 +159,52 @@ const Adventure2Page = () => {
             backgroundPosition: 'center',
             width: 'clamp(320px, 96vw, 1400px)',
             aspectRatio: '16 / 9',
-            padding: 'clamp(20px, 4vw, 56px) clamp(24px, 5vw, 72px)',
-            overflow: 'hidden',
           }}
-        >
-          {/* 세이프존: 양피지 테두리 안쪽 영역 */}
-          <div
-            className="h-full w-full flex flex-col items-center justify-center"
-            style={{ gap: 'clamp(24px, 3vh, 40px)' }}
-          >
-            {/* 문제 영역: 이미지 카드 + 단어 카드 (반응형 배치) */}
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-10 w-full"> {/* ✅ 핵심 변경 */}
-              {/* 왼쪽: 이미지 카드 */}
-              <div className="flex-shrink-0 w-full md:w-auto md:max-w-md"> {/* ✅ 모바일 전체폭, 데스크톱 최대 448px */}
-                <ImageProblemCard
-                  imageUrl={currentProblem.imageUrl}
-                  alt="문제 이미지"
-                />
-              </div>
+        />
+      </div>
 
-              {/* 오른쪽: 단어 카드 */}
-              <div className="flex-shrink-0 w-full md:w-auto"> {/* ✅ 모바일 전체폭 */}
-                <MultiSyllableCard
-                  syllables={currentProblem.syllables}
-                  isAnswered={isAnswered}
-                />
-              </div>
-            </div>
+      {/* 튜토리얼 오버레이 */}
+      <TutorialOverlay active={isTutorialMode} />
 
-            {/* 선택지 목록 */}
-            <OptionsList
-              options={currentProblem.options}
-              correctAnswer={correctAnswer}
-              selectedAnswer={selectedAnswer}
-              wrongAnswers={wrongAnswers}
-              isAnswered={isAnswered}
-              isAnimating={isAnimating}
-              isTutorialMode={isTutorialMode}
-              onSelect={handleOptionClick}
-              variant="square"
+      {/* 상단 액션 바 */}
+      <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
+
+      {/* 메인 콘텐츠 */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
+        {/* 튜토리얼 말풍선 */}
+        <div className="flex items-center justify-center mb-4 sm:mb-6" style={{ minHeight: '3rem' }}>
+          {isTutorialMode && (
+            <TutorialBubble
+              text="그림을 보고 빈칸에 들어갈 글자를 선택하세요!"
+              className="max-w-[90%] text-center"
             />
-          </div>
+          )}
         </div>
+
+        {/* 문제 영역: 이미지 카드 + 단어 카드 (반응형 배치) */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-10 mb-6 sm:mb-8 md:mb-10">
+          <ImageProblemCard
+            imageUrl={currentProblem.imageUrl}
+            alt="문제 이미지"
+          />
+          <MultiSyllableCard
+            syllables={currentProblem.syllables}
+            isAnswered={isAnswered}
+          />
+        </div>
+
+        {/* 선택지 목록 */}
+        <OptionsList
+          options={currentProblem.options}
+          correctAnswer={correctAnswer}
+          selectedAnswer={selectedAnswer}
+          wrongAnswers={wrongAnswers}
+          isAnswered={isAnswered}
+          isAnimating={isAnimating}
+          isTutorialMode={isTutorialMode}
+          onSelect={handleOptionClick}
+          variant="square"
+        />
       </main>
 
       {/* 피드백 캐릭터 */}
