@@ -35,10 +35,6 @@ public class DiagnosisController {
      * POST /api/student/{student-id}/diagnosis/start
      */
     @PostMapping("/{studentId}/diagnosis/start")
-    @ApiResponse(responseCode = "200", description = "진단 시작 성공")
-    @ApiResponse(responseCode = "400", description = "이미 진행 중인 진단 세션이 있습니다")
-    @ApiResponse(responseCode = "403", description = "해당 학생에 대한 접근 권한이 없습니다")
-    @ApiResponse(responseCode = "404", description = "학생을 찾을 수 없습니다")
     public ResponseEntity<StartInitialDiagnosisResponse> startInitialDiagnosis(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable Integer studentId,
