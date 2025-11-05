@@ -107,21 +107,9 @@ const Adventure3Page = () => {
         minWidth: '100vw',
       }}
     >
-      <TutorialOverlay active={isTutorialMode} />
-      <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
-
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-8 pb-6 relative z-[2]">
-        {isTutorialMode && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-            <TutorialBubble
-              text="그림을 보고 알맞은 단어를 선택하세요!"
-              className="max-w-[90%] text-center"
-            />
-          </div>
-        )}
-
+      {/* 양피지 배경 장식 */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
         <div
-          className="relative"
           style={{
             backgroundImage: 'url(/adventurepage/map_background.png)',
             backgroundSize: 'contain',
@@ -129,32 +117,44 @@ const Adventure3Page = () => {
             backgroundPosition: 'center',
             width: 'clamp(320px, 96vw, 1400px)',
             aspectRatio: '16 / 9',
-            padding: 'clamp(20px, 4vw, 56px) clamp(24px, 5vw, 72px)',
-            overflow: 'hidden',
           }}
-        >
-          <div
-            className="h-full w-full flex flex-col items-center justify-center"
-            style={{ gap: 'clamp(32px, 4vh, 48px)'}}
-          >
-            <ImageProblemCard
-              imageUrl={currentProblem.imageUrl}
-              alt={currentProblem.correctAnswer}
-            />
+        />
+      </div>
 
-            <OptionsList
-              options={currentProblem.options}
-              correctAnswer={currentProblem.correctAnswer}
-              selectedAnswer={selectedAnswer}
-              wrongAnswers={wrongAnswers}
-              isAnswered={isAnswered}
-              isAnimating={isAnimating}
-              isTutorialMode={isTutorialMode}
-              onSelect={handleOptionClick}
-              variant="rectangle"
+      <TutorialOverlay active={isTutorialMode} />
+      <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
+
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
+        {/* 튜토리얼 말풍선 */}
+        <div className="flex items-center justify-center mb-4 sm:mb-6" style={{ minHeight: '3rem' }}>
+          {isTutorialMode && (
+            <TutorialBubble
+              text="그림을 보고 알맞은 단어를 선택하세요!"
+              className="max-w-[90%] text-center"
             />
-          </div>
+          )}
         </div>
+
+        {/* 이미지 카드 */}
+        <div className="mb-6 sm:mb-8 md:mb-10">
+          <ImageProblemCard
+            imageUrl={currentProblem.imageUrl}
+            alt={currentProblem.correctAnswer}
+          />
+        </div>
+
+        {/* 선택지 목록 */}
+        <OptionsList
+          options={currentProblem.options}
+          correctAnswer={currentProblem.correctAnswer}
+          selectedAnswer={selectedAnswer}
+          wrongAnswers={wrongAnswers}
+          isAnswered={isAnswered}
+          isAnimating={isAnimating}
+          isTutorialMode={isTutorialMode}
+          onSelect={handleOptionClick}
+          variant="rectangle"
+        />
       </main>
 
       <FeedbackCharacter
