@@ -59,6 +59,7 @@ def build(agent, student_data=None):
         f"금: 탐험4(음성+{student_data['small_interest_name']}) 2문제, 탐험2 2문제\n"
         "✅ 리스트, 코드, 영어, 키값 못씀. 대화체+요일별 목표만 한국어 자연스러운 줄글. 단계별 근거, 단어 추천, 난이도 조정, 피드백 전부 대화처럼!\n"
         f"\n# 학생 데이터:\n{student_data}\n"
+        "- 대화 마지막에는 반드시 '논의 및 합의 요약:'으로 시작하는 전체 협의 요약을 한국어로 자연스럽게 추가하세요. 3문단 이상 작성 필수!"
     )
     return Task(
         description=description,

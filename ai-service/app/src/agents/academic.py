@@ -1,7 +1,7 @@
 # src/agents/academic.py
 
 from crewai import Agent
-from app.src.utils.llm import llm
+from ..utils.llm import llm
 
 def build(student_id, real_jamo, confusion_jamo, weekly_accuracy_rate, weekly_fail_rate, attendance_rate=None):
     return Agent(

@@ -63,8 +63,6 @@ class WeeklyPersonalReport(Base):
     report_id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("student.student_id"))
     total_time = Column(Integer)
-    error_rate = Column(Float)
-    improvement_rate = Column(Float)
     curriculum = Column(Text)
     discussion_log = Column(Text)
     protector_goal = Column(

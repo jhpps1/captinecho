@@ -10,7 +10,6 @@ from app.src.core.models import (
 )
 from app.src.tasks.statistics.statistics import fill_reset_and_make_weekly_report
 
-app = FastAPI()
 router = APIRouter()
 
 def to_dict(obj):
@@ -33,62 +32,26 @@ def get_student_full(student_id: int, db: Session = Depends(get_db)):
     result['weekly_jamo_stats'] = [to_dict(wjs) for wjs in db.query(WeeklyJamoStat).order_by(WeeklyJamoStat.created_at.desc()).limit(3).all()]
     return result
 
+
+
 # 2. CrewAI/외부 리포트 저장 및 갱신 API (POST /save-report)
 class ReportRequest(BaseModel):
     curriculum: str
     discussion_log: str
-    protector_goal: str = None
-    error_rate: float = None
-    improvement_rate: float = None
+
 
 @router.post("/save-report")
 def save_report(student_id: int, report: ReportRequest, db: Session = Depends(get_db)):
     latest = db.query(WeeklyPersonalReport).filter_by(student_id=student_id).order_by(WeeklyPersonalReport.created_at.desc()).first()
-    if latest:
-        fields = ["curriculum", "discussion_log", "protector_goal", "error_rate", "improvement_rate"]
-        for field in fields:
-            value = getattr(report, field)
-            if value is not None:
-                setattr(latest, field, value)
-        db.commit()
-        db.refresh(latest)
-        return {"status": "updated", "report_id": latest.report_id}
-    new_report = WeeklyPersonalReport(
-        student_id=student_id,
-        total_time=0,
-        error_rate=report.error_rate if report.error_rate is not None else 0.0,
-        improvement_rate=report.improvement_rate if report.improvement_rate is not None else 0.0,
-        curriculum=report.curriculum,
-        discussion_log=report.discussion_log,
-        protector_goal=report.protector_goal,
-        created_at=datetime.now()
-    )
-    db.add(new_report)
+    if not latest:
+        return {"error": "리포트가 없습니다. 먼저 리포트를 생성해주세요."}
+    
+    latest.curriculum = report.curriculum
+    latest.discussion_log = report.discussion_log
     db.commit()
-    db.refresh(new_report)
-    return {"status": "created", "report_id": new_report.report_id}
+    db.refresh(latest)
+    return {"status": "updated", "report_id": latest.report_id}
 
-# 3. 리포트 직접 update API (리포트ID 기반)
-class ReportUpdateRequest(BaseModel):
-    curriculum: str = None
-    discussion_log: str = None
-    protector_goal: str = None
-    error_rate: float = None
-    improvement_rate: float = None
-
-@router.put("/update-report/{report_id}")
-def update_report(report_id: int, report: ReportUpdateRequest, db: Session = Depends(get_db)):
-    target = db.query(WeeklyPersonalReport).filter_by(report_id=report_id).first()
-    if not target:
-        return {"error": "리포트 없음"}
-    fields = ["curriculum", "discussion_log", "protector_goal", "error_rate", "improvement_rate"]
-    for field in fields:
-        value = getattr(report, field)
-        if value is not None:
-            setattr(target, field, value)
-    db.commit()
-    db.refresh(target)
-    return {"status": "updated", "report_id": target.report_id}
 
 # 4. 주간 자모통계 자동 생성 엔드포인트
 @router.post("/weekly-report/generate/")
@@ -99,4 +62,3 @@ def generate_weekly_report(db: Session = Depends(get_db)):
     result = fill_reset_and_make_weekly_report(db)
     return result
 
-app.include_router(router)
