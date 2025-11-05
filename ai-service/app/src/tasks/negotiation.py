@@ -1,22 +1,24 @@
-# src/tasks/negotiation.py
+# from crewai import Task
 
-from crewai import Task
-
-def build(agent, context_tasks):
-    description = (
-        "학습 전문가와 심리 담당자의 모든 논의·수정 제안을 바탕으로, "
-        "학습 계획을 최종적으로 수정·보완합니다.\n"
-        "구체적인 개선 방향, 협의 대화 로그를 JSON 결과물로 남깁니다.\n"
-        "아래 JSON 구조로만, 불필요한 키 없이 출력:\n"
-        "{\n"
-        "  \"curriculum\": { \"최종 수정안\": \"...\" },\n"
-        "  \"discussion_log\": [ { \"summary\": \"협의 로그\", \"participant_feedback\": {\"student\": \"...\", \"parents\": \"...\"} } ]\n"
-        "}\n"
-        "답변은 반드시 한국어."
-    )
-    return Task(
-        description=description,
-        agent=agent,
-        context=context_tasks,
-        expected_output="JSON 구조(curriculum, discussion_log)"
-    )
+# def build(agent, context_tasks):
+#     description = (
+#         "학습 전문가(치료사)와 심리 담당자(코치)의 모든 평가, 피드백, 수정 제안 대화 내용을 바탕으로,\n"
+#         "최종 학습 계획을 자연스러운 대화체+평가지로 작성하세요.\n"
+#         "대화 중 반드시 학생/부모/전문가(치료사/심리코치)들이 서로 협의하고 의견을 주고받는 발화 구조를 만드세요.\n"
+#         "마지막에는 최종 수정·보완된 계획을 한글 줄글로 요약하되, 부담/흥미/성취감 등 심리·학습 목표의 균형도 반드시 반영되어야 합니다.\n"
+#         "\n\n예시:\n"
+#         "치료사: 문제 수 조정안에 동의합니다. 각 단계별로 흥미로운 활동도 함께 계획에 넣겠습니다.\n"
+#         "부모: 아이가 공룡을 좋아하니 그 부분을 반영해 주셔서 감사해요.\n"
+#         "심리코치: 초반에 몰입이 떨어질 경우 즉시 난이도를 조절하는 옵션도 마련해 주세요.\n"
+#         "치료사: 실제 실행 단계에서 난이도별 진단을 추가하고, 부모님과 매일 피드백을 교환하면서 플랜을 보완하겠습니다.\n"
+#         "...\n"
+#         "[최종 수정안 및 요약]\n"
+#         "전체 계획은 부담을 최소화하고, 아이의 관심사를 최대한 반영하면서 진행됩니다. 매일 피드백 받고, 단계별로 적절한 난이도와 재미를 추가하도록 조율하였습니다.\n"
+#         "\n리스트/코드/키값/영어 불가, 한글 대화체·평가 줄글 형태만 허용!\n"
+#     )
+#     return Task(
+#         description=description,
+#         agent=agent,
+#         context=context_tasks,
+#         expected_output="치료사/심리코치/부모 다자간 협의 대화+최종 수정안(한글 줄글)"
+#     )

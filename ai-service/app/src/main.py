@@ -23,9 +23,10 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 sys.path.insert(0, PROJECT_ROOT)
 load_dotenv(os.path.join(PROJECT_ROOT, '.env'))
 
-from app.src.crew import build_crew
+from app.src.crew import build_conversation_flow
 from app.src.core.models import Student, WeeklyPersonalReport
 from app.src.core.config import settings
+
 
 os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
 os.environ["OPENAI_MODEL"] = settings.OPENAI_MODEL
@@ -56,7 +57,7 @@ def get_student_data(student_id: int):
         db.close()
 
 def run_crew_analysis(student_data=None):
-    crew = build_crew(student_data=student_data)
+    crew = build_conversation_flow(student_data=student_data)
     start_time = time.time()
     result = crew.kickoff()
     end_time = time.time()
@@ -117,7 +118,7 @@ def save_report_via_api(student_id, curriculum, discussion_log, protector_goal):
         return None
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Dyslexia Crew 분석 실행")
+    parser = argparse.ArgumentParser(description="Dyslexia Crew 대화형 세션")
     parser.add_argument("--student-id", type=int, help="분석할 학생의 ID")
     args = parser.parse_args()
 
@@ -125,23 +126,38 @@ if __name__ == "__main__":
     if not student_data:
         logger.error(f"학생 ID({args.student_id})를 찾을 수 없습니다.")
         sys.exit(1)
-    logger.info(f"학생 '{student_data['name']}' 분석 시작...")
+    logger.info(f"학생 '{student_data['name']}' 대화형 분석 시작...")
 
-    result_dict = run_crew_analysis(student_data=student_data)
-    result_obj = result_dict["result"]
-    log_agent_dialogue(result_obj)
+    flow = build_conversation_flow(student_data=student_data)
 
-    raw_curriculum, raw_discussion_log = extract_crew_texts(result_obj)
-    print("\n=== CrewAI 최종 줄글 출력 ===")
-    print("[커리큘럼 요약]\n", raw_curriculum)
-    print("[논의 및 합의 요약]\n", raw_discussion_log)
+    # ✅ 자동 입력 프롬프트 (원하는 만큼 턴만큼)
+    auto_inputs = [
+        "이번 주 커리큘럼 요약 알려주세요.",
+        "대화 근거(주요 협의·이유)만 요약해 주세요.",
+        "감사합니다!"
+        "그만"
+    ]
 
-    # FastAPI API로 리포트 저장!
-    save_report_via_api(
-        student_id=args.student_id,
-        curriculum=raw_curriculum,
-        discussion_log=raw_discussion_log,
-        protector_goal=student_data.get("protector_goal", None)
-    )
-    logger.info(f"분석 완료! 소요 시간: {result_dict['elapsed_seconds']:.2f}초")
-    print(f"분석 완료! 소요 시간: {result_dict['elapsed_seconds']:.2f}초")
+    overall_start = time.time()
+    for idx, user_input in enumerate(auto_inputs):
+        turn_start = time.time()
+        flow.state.user_input = user_input
+        result = flow.get_agent_response()
+        turn_end = time.time()
+        turn_duration = turn_end - turn_start
+        # 사람이 읽기 좋은 출력 & 턴별 시간
+        logger.info(f"\n=========== 대화 턴 {idx+1} 결과({turn_duration:.2f}초) ===========\n" + flow.state.last_output)
+        print(f"[TURN {idx+1}] [INPUT] {user_input}\n[CREWAI OUTPUT]:\n{flow.state.last_output}\n[TURN 시간: {turn_duration:.2f}초]\n---")
+        if flow.state.done:
+            break
+    overall_end = time.time()
+    overall_duration = overall_end - overall_start
+
+    logger.info(f"\n======= 전체 대화 로그 =======\n" + "\n".join(flow.state.history))
+    logger.info(f"\n전체 대화 소요 시간: {overall_duration:.2f}초\n")
+
+    print(f"\n=== 전체 대화 로그 ===\n(전체 걸린 시간: {overall_duration:.2f}초)")
+    for msg in flow.state.history:
+        print(msg)
+    logger.info("대화형 분석 종료!")
+
