@@ -9,12 +9,14 @@ import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
@@ -270,5 +272,33 @@ public class StudentService {
 
         // 9. 성공 결과 반환
         return new AddStudentInterestResult(true);
+    }
+
+    @Transactional
+    public DeleteStudentInterestResult deleteStudentInterest(DeleteStudentInterestCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인 (접근 권한)
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. StudentInterest 존재 확인
+        StudentInterest studentInterest = studentInterestRepository.findById(command.studentInterestId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_INTEREST_NOT_FOUND));
+
+        // 4. StudentInterest가 실제로 해당 학생의 것인지 확인
+        if (!studentInterest.getStudent().getStudentId().equals(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_INTEREST_NOT_FOUND);
+        }
+
+        // 5. StudentInterest 삭제 (hard delete)
+        studentInterestRepository.delete(studentInterest);
+
+        // 6. 성공 결과 반환
+        return new DeleteStudentInterestResult(true);
     }
 }
