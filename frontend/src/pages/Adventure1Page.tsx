@@ -17,7 +17,7 @@ import { useTutorialVoice } from '../hooks/useTutorialVoice';
 import { TutorialOverlay } from '../components/adventure/TutorialOverlay';
 import { TopActionsBar } from '../components/adventure/TopActionsBar';
 import { TutorialBubble } from '../components/adventure/TutorialBubble';
-import { ProblemCard } from '../components/adventure/ProblemCard';
+import { SingleSyllableCard } from '../components/adventure/SingleSyllableCard';
 import { OptionsList } from '../components/adventure/OptionsList';
 import { FeedbackCharacter } from '../components/adventure/FeedbackCharacter';
 
@@ -172,6 +172,20 @@ const Adventure1Page = () => {
         minWidth: '100vw',
       }}
     >
+      {/* 양피지 배경 장식 */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <div
+          style={{
+            backgroundImage: 'url(/adventurepage/map_background.png)',
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            width: 'clamp(320px, 96vw, 1400px)',
+            aspectRatio: '16 / 9',
+          }}
+        />
+      </div>
+
       {/* 어두운 배경 오버레이 - 튜토리얼 모드 */}
       <TutorialOverlay active={isTutorialMode} />
 
@@ -179,7 +193,7 @@ const Adventure1Page = () => {
       <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20 relative z-[2]">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
         {/* 안내문 (위쪽) */}
         <div
           className="flex items-center justify-center mb-4 sm:mb-6"
@@ -195,7 +209,7 @@ const Adventure1Page = () => {
 
         {/* 문제 카드 */}
         <div className="mb-6 sm:mb-8 md:mb-10">
-          <ProblemCard
+          <SingleSyllableCard
             problem={currentProblem}
             vowelLayoutType={vowelLayoutType}
             vowelParts={vowelParts}
