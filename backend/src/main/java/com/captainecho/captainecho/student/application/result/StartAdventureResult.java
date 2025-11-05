@@ -1,9 +1,9 @@
 package com.captainecho.captainecho.student.application.result;
 
 public record StartAdventureResult(
-        Boolean success
+        Integer sessionId
 ) {
-    public static StartAdventureResult from(Boolean success) {
-        return new StartAdventureResult(success);
+    public static StartAdventureResult from(Integer sessionId) {
+        return new StartAdventureResult(sessionId);
     }
 }

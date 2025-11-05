@@ -5,15 +5,11 @@ import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.StudentService;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
-import com.captainecho.captainecho.student.application.command.StartAdventureCommand;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
-import com.captainecho.captainecho.student.application.result.StartAdventureResult;
 import com.captainecho.captainecho.student.presentation.request.RegisterStudentRequest;
-import com.captainecho.captainecho.student.presentation.request.StartAdventureRequest;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
-import com.captainecho.captainecho.student.presentation.response.StartAdventureResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -68,29 +64,6 @@ public class StudentController {
         GetStudentInterestResult result = studentService.getStudentInterests(command);
 
         GetStudentInterestResponse response = GetStudentInterestResponse.from(result);
-
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 탐험 시작
-     * POST /api/student/{student-id}/adventure/start
-     */
-    @PostMapping("/{studentId}/adventure/start")
-    public ResponseEntity<StartAdventureResponse> startAdventure(
-            @AuthenticationPrincipal ProtectorPrincipal principal,
-            @PathVariable Integer studentId,
-            @Valid @RequestBody StartAdventureRequest request
-    ) {
-        if (principal == null) {
-            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
-        }
-
-        Long protectorId = principal.getProtectorId();
-
-        StartAdventureCommand command = request.toCommand(studentId, protectorId);
-        StartAdventureResult result = studentService.startAdventure(command);
-        StartAdventureResponse response = StartAdventureResponse.from(result);
 
         return ResponseEntity.ok(response);
     }

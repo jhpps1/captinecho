@@ -63,4 +63,19 @@ public interface LearningSessionRepository extends JpaRepository<LearningSession
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    /**
+     * 특정 학생의 가장 최근 진행 중인 학습 세션 조회 (endTime이 null인 것)
+     */
+    @Query("""
+            SELECT ls
+            FROM LearningSession ls
+            WHERE ls.student.studentId = :studentId
+              AND ls.endTime IS NULL
+            ORDER BY ls.startTime DESC
+            LIMIT 1
+            """)
+    java.util.Optional<LearningSession> findLatestOngoingSessionByStudentId(
+            @Param("studentId") Integer studentId
+    );
 }
