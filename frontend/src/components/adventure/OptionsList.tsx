@@ -2,14 +2,15 @@
 import { OptionButton } from './OptionButton';
 
 type OptionsListProps = {
-  options: string[];               // 선택지 배열
-  correctAnswer: string;           // 정답
-  selectedAnswer: string | null;   // 현재 선택된 답
-  wrongAnswers: string[];          // 오답 목록
-  isAnswered: boolean;             // 정답 맞춤 여부
-  isAnimating: boolean;            // 오답 애니메이션 중
-  isTutorialMode: boolean;         // 튜토리얼 모드
-  onSelect: (option: string) => void; // 선택 핸들러
+  options: string[];
+  correctAnswer: string;
+  selectedAnswer: string | null;
+  wrongAnswers: string[];
+  isAnswered: boolean;
+  isAnimating: boolean;
+  isTutorialMode: boolean;
+  onSelect: (option: string) => void;
+  variant?: 'square' | 'rectangle';
 };
 
 export const OptionsList = ({
@@ -20,7 +21,8 @@ export const OptionsList = ({
   isAnswered,
   isAnimating,
   isTutorialMode,
-  onSelect
+  onSelect,
+  variant = 'square'
 }: OptionsListProps) => {
   return (
     <div className="flex gap-4 sm:gap-6 md:gap-8">
@@ -37,6 +39,7 @@ export const OptionsList = ({
             wasTriedAndWrong={wasTriedAndWrong}
             disabled={disabled}
             onClick={() => onSelect(option)}
+            variant={variant}
           />
         );
       })}
