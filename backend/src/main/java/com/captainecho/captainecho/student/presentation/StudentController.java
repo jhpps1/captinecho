@@ -4,8 +4,11 @@ import com.captainecho.captainecho.auth.domain.ProtectorPrincipal;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.StudentService;
+import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.presentation.request.RegisterStudentRequest;
+import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,10 +18,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+
 
 @Slf4j
 @RestController
@@ -30,6 +32,7 @@ public class StudentController {
     private final StudentService studentService;
 
     @PostMapping
+    @Operation(summary = "학생 등록", description = "보호자가 새로운 학생을 등록합니다.")
     public ResponseEntity<RegisterStudentResponse> registerStudent(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @Valid @RequestBody RegisterStudentRequest request
@@ -43,6 +46,26 @@ public class StudentController {
         RegisterStudentResult result = studentService.registerStudent(request.toCommand(protectorId));
 
         RegisterStudentResponse response = new RegisterStudentResponse(result.success());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/interests")
+    @Operation(summary = "학생 관심사 조회", description = "특정 학생의 관심사 목록을 조회합니다.")
+    public ResponseEntity<GetStudentInterestResponse> getStudentInterests(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        GetStudentInterestCommand command = new GetStudentInterestCommand(studentId, protectorId);
+        GetStudentInterestResult result = studentService.getStudentInterests(command);
+
+        GetStudentInterestResponse response = GetStudentInterestResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
