@@ -8,11 +8,14 @@ import com.captainecho.captainecho.auth.domain.ProtectorPrincipal;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.command.EndAdventureCommand;
+import com.captainecho.captainecho.student.application.command.GetAdventureProblemsCommand;
 import com.captainecho.captainecho.student.application.command.StartAdventureCommand;
 import com.captainecho.captainecho.student.application.result.EndAdventureResult;
+import com.captainecho.captainecho.student.application.result.GetAdventureProblemsResult;
 import com.captainecho.captainecho.student.application.result.StartAdventureResult;
 import com.captainecho.captainecho.student.presentation.request.StartAdventureRequest;
 import com.captainecho.captainecho.student.presentation.response.EndAdventureResponse;
+import com.captainecho.captainecho.student.presentation.response.GetAdventureProblemsResponse;
 import com.captainecho.captainecho.student.presentation.response.StartAdventureResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -86,6 +89,28 @@ public class AdventureController {
         EndAdventureCommand command = new EndAdventureCommand(studentId, protectorId);
         EndAdventureResult result = adventureService.endAdventure(command);
         EndAdventureResponse response = EndAdventureResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 일일 탐험 문제 조회
+     * GET /api/student/{student-id}/adventure/problem
+     */
+    @GetMapping("/student/{studentId}/adventure/problem")
+    public ResponseEntity<GetAdventureProblemsResponse> getAdventureProblems(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        GetAdventureProblemsCommand command = new GetAdventureProblemsCommand(studentId, protectorId);
+        GetAdventureProblemsResult result = adventureService.getAdventureProblems(command);
+        GetAdventureProblemsResponse response = GetAdventureProblemsResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
