@@ -1,5 +1,5 @@
-// 문제 카드
-// Adventure1, Adveutnre2에서 사용
+// 음소 문제 카드
+// Adventure1 에서 사용
 import type { ProblemData } from '../../types/problem';
 import { bottomMostLineClass, getTopBlockClass } from '../../utils/hangulUtils';
 

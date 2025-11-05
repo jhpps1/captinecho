@@ -10,6 +10,7 @@ import AIAgentLogPage from '../pages/AIAgentLogPage.tsx';
 import ManageStudentsPage from '../pages/ManageStudentsPage.tsx';
 import StudentDashboard from '../pages/StudentDashboard.tsx';
 import Adventure1Page from '../pages/Adventure1Page.tsx';
+import Adventure2Page from '../pages/Adventure2Page.tsx';
 import Adventure3Page from '../pages/Adventure3Page.tsx';
 import Adventure4Page from '../pages/Adventure4Page.tsx';
 import NewUserTerms from '../pages/NewUserTerms.tsx';
@@ -63,7 +64,11 @@ const router = createBrowserRouter([
     path: '/adventure/1',
     element: <Adventure1Page />,
   },
-      {
+  {
+    path: '/adventure/2',
+    element: <Adventure2Page />,
+  },
+  {
     path: '/adventure/3',
     element: <Adventure3Page />,
   },

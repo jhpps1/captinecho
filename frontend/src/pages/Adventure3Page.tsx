@@ -135,7 +135,7 @@ const Adventure3Page = () => {
         >
           <div
             className="h-full w-full flex flex-col items-center justify-center"
-            style={{ gap: 'clamp(32px, 4vh, 48px)', paddingTop: '5%' }}
+            style={{ gap: 'clamp(32px, 4vh, 48px)'}}
           >
             <ImageProblemCard
               imageUrl={currentProblem.imageUrl}
