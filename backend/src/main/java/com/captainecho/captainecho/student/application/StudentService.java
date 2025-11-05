@@ -15,7 +15,6 @@ import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPerc
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
-import com.captainecho.captainecho.student.domain.Grade;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
 import com.captainecho.captainecho.student.persistence.StudentInterestRepository;
