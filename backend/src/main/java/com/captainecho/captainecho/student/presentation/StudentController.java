@@ -32,7 +32,6 @@ public class StudentController {
     private final StudentService studentService;
 
     @PostMapping
-    @Operation(summary = "학생 등록", description = "보호자가 새로운 학생을 등록합니다.")
     public ResponseEntity<RegisterStudentResponse> registerStudent(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @Valid @RequestBody RegisterStudentRequest request
@@ -51,7 +50,6 @@ public class StudentController {
     }
 
     @GetMapping("/{studentId}/interests")
-    @Operation(summary = "학생 관심사 조회", description = "특정 학생의 관심사 목록을 조회합니다.")
     public ResponseEntity<GetStudentInterestResponse> getStudentInterests(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable Integer studentId
