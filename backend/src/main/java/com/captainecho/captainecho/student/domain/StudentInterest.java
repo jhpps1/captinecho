@@ -25,8 +25,8 @@ public class StudentInterest {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "interest_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sub_interest_id", referencedColumnName = "sub_interest_id")
     private SubInterest subInterest;
 
     @CreationTimestamp

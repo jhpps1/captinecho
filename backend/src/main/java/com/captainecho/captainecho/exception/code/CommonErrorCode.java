@@ -29,6 +29,16 @@ public enum CommonErrorCode implements ErrorCode {
 
     // 500 INTERNAL SERVER ERROR
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CM50001", "서버 내부 오류가 발생했습니다"),
+
+    // Database Errors
+    DB_CONSTRAINT_VIOLATION(HttpStatus.BAD_REQUEST, "CM40004", "데이터베이스 제약 조건 위반입니다"),
+    DB_FOREIGN_KEY_VIOLATION(HttpStatus.BAD_REQUEST, "CM40005", "참조 무결성 제약 조건 위반입니다"),
+    DB_UNIQUE_VIOLATION(HttpStatus.BAD_REQUEST, "CM40006", "중복된 데이터가 존재합니다"),
+    DB_NOT_NULL_VIOLATION(HttpStatus.BAD_REQUEST, "CM40007", "필수 입력값이 누락되었습니다"),
+
+    // Validation Errors
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "CM40008", "입력값 검증에 실패했습니다"),
+    CONSTRAINT_VIOLATION(HttpStatus.BAD_REQUEST, "CM40009", "제약 조건 위반입니다"),
     ;
 
     private final HttpStatus httpStatus;
