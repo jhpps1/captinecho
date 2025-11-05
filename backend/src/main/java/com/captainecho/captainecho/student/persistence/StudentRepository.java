@@ -42,4 +42,9 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
             @Param("studentId") Integer studentId,
             @Param("protectorId") Long protectorId
     );
+
+    /**
+     * 특정 보호자의 학생 수 조회
+     */
+    Integer countByProtector_ProtectorId(Long protectorId);
 }

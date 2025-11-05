@@ -3,9 +3,11 @@ package com.captainecho.captainecho.protector.application;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
 import com.captainecho.captainecho.protector.application.command.CreatePinCommand;
+import com.captainecho.captainecho.protector.application.command.GetStudentCountCommand;
 import com.captainecho.captainecho.protector.application.command.UpdatePinCommand;
 import com.captainecho.captainecho.protector.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.protector.application.result.CreatePinResult;
+import com.captainecho.captainecho.protector.application.result.GetStudentCountResult;
 import com.captainecho.captainecho.protector.application.result.UpdatePinResult;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 import com.captainecho.captainecho.protector.domain.Protector;
@@ -126,5 +128,26 @@ public class ProtectorService {
                 .collect(Collectors.toList());
 
         return new StudentListResult(studentDtos);
+    }
+
+    /**
+     * 보호자의 학생 계정 수 조회
+     */
+    @Transactional(readOnly = true)
+    public GetStudentCountResult getStudentCount(GetStudentCountCommand command) {
+        // 1. Protector 조회
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+
+        // 2. 총 할당 계정 수
+        Integer totalCount = protector.getMaxStudentCount().intValue();
+
+        // 3. 현재 등록된 학생 수
+        Integer currentStudentCount = studentRepository.countByProtector_ProtectorId(command.protectorId());
+
+        // 4. 남은 계정 수 계산
+        Integer remainCount = totalCount - currentStudentCount;
+
+        return GetStudentCountResult.of(totalCount, remainCount);
     }
 }
