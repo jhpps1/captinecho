@@ -10,10 +10,12 @@ import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
+import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
+import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
@@ -181,5 +183,33 @@ public class StudentService {
         }
 
         return GetWeeklyGoalPercentResult.from(percent);
+    }
+
+    @Transactional(readOnly = true)
+    public GetStudentInterestResult getStudentInterests(GetStudentInterestCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 학생의 관심사 목록 조회
+        List<StudentInterest> studentInterests = studentInterestRepository.findByStudent_StudentId(command.studentId());
+
+        // 4. Result 객체로 변환
+        List<GetStudentInterestResult.StudentInterestInfo> interestInfos = studentInterests.stream()
+                .map(si -> new GetStudentInterestResult.StudentInterestInfo(
+                        si.getSubInterest().getSubInterestId(),
+                        si.getSubInterest().getSmallInterestName(),
+                        si.getSubInterest().getMajorInterest().getMajorInterestId(),
+                        si.getSubInterest().getMajorInterest().getMajorInterestName()
+                ))
+                .toList();
+
+        return new GetStudentInterestResult(command.studentId(), interestInfos);
     }
 }
