@@ -9,7 +9,7 @@ import java.util.List;
 
 public record AddStudentInterestRequest(
         @NotNull(message = "관심사는 필수입니다")
-        @Size(min = 1, max = 5, message = "관심사는 최소 1개, 최대 5개까지 등록 가능합니다")
+        @Size(max = 5, message = "관심사는 최대 5개까지 등록 가능합니다")
         @Valid
         List<Interest> interests
 ) {
