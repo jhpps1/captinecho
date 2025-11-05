@@ -94,7 +94,7 @@ def update_report(report_id: int, report: ReportUpdateRequest, db: Session = Dep
 @router.post("/weekly-report/generate/")
 def generate_weekly_report(db: Session = Depends(get_db)):
     """
-    주간 자모통계 백업 및 리포트 자동화 엔드포인트
+    금주의 자모통계 -> 주간 자모통계 테이블로 복사 후 금주의 자모통계 초기화
     """
     result = fill_reset_and_make_weekly_report(db)
     return result
