@@ -41,7 +41,7 @@ const Adventure2Page = () => {
     },
     {
       id: 2,
-      imageUrl: '/adventurepage/test_bag.png',
+      imageUrl: '',
       word: '의자',
       syllables: [
         { initial: 'ㅇ', medial: 'ㅢ', hiddenTarget: 'initial' },  // "의" (초성 빈칸)
@@ -52,7 +52,7 @@ const Adventure2Page = () => {
     },
     {
       id: 3,
-      imageUrl: '/adventurepage/test_bag.png',
+      imageUrl: '',
       word: '사과',
       syllables: [
         { initial: 'ㅅ', medial: 'ㅏ' },  // "사" (빈칸 없음)

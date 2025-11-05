@@ -17,7 +17,7 @@ import { useTutorialVoice } from '../hooks/useTutorialVoice';
 import { TutorialOverlay } from '../components/adventure/TutorialOverlay';
 import { TopActionsBar } from '../components/adventure/TopActionsBar';
 import { TutorialBubble } from '../components/adventure/TutorialBubble';
-import { ProblemCard } from '../components/adventure/ProblemCard';
+import { SingleSyllableCard } from '../components/adventure/SingleSyllableCard';
 import { OptionsList } from '../components/adventure/OptionsList';
 import { FeedbackCharacter } from '../components/adventure/FeedbackCharacter';
 
@@ -195,7 +195,7 @@ const Adventure1Page = () => {
 
         {/* 문제 카드 */}
         <div className="mb-6 sm:mb-8 md:mb-10">
-          <ProblemCard
+          <SingleSyllableCard
             problem={currentProblem}
             vowelLayoutType={vowelLayoutType}
             vowelParts={vowelParts}
