@@ -268,17 +268,7 @@ public class StudentService {
 
         studentInterestRepository.saveAll(newStudentInterests);
 
-        // 9. 전체 관심사 목록 조회 및 반환
-        List<StudentInterest> allInterests = studentInterestRepository.findByStudent_StudentId(command.studentId());
-        List<GetStudentInterestResult.StudentInterestInfo> interestInfos = allInterests.stream()
-                .map(si -> new GetStudentInterestResult.StudentInterestInfo(
-                        si.getSubInterest().getSubInterestId(),
-                        si.getSubInterest().getSmallInterestName(),
-                        si.getSubInterest().getMajorInterest().getMajorInterestId(),
-                        si.getSubInterest().getMajorInterest().getMajorInterestName()
-                ))
-                .toList();
-
-        return new AddStudentInterestResult(command.studentId(), interestInfos);
+        // 9. 성공 결과 반환
+        return new AddStudentInterestResult(true);
     }
 }
