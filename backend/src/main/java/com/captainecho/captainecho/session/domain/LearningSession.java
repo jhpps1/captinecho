@@ -46,4 +46,8 @@ public class LearningSession {
         this.startTime = startTime;
         this.endTime = endTime;
     }
+
+    public void updateEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
 }
