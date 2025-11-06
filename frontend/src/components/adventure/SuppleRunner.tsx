@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSuppleProblems } from '../../api/adventureApi';
-import { Problem } from '../../types/adventure';
+import type{ Problem } from '../../types/adventure';
 import { ProblemRunner } from './ProblemRunner';
 
 /**

@@ -1,11 +1,11 @@
 import axiosInstance from './axiosInstance';
-import {
+import type {
   ProblemsResponse,
   Problem,
-  normalizeProblemsResponse,
   AnswerResult,
   SubmitAnswerRequest,
 } from '../types/adventure';
+import { normalizeProblemsResponse } from '../types/adventure';
 
 // ===== API 함수 =====
 

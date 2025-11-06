@@ -1,6 +1,7 @@
-import { useState, useEffect, ComponentType } from 'react';
+import { useState, useEffect } from 'react';
+import type { ComponentType } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Problem, AnswerResult } from '../../types/adventure';
+import type { Problem, AnswerResult } from '../../types/adventure';
 import { submitSingleProblemResult } from '../../api/adventureApi';
 
 // Adventure 컴포넌트 Props 인터페이스
