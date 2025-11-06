@@ -10,14 +10,16 @@ interface AddStudentModalProps {
     interests: string[];
   }) => void;
   onOpenInterests: () => void;
-  selectedInterests: string[];
+  selectedInterestsCount: number;
+  isLoading?: boolean;
 }
 
 export default function AddStudentModal({
   onClose,
   onSubmit,
   onOpenInterests,
-  selectedInterests
+  selectedInterestsCount,
+  isLoading = false
 }: AddStudentModalProps) {
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
@@ -35,7 +37,7 @@ export default function AddStudentModal({
       gender,
       birthDate,
       grade,
-      interests: selectedInterests
+      interests: [] // 실제 관심사는 ManageStudentsPage에서 처리
     });
   };
 
@@ -122,19 +124,24 @@ export default function AddStudentModal({
           {/* 학생 관심사 */}
           <div>
             <label className="block text-gray-700 font-semibold mb-2">
-              학생 관심사
+              학생 관심사 (선택사항)
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                value={selectedInterests.join(', ')}
+                value={selectedInterestsCount > 0 ? `${selectedInterestsCount}개 선택됨` : ''}
                 readOnly
                 className="flex-1 px-4 py-3 rounded-lg border-2 border-gray-300 bg-gray-50"
-                placeholder="관심사를 선택하세요"
+                placeholder="관심사를 선택하세요 (최대 5개)"
               />
               <button
                 onClick={onOpenInterests}
-                className="px-6 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 font-semibold"
+                disabled={isLoading}
+                className={`px-6 py-3 rounded-lg font-semibold ${
+                  isLoading
+                    ? 'bg-gray-100 cursor-not-allowed'
+                    : 'bg-gray-200 hover:bg-gray-300'
+                }`}
               >
                 ⋯
               </button>
@@ -151,13 +158,23 @@ export default function AddStudentModal({
         <div className="flex gap-4 mt-8">
           <button
             onClick={handleSubmit}
-            className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600"
+            disabled={isLoading}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold ${
+              isLoading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600'
+            } text-white`}
           >
-            확인
+            {isLoading ? '등록 중...' : '확인'}
           </button>
           <button
             onClick={onClose}
-            className="flex-1 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50"
+            disabled={isLoading}
+            className={`flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold ${
+              isLoading
+                ? 'bg-gray-100 cursor-not-allowed'
+                : 'bg-white hover:bg-gray-50'
+            }`}
           >
             취소
           </button>

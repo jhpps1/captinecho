@@ -1,11 +1,13 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import StudentSidebar from '../components/protector/StudentSidebar';
 import StudentCard from '../components/protector/StudentCard';
 import StreakCalendar from '../components/protector/StreakCalendar';
 import StudyGoalsCard from '../components/protector/StudyGoalsCard';
+import { getStudents } from '../api/protectorApi';
+import type { Student } from '../mocks/protectorData';
 import {
-  mockStudents,
   mockWeeklyActivity,
   mockStudyGoals,
   mockAILogs
@@ -13,15 +15,44 @@ import {
 
 export default function AIAgentLogPage() {
   const navigate = useNavigate();
-  const selectedStudent = mockStudents[0]; // 임시로 첫 번째 학생 선택
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const selectedStudent = students[0] || null; // 첫 번째 학생 선택
+
+  // 학생 목록 조회
+  const fetchStudents = async () => {
+    setIsLoadingStudents(true);
+    try {
+      const response = await getStudents();
+      const studentList: Student[] = response.students.map(s => ({
+        id: s.studentId,
+        lastName: s.name.charAt(0),
+        fullName: s.name,
+        level: s.level || 0,
+        streak: 0,
+        profileImage: s.profileImage,
+        grade: s.grade || '미취학'
+      }));
+      setStudents(studentList);
+    } catch (error) {
+      console.error('❌ 학생 목록 로드 실패:', error);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 학생 목록 로드
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* 왼쪽 사이드바 */}
       <StudentSidebar
-        students={mockStudents}
+        students={students}
         selectedStudent={selectedStudent}
-        onSelectStudent={() => {}}
+        onSelectStudent={(student) => navigate('/protector', { state: { selectedStudent: student } })}
         onSettings={() => navigate('/protector/settings')}
         onLogout={() => {
           localStorage.removeItem('accessToken');
