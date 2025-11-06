@@ -193,59 +193,54 @@ const Adventure4Page = () => {
         minWidth: '100vw',
       }}
     >
+      {/* 양피지 배경 장식 */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <div
+          style={{
+            backgroundImage: 'url(/adventurepage/map_background.png)',
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            width: 'clamp(320px, 96vw, 1400px)',
+            aspectRatio: '16 / 9',
+          }}
+        />
+      </div>
+
       {/* 화면 어둡게 하는 오버레이 (튜토리얼 모드일 때) */}
       <TutorialOverlay active={isTutorialMode} />
 
       {/* 상단 아이콘 바 (물음표 / 나가기) */}
       <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={isAllCompleted} />
-      
+
       {/* 메인 콘텐츠 영역 */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-8 pb-6 relative z-[2]">
-        {/* 튜토리얼 말풍선 (양피지 위에 표시) */}
-        {isTutorialMode && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
+        {/* 튜토리얼 말풍선 */}
+        <div className="flex items-center justify-center mb-4 sm:mb-6" style={{ minHeight: '3rem' }}>
+          {isTutorialMode && (
             <TutorialBubble
               text="단어를 보고 똑같이 말해보세요!"
               className="max-w-[90%] text-center"
             />
-          </div>
-        )}
+          )}
+        </div>
 
-  {/* (2) 양피지 컨테이너: 지도+콘텐츠 동일 스케일 */}
-  <div
-    className="relative"
-    style={{
-      backgroundImage: 'url(/adventurepage/map_background.png)', // map_background여도 OK
-      backgroundSize: 'contain',
-      backgroundRepeat: 'no-repeat',
-      backgroundPosition: 'center',
-      width: 'clamp(800px, 96vw, 1400px)',
-      aspectRatio: '16 / 9',      // 업로드한 이미지 비율 그대로
-      padding: 'clamp(20px, 4vw, 56px) clamp(24px, 5vw, 72px)',
-      overflow: 'hidden',
-    }}
-  >
-    {/* (3) 세이프존: 테두리 안쪽 퍼센트 영역 */}
-    <div
-      className="absolute flex flex-col items-center justify-center gap-[6%]"
-      style={{ inset: '10% 8%' }}   // 상하 10%, 좌우 8% 안쪽만 사용
-    >
-          {/* 단어 카드 + 스피커 버튼 */}
+        {/* 단어 카드 + 스피커 버튼 */}
+        <div className="mb-8 sm:mb-12 md:mb-16">
           <WordCard
             word={currentProblem.word}
             showSpeaker={showSpeakerButton}
             onSpeakerClick={handlePlayWordAudio}
             isSpeaking={isSpeaking}
           />
-
-          {/* 마이크 버튼 */}
-          <MicrophoneButton
-            isRecording={isRecording}
-            isAnalyzing={isAnalyzing}
-            onClick={handleMicClick}
-          />
         </div>
-      </div>
+
+        {/* 마이크 버튼 */}
+        <MicrophoneButton
+          isRecording={isRecording}
+          isAnalyzing={isAnalyzing}
+          onClick={handleMicClick}
+        />
       </main>
 
       {/* 우측 하단 캐릭터 (피드백 캐릭터) */}

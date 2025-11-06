@@ -32,7 +32,7 @@ public class LearningSession {
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(name = "end_time", nullable = false)
+    @Column(name = "end_time")
     private LocalDateTime endTime;
 
     @CreationTimestamp
@@ -44,6 +44,10 @@ public class LearningSession {
         this.student = student;
         this.studyType = studyType;
         this.startTime = startTime;
+        this.endTime = endTime;
+    }
+
+    public void updateEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
     }
 }

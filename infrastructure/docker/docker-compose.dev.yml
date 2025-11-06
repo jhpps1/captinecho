@@ -67,45 +67,6 @@ services:
       retries: 3
 
   # ==============================================
-  # FastAPI + CrewAI (AI Service)
-  # ==============================================
-  ai-service:
-    build:
-      context: ../../ai-service
-      dockerfile: Dockerfile
-    container_name: fastapi
-    ports:
-      - "8000:8000"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o-mini}
-      - OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE:-0.7}
-      - OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS:-4000}
-      - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_NAME=${DB_NAME:-captain_echo}
-      - DB_USER=${DB_USER:-admin}
-      - DB_PASSWORD=${DB_PASSWORD:-changeme}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}
-      - CREWAI_TELEMETRY_OPT_OUT=${CREWAI_TELEMETRY_OPT_OUT:-true}
-      - CREWAI_LOG_LEVEL=${CREWAI_LOG_LEVEL:-WARNING}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ai-logs:/app/logs
-    restart: unless-stopped
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # ==============================================
   # PostgreSQL Database
   # ==============================================
   postgres:

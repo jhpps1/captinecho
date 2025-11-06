@@ -1,21 +1,21 @@
-// 문제 카드
-// Adventure1, Adveutnre2에서 사용
+// 단일 음절 카드 컴포넌트 (Adventure1)
+// 초성/중성/종성을 분리하여 표시하며, 하나의 음소를 빈칸으로 표시
 import type { ProblemData } from '../../types/problem';
 import { bottomMostLineClass, getTopBlockClass } from '../../utils/hangulUtils';
 
-type ProblemCardProps = {
+type SingleSyllableCardProps = {
   problem: ProblemData;
   vowelLayoutType: string;
   vowelParts: { type: string; top: string; bottom: string | null };
   getColorClassForPart: (part: 'initial' | 'medialTop' | 'medialBottom' | 'final') => string;
 };
 
-export const ProblemCard = ({
+export const SingleSyllableCard = ({
   problem,
   vowelLayoutType,
   vowelParts,
   getColorClassForPart
-}: ProblemCardProps) => {
+}: SingleSyllableCardProps) => {
   return (
     <div className="w-[85vw] max-w-2xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800">
       <div className="flex flex-col items-center justify-center m-0 p-0 gap-0 transition-all duration-300">

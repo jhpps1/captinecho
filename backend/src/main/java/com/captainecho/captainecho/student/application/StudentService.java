@@ -8,13 +8,19 @@ import com.captainecho.captainecho.interest.domain.SubInterest;
 import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
+import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
+import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
+import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
+import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
+import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
@@ -29,7 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -200,5 +208,116 @@ public class StudentService {
 
         // 4. Student 엔티티 삭제
         studentRepository.delete(student);
+    }
+
+    @Transactional(readOnly = true)
+    public GetStudentInterestResult getStudentInterests(GetStudentInterestCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 학생의 관심사 목록 조회
+        List<StudentInterest> studentInterests = studentInterestRepository.findByStudent_StudentId(command.studentId());
+
+        // 4. Result 객체로 변환
+        List<GetStudentInterestResult.StudentInterestInfo> interestInfos = studentInterests.stream()
+                .map(si -> new GetStudentInterestResult.StudentInterestInfo(
+                        si.getSubInterest().getSubInterestId(),
+                        si.getSubInterest().getSmallInterestName(),
+                        si.getSubInterest().getMajorInterest().getMajorInterestId(),
+                        si.getSubInterest().getMajorInterest().getMajorInterestName()
+                ))
+                .toList();
+
+        return new GetStudentInterestResult(command.studentId(), interestInfos);
+    }
+
+    @Transactional
+    public AddStudentInterestResult addStudentInterest(AddStudentInterestCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 기존 관심사 조회
+        List<StudentInterest> existingInterests = studentInterestRepository.findByStudent_StudentId(command.studentId());
+        Set<Short> existingSubInterestIds = existingInterests.stream()
+                .map(si -> si.getSubInterest().getSubInterestId())
+                .collect(Collectors.toSet());
+
+        // 4. 중복 체크
+        for (Short subInterestId : command.subInterestIds()) {
+            if (existingSubInterestIds.contains(subInterestId)) {
+                throw new EchoException(StudentErrorCode.DUPLICATE_INTEREST);
+            }
+        }
+
+        // 5. 최대 개수 체크 (기존 + 신규 <= 5)
+        int totalCount = existingInterests.size() + command.subInterestIds().size();
+        if (totalCount > 5) {
+            throw new EchoException(StudentErrorCode.INTEREST_LIMIT_EXCEEDED);
+        }
+
+        // 6. SubInterest 유효성 검증
+        List<SubInterest> subInterests = subInterestRepository.findAllById(command.subInterestIds());
+        if (subInterests.size() != command.subInterestIds().size()) {
+            throw new EchoException(StudentErrorCode.INVALID_SUB_INTEREST);
+        }
+
+        // 7. Student 엔티티 조회
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+        // 8. 새 StudentInterest 엔티티들 생성 및 저장
+        List<StudentInterest> newStudentInterests = subInterests.stream()
+                .map(subInterest -> StudentInterest.builder()
+                        .student(student)
+                        .subInterest(subInterest)
+                        .build())
+                .toList();
+
+        studentInterestRepository.saveAll(newStudentInterests);
+
+        // 9. 성공 결과 반환
+        return new AddStudentInterestResult(true);
+    }
+
+    @Transactional
+    public DeleteStudentInterestResult deleteStudentInterest(DeleteStudentInterestCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인 (접근 권한)
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. StudentInterest 존재 확인
+        StudentInterest studentInterest = studentInterestRepository.findById(command.studentInterestId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_INTEREST_NOT_FOUND));
+
+        // 4. StudentInterest가 실제로 해당 학생의 것인지 확인
+        if (!studentInterest.getStudent().getStudentId().equals(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_INTEREST_NOT_FOUND);
+        }
+
+        // 5. StudentInterest 삭제 (hard delete)
+        studentInterestRepository.delete(studentInterest);
+
+        // 6. 성공 결과 반환
+        return new DeleteStudentInterestResult(true);
     }
 }
