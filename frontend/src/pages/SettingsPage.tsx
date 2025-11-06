@@ -1,16 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import StudentSidebar from '../components/protector/StudentSidebar';
 import PINInputModal from '../components/protector/PINInputModal';
-import { mockStudents } from '../mocks/protectorData';
+import { getStudents } from '../api/protectorApi';
+import type { Student } from '../mocks/protectorData';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [showNewPinModal, setShowNewPinModal] = useState(false);
   const [showConfirmPinModal, setShowConfirmPinModal] = useState(false);
   const [newPin, setNewPin] = useState('');
+
+  // 학생 목록 조회
+  const fetchStudents = async () => {
+    setIsLoadingStudents(true);
+    try {
+      const response = await getStudents();
+      const studentList: Student[] = response.students.map(s => ({
+        id: s.studentId,
+        lastName: s.name.charAt(0),
+        fullName: s.name,
+        level: s.level || 0,
+        streak: 0,
+        profileImage: s.profileImage,
+        grade: s.grade || '미취학'
+      }));
+      setStudents(studentList);
+    } catch (error) {
+      console.error('❌ 학생 목록 로드 실패:', error);
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 학생 목록 로드
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   const handleChangePinClick = () => {
     setShowChangePinModal(true);
@@ -81,9 +111,9 @@ export default function SettingsPage() {
 
       {/* 왼쪽 사이드바 */}
       <StudentSidebar
-        students={mockStudents}
+        students={students}
         selectedStudent={null}
-        onSelectStudent={() => {}}
+        onSelectStudent={(student) => navigate('/protector', { state: { selectedStudent: student } })}
         onSettings={() => {}}
         onLogout={() => {
           localStorage.removeItem('accessToken');

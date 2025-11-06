@@ -4,7 +4,13 @@ import Cookies from 'js-cookie';
 import StudentSidebar from '../components/protector/StudentSidebar';
 import AddStudentModal from '../components/protector/modals/AddStudentModal';
 import InterestSelectionModal from '../components/protector/modals/InterestSelectionModal';
-import { mockStudents } from '../mocks/protectorData';
+import { getStudents, registerStudent } from '../api/protectorApi';
+import {
+  mapGenderToBackend,
+  mapGradeToBackend,
+  formatDateToBackend
+} from '../utils/studentMapper';
+import type { Student } from '../mocks/protectorData';
 
 interface DeletePendingStudent {
   id: number;
@@ -13,17 +19,47 @@ interface DeletePendingStudent {
 
 export default function ManageStudentsPage() {
   const navigate = useNavigate();
-  const [students, setStudents] = useState(mockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState<number | null>(null);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<number[]>([]); // 관심사 ID 배열
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deletePendingStudents, setDeletePendingStudents] = useState<DeletePendingStudent[]>([]);
   const [, setCurrentTime] = useState(new Date());
   const [showCancelDeleteModal, setShowCancelDeleteModal] = useState(false);
   const [selectedForCancelDelete, setSelectedForCancelDelete] = useState<number | null>(null);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+
+  // 학생 목록 조회
+  const fetchStudents = async () => {
+    setIsLoadingStudents(true);
+    try {
+      const response = await getStudents();
+      const studentList: Student[] = response.students.map(s => ({
+        id: s.studentId,
+        lastName: s.name.charAt(0),
+        fullName: s.name,
+        level: s.level || 0,
+        streak: 0, // TODO: 연속 학습일 API 추가 필요
+        profileImage: s.profileImage,
+        grade: s.grade || '미취학'
+      }));
+      setStudents(studentList);
+    } catch (error) {
+      console.error('❌ 학생 목록 로드 실패:', error);
+      alert('학생 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 학생 목록 로드
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   // 1분마다 시간 업데이트
   useEffect(() => {
@@ -93,21 +129,65 @@ export default function ManageStudentsPage() {
     }
   };
 
-  const handleAddStudent = (studentData: {
+  const handleAddStudent = async (studentData: {
     name: string;
     gender: 'male' | 'female';
     birthDate: string;
     grade: string;
     interests: string[];
   }) => {
-    console.log('새 학생 추가:', studentData);
-    alert(`학생 "${studentData.name}" 추가됨`);
-    setShowAddModal(false);
-    setSelectedInterests([]);
+    setIsAddingStudent(true);
+    try {
+      // 프론트엔드 데이터를 백엔드 형식으로 변환
+      const requestData = {
+        studentName: studentData.name,
+        gender: mapGenderToBackend(studentData.gender),
+        birth: formatDateToBackend(studentData.birthDate),
+        grade: mapGradeToBackend(studentData.grade),
+        interests: selectedInterests.map(id => ({ interestId: id }))
+      };
+
+      console.log('📤 학생 등록 요청:', requestData);
+
+      // API 호출
+      const response = await registerStudent(requestData);
+
+      if (response.success) {
+        console.log('✅ 학생 등록 성공');
+        alert(`학생 "${studentData.name}"이(가) 추가되었습니다!`);
+
+        // 학생 목록 새로고침
+        await fetchStudents();
+
+        // 모달 닫기
+        setShowAddModal(false);
+        setSelectedInterests([]);
+      }
+    } catch (error: any) {
+      console.error('❌ 학생 등록 실패:', error);
+
+      // 에러 메시지 파싱
+      let errorMessage = '학생 등록에 실패했습니다.';
+
+      if (error.response?.data?.message) {
+        const message = error.response.data.message;
+        if (message.includes('MAX_STUDENT_COUNT_EXCEEDED')) {
+          errorMessage = '최대 학생 수를 초과했습니다.';
+        } else if (message.includes('UNAUTHORIZED')) {
+          errorMessage = '인증이 필요합니다. 다시 로그인해주세요.';
+        } else {
+          errorMessage = message;
+        }
+      }
+
+      alert(errorMessage);
+    } finally {
+      setIsAddingStudent(false);
+    }
   };
 
-  const handleInterestConfirm = (interests: string[]) => {
-    setSelectedInterests(interests);
+  const handleInterestConfirm = (interestIds: number[]) => {
+    setSelectedInterests(interestIds);
     setShowInterestModal(false);
   };
 
@@ -198,7 +278,8 @@ export default function ManageStudentsPage() {
           }}
           onSubmit={handleAddStudent}
           onOpenInterests={() => setShowInterestModal(true)}
-          selectedInterests={selectedInterests}
+          selectedInterestsCount={selectedInterests.length}
+          isLoading={isAddingStudent}
         />
       )}
 
@@ -213,9 +294,9 @@ export default function ManageStudentsPage() {
 
       {/* 왼쪽 사이드바 */}
       <StudentSidebar
-        students={mockStudents}
+        students={students}
         selectedStudent={null}
-        onSelectStudent={() => {}}
+        onSelectStudent={(student) => navigate('/protector', { state: { selectedStudent: student } })}
         onSettings={() => navigate('/protector/settings')}
         onLogout={() => {
           localStorage.removeItem('accessToken');
