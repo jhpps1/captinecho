@@ -16,28 +16,18 @@ interface ProblemRunnerProps {
   studentId: number;
 }
 
-// Adventure 컴포넌트 매핑 (동적 import로 변경 예정)
-// TODO: 6단계에서 실제 컴포넌트로 교체
-const PlaceholderAdventure = ({ problem, onSubmit }: AdventureViewProps) => (
-  <div className="text-center p-8">
-    <h2 className="text-2xl mb-4">Adventure Type {problem.adventureTypeId}</h2>
-    <p className="mb-4">문제 ID: {problem.dayProblemId}</p>
-    <p className="mb-4">문제: {problem.questionText}</p>
-    <button
-      onClick={() => onSubmit('test-answer', 1)}
-      className="px-6 py-3 bg-blue-500 text-white rounded"
-    >
-      임시 정답 제출 (6단계에서 교체)
-    </button>
-  </div>
-);
+// Adventure 컴포넌트 import
+import { Adventure1 } from './Adventure1';
+import { Adventure2 } from './Adventure2';
+import { Adventure3 } from './Adventure3';
+import { Adventure4 } from './Adventure4';
 
 // adventureTypeId → Component 매핑
 const ADVENTURE_VIEWS: Record<number, ComponentType<AdventureViewProps>> = {
-  1: PlaceholderAdventure, // TODO: Adventure1로 교체
-  2: PlaceholderAdventure, // TODO: Adventure2로 교체
-  3: PlaceholderAdventure, // TODO: Adventure3로 교체
-  4: PlaceholderAdventure, // TODO: Adventure4로 교체
+  1: Adventure1, // 음소 분해
+  2: Adventure2, // 빈칸 채우기
+  3: Adventure3, // 단어 선택
+  4: Adventure4, // 말하기
 };
 
 /**
