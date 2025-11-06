@@ -9,6 +9,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.validation.ConstraintViolationException;
 
@@ -89,6 +90,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(CommonErrorCode.INVALID_TYPE_VALUE.getHttpStatus())
                 .body(ErrorResponse.fail(CommonErrorCode.INVALID_TYPE_VALUE.getCode(), message));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("Resource not found: {}", e.getMessage());
+
+        return ResponseEntity.status(CommonErrorCode.ENTITY_NOT_FOUND.getHttpStatus())
+                .body(ErrorResponse.fail(
+                        CommonErrorCode.ENTITY_NOT_FOUND.getCode(),
+                        CommonErrorCode.ENTITY_NOT_FOUND.getMessage()
+                ));
     }
 
     @ExceptionHandler(Exception.class)
