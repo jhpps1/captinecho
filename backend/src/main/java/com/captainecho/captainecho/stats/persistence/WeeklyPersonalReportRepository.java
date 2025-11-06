@@ -27,4 +27,13 @@ public interface WeeklyPersonalReportRepository extends JpaRepository<WeeklyPers
      * 특정 학생의 모든 주간 리포트 조회 (최신순)
      */
     List<WeeklyPersonalReport> findByStudent_StudentIdOrderByCreatedAtDesc(Integer studentId);
+
+    /**
+     * 특정 학생의 이번 주 리포트 조회 (단일 결과)
+     */
+    Optional<WeeklyPersonalReport> findFirstByStudent_StudentIdAndCreatedAtBetween(
+            Integer studentId,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 }

@@ -10,6 +10,9 @@ import com.captainecho.captainecho.exception.code.StudentErrorCode;
 import com.captainecho.captainecho.session.persistence.LearningSessionRepository;
 import com.captainecho.captainecho.stats.domain.WeeklyPersonalReport;
 import com.captainecho.captainecho.stats.persistence.WeeklyPersonalReportRepository;
+import com.captainecho.captainecho.student.application.command.SetProtectorGoalCommand;
+import com.captainecho.captainecho.student.application.result.SetProtectorGoalResult;
+import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -139,6 +142,52 @@ public class DashboardService {
                 .sum();
 
         return new WeeklyLearningTimeDto(totalMinutes, dailyList);
+    }
+
+    /**
+     * 보호자 학습 목표 설정
+     */
+    @Transactional
+    public SetProtectorGoalResult setProtectorGoal(SetProtectorGoalCommand command) {
+        // 1. 학생 접근 권한 확인
+        verifyStudentAccess(command.protectorId(), command.studentId());
+
+        // 2. 이번 주 범위 계산 (월요일 00:00 ~ 일요일 23:59)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime thisWeekStart = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime thisWeekEnd = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+                .withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+
+        // 3. 이번 주 리포트 존재 확인
+        WeeklyPersonalReport existingReport = weeklyPersonalReportRepository
+                .findFirstByStudent_StudentIdAndCreatedAtBetween(
+                        command.studentId(),
+                        thisWeekStart,
+                        thisWeekEnd
+                )
+                .orElse(null);
+
+        if (existingReport != null) {
+            // 4-1. 이미 존재하면 UPDATE
+            existingReport.updateProtectorGoal(command.protectorGoal());
+        } else {
+            // 4-2. 없으면 INSERT (protectorGoal, student만 세팅, 나머지 null)
+            Student student = studentRepository.findById(command.studentId())
+                    .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+            WeeklyPersonalReport newReport = WeeklyPersonalReport.builder()
+                    .student(student)
+                    .protectorGoal(command.protectorGoal())
+                    .totalTime(0)
+                    .curriculum(null)
+                    .discussionLog(null)
+                    .build();
+
+            weeklyPersonalReportRepository.save(newReport);
+        }
+
+        return SetProtectorGoalResult.from(true);
     }
 
     /**
