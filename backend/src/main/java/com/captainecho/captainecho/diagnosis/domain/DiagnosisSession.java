@@ -36,4 +36,8 @@ public class DiagnosisSession {
         this.startTime = startTime;
         this.endTime = endTime;
     }
+
+    public void completeSession() {
+        this.endTime = LocalDateTime.now();
+    }
 }
