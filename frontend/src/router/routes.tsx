@@ -9,11 +9,12 @@ import SettingsPage from '../pages/SettingsPage.tsx';
 import AIAgentLogPage from '../pages/AIAgentLogPage.tsx';
 import ManageStudentsPage from '../pages/ManageStudentsPage.tsx';
 import StudentDashboard from '../pages/StudentDashboard.tsx';
-import Adventure1Page from '../pages/Adventure1Page.tsx';
-import Adventure2Page from '../pages/Adventure2Page.tsx';
-import Adventure3Page from '../pages/Adventure3Page.tsx';
-import Adventure4Page from '../pages/Adventure4Page.tsx';
 import NewUserTerms from '../pages/NewUserTerms.tsx';
+
+// Adventure 관련 컴포넌트 (새 구조)
+import { AdventureLayout } from '../components/adventure/AdventureLayout.tsx';
+import { DailyRunner } from '../components/adventure/DailyRunner.tsx';
+import { SuppleRunner } from '../components/adventure/SuppleRunner.tsx';
 
 const router = createBrowserRouter([
   {
@@ -60,21 +61,22 @@ const router = createBrowserRouter([
     path: '/protector/manage-students',
     element: <ManageStudentsPage />,
   },
+  // 새로운 Adventure 라우트 (설계 문서 기반)
   {
-    path: '/adventure/1',
-    element: <Adventure1Page />,
+    path: '/daily/:studentId/:idx?',
+    element: (
+      <AdventureLayout>
+        <DailyRunner />
+      </AdventureLayout>
+    ),
   },
   {
-    path: '/adventure/2',
-    element: <Adventure2Page />,
-  },
-  {
-    path: '/adventure/3',
-    element: <Adventure3Page />,
-  },
-  {
-    path: '/adventure/4',
-    element: <Adventure4Page />,
+    path: '/adventure/:studentId/:typeId',
+    element: (
+      <AdventureLayout>
+        <SuppleRunner />
+      </AdventureLayout>
+    ),
   },
 ]);
 
