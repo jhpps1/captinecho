@@ -87,7 +87,7 @@ export const ProblemRunner = ({ problems, mode, studentId }: ProblemRunnerProps)
   const handleSubmit = async (answer: unknown, attempts: number) => {
     console.log(`문제 ${currentProblem.dayProblemId} 제출:`, { answer, attempts });
 
-    // 결과 기록
+    // 결과 데이터 생성
     const result: AnswerResult = {
       dayProblemId: currentProblem.dayProblemId,
       studentId: currentProblem.studentId,
@@ -96,7 +96,19 @@ export const ProblemRunner = ({ problems, mode, studentId }: ProblemRunnerProps)
       submittedAt: new Date().toISOString(),
     };
 
-    setCompletedResults((prev) => [...prev, result]);
+    // ✅ 매 문제마다 즉시 백엔드에 제출
+    try {
+      await submitSingleProblemResult(studentId, result);
+      console.log(`✅ 문제 ${currentProblem.dayProblemId} 결과 제출 완료`);
+
+      // 제출 성공 후 로컬 상태에도 기록
+      setCompletedResults((prev) => [...prev, result]);
+    } catch (error) {
+      console.error(`❌ 문제 ${currentProblem.dayProblemId} 결과 제출 실패:`, error);
+      // TODO: 에러 처리 (재시도, 사용자 알림 등)
+      // 일단 로컬에는 저장하고 계속 진행
+      setCompletedResults((prev) => [...prev, result]);
+    }
 
     // 다음 문제로 이동 또는 완료 처리
     if (currentIndex < problems.length - 1) {
@@ -106,14 +118,6 @@ export const ProblemRunner = ({ problems, mode, studentId }: ProblemRunnerProps)
     } else {
       // 모든 문제 완료
       setIsAllCompleted(true);
-
-      // 백엔드에 결과 제출
-      try {
-        await submitSingleProblemResult(studentId, result);
-        console.log('✅ 문제 결과 제출 완료');
-      } catch (error) {
-        console.error('❌ 결과 제출 실패:', error);
-      }
     }
   };
 
