@@ -30,8 +30,19 @@ export default function SettingsPage() {
         grade: s.grade || '미취학'
       }));
       setStudents(studentList);
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ 학생 목록 로드 실패:', error);
+
+      // 401 인증 에러인 경우 로그인 페이지로 리다이렉트
+      if (error.response?.status === 401) {
+        alert('로그인이 필요합니다.');
+        Cookies.remove('accessToken');
+        navigate('/');
+        return;
+      }
+
+      // 학생이 없는 경우는 에러가 아니므로 빈 배열로 처리
+      setStudents([]);
     } finally {
       setIsLoadingStudents(false);
     }
