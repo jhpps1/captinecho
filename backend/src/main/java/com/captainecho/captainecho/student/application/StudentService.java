@@ -8,6 +8,7 @@ import com.captainecho.captainecho.interest.domain.SubInterest;
 import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
+import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
@@ -47,8 +48,8 @@ public class StudentService {
         Protector protector = protectorRepository.findById(command.protectorId())
                 .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
 
-        // 2. 현재 등록된 학생 수 확인
-        List<Student> currentStudents = studentRepository.findByProtector_ProtectorId(command.protectorId());
+        // 2. 현재 등록된 학생 수 확인 (삭제되지 않은 학생만)
+        List<Student> currentStudents = studentRepository.findActiveStudentsByProtectorId(command.protectorId());
         if (currentStudents.size() >= protector.getMaxStudentCount()) {
             throw new EchoException(StudentErrorCode.MAX_STUDENT_COUNT_EXCEEDED);
         }
@@ -181,5 +182,23 @@ public class StudentService {
         }
 
         return GetWeeklyGoalPercentResult.from(percent);
+    }
+
+    @Transactional
+    public void deleteStudent(DeleteStudentCommand command) {
+        // 1. 학생 존재 여부 확인
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+        // 2. 보호자-학생 관계 확인 (권한 검증)
+        if (!student.getProtector().getProtectorId().equals(command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 연관된 StudentInterest 먼저 삭제
+        studentInterestRepository.deleteByStudent_StudentId(command.studentId());
+
+        // 4. Student 엔티티 삭제
+        studentRepository.delete(student);
     }
 }
