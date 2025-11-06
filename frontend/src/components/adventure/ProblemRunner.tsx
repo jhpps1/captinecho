@@ -1,0 +1,190 @@
+import { useState, useEffect, ComponentType } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Problem, AnswerResult } from '../../types/adventure';
+import { submitSingleProblemResult } from '../../api/adventureApi';
+
+// Adventure 컴포넌트 Props 인터페이스
+export interface AdventureViewProps {
+  problem: Problem;
+  onSubmit: (answer: unknown, attemptCount: number) => void;
+}
+
+// ProblemRunner Props
+interface ProblemRunnerProps {
+  problems: Problem[];
+  mode: 'daily' | 'supple';
+  studentId: number;
+}
+
+// Adventure 컴포넌트 매핑 (동적 import로 변경 예정)
+// TODO: 6단계에서 실제 컴포넌트로 교체
+const PlaceholderAdventure = ({ problem, onSubmit }: AdventureViewProps) => (
+  <div className="text-center p-8">
+    <h2 className="text-2xl mb-4">Adventure Type {problem.adventureTypeId}</h2>
+    <p className="mb-4">문제 ID: {problem.dayProblemId}</p>
+    <p className="mb-4">문제: {problem.questionText}</p>
+    <button
+      onClick={() => onSubmit('test-answer', 1)}
+      className="px-6 py-3 bg-blue-500 text-white rounded"
+    >
+      임시 정답 제출 (6단계에서 교체)
+    </button>
+  </div>
+);
+
+// adventureTypeId → Component 매핑
+const ADVENTURE_VIEWS: Record<number, ComponentType<AdventureViewProps>> = {
+  1: PlaceholderAdventure, // TODO: Adventure1로 교체
+  2: PlaceholderAdventure, // TODO: Adventure2로 교체
+  3: PlaceholderAdventure, // TODO: Adventure3로 교체
+  4: PlaceholderAdventure, // TODO: Adventure4로 교체
+};
+
+/**
+ * ProblemRunner - 문제 실행 총괄 컴포넌트
+ *
+ * @description
+ * - 문제 배열을 받아 순차적으로 표시
+ * - adventureTypeId에 따라 Adventure1~4 컴포넌트 동적 렌더링
+ * - 현재 문제 인덱스 관리 및 진행도 복원 (URL idx 파라미터)
+ * - 정답/오답 처리 및 시도 횟수 추적
+ * - 완료 시 결과를 백엔드로 제출
+ *
+ * @param problems - 문제 배열 (10개)
+ * @param mode - 'daily' (일일문제) | 'supple' (추가학습)
+ * @param studentId - 학생 ID
+ */
+export const ProblemRunner = ({ problems, mode, studentId }: ProblemRunnerProps) => {
+  const navigate = useNavigate();
+  const { idx } = useParams<{ idx?: string }>();
+
+  // 현재 문제 인덱스 (URL에서 복원 또는 0부터 시작)
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const urlIdx = idx ? parseInt(idx, 10) : 0;
+    return urlIdx >= 0 && urlIdx < problems.length ? urlIdx : 0;
+  });
+
+  // 현재 문제의 시도 횟수 추적
+  const [attemptCount, setAttemptCount] = useState(1);
+
+  // 완료된 문제 결과 저장
+  const [completedResults, setCompletedResults] = useState<AnswerResult[]>([]);
+
+  // 모든 문제 완료 여부
+  const [isAllCompleted, setIsAllCompleted] = useState(false);
+
+  const currentProblem = problems[currentIndex];
+
+  // URL idx 파라미터와 currentIndex 동기화
+  useEffect(() => {
+    if (mode === 'daily') {
+      // 일일문제는 진행도 URL에 반영 (새로고침 시 복원)
+      navigate(`/daily/${studentId}/${currentIndex}`, { replace: true });
+    }
+  }, [currentIndex, mode, studentId, navigate]);
+
+  // 정답 제출 핸들러
+  const handleSubmit = async (answer: unknown, attempts: number) => {
+    console.log(`문제 ${currentProblem.dayProblemId} 제출:`, { answer, attempts });
+
+    // 결과 기록
+    const result: AnswerResult = {
+      dayProblemId: currentProblem.dayProblemId,
+      studentId: currentProblem.studentId,
+      isCorrect: true, // 프론트엔드에서 검증 완료 후 호출되므로 true
+      attemptCount: attempts,
+      submittedAt: new Date().toISOString(),
+    };
+
+    setCompletedResults((prev) => [...prev, result]);
+
+    // 다음 문제로 이동 또는 완료 처리
+    if (currentIndex < problems.length - 1) {
+      // 다음 문제로
+      setCurrentIndex((prev) => prev + 1);
+      setAttemptCount(1); // 시도 횟수 초기화
+    } else {
+      // 모든 문제 완료
+      setIsAllCompleted(true);
+
+      // 백엔드에 결과 제출
+      try {
+        await submitSingleProblemResult(studentId, result);
+        console.log('✅ 문제 결과 제출 완료');
+      } catch (error) {
+        console.error('❌ 결과 제출 실패:', error);
+      }
+    }
+  };
+
+  // 오답 처리 (시도 횟수 증가)
+  const handleWrongAnswer = () => {
+    setAttemptCount((prev) => prev + 1);
+  };
+
+  // 완료 화면
+  if (isAllCompleted) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h1 className="text-4xl font-bold mb-4">🎉 모든 문제 완료!</h1>
+        <p className="text-xl mb-8">총 {problems.length}문제를 풀었습니다.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="px-8 py-4 bg-green-500 text-white rounded-lg text-xl"
+        >
+          메인으로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  // 문제가 없는 경우
+  if (!currentProblem) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-xl text-gray-500">문제를 불러올 수 없습니다.</p>
+      </div>
+    );
+  }
+
+  // adventureTypeId에 맞는 컴포넌트 선택
+  const AdventureComponent = ADVENTURE_VIEWS[currentProblem.adventureTypeId];
+
+  if (!AdventureComponent) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-xl text-red-500">
+          지원하지 않는 문제 유형입니다: {currentProblem.adventureTypeId}
+        </p>
+      </div>
+    );
+  }
+
+  // 문제 렌더링
+  return (
+    <div className="min-h-screen">
+      {/* 진행도 표시 */}
+      <div className="fixed top-4 right-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
+        <span className="text-sm font-semibold">
+          {currentIndex + 1} / {problems.length}
+        </span>
+      </div>
+
+      {/* Adventure 컴포넌트 렌더링 */}
+      <AdventureComponent
+        problem={currentProblem}
+        onSubmit={(answer) => handleSubmit(answer, attemptCount)}
+      />
+
+      {/* 개발용: 오답 버튼 (실제로는 각 Adventure 컴포넌트 내부에서 처리) */}
+      <div className="fixed bottom-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
+        <button
+          onClick={handleWrongAnswer}
+          className="text-sm text-red-500 hover:text-red-700"
+        >
+          오답 처리 (시도: {attemptCount})
+        </button>
+      </div>
+    </div>
+  );
+};
