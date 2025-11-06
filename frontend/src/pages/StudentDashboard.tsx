@@ -5,10 +5,10 @@ import Cookies from 'js-cookie';
 
 // 오른쪽 나무 버튼 데이터를 배열로 관리하면 편리합니다.
 const woodenButtons = [
-  { id: 1, label: '자모맞추기' },
-  { id: 2, label: '빈칸맞추기' },
-  { id: 3, label: '단어맞추기' },
-  { id: 4, label: '단어읽기' },
+  { id: 1, label: '자모맞추기', path: '/adventure/1' },
+  { id: 2, label: '빈칸맞추기', path: '/adventure/2' },
+  { id: 3, label: '단어맞추기', path: '/adventure/3' },
+  { id: 4, label: '단어읽기', path: '/adventure/4' },
 ];
 
 // 설정 아이콘 컴포넌트 (SVG)
@@ -143,10 +143,10 @@ export default function StudentDashboard() {
           {woodenButtons.map((button) => (
             <button
               key={button.id}
+              onClick={() => navigate(button.path)}
               className="w-full h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white shadow-md hover:scale-105 transition-transform"
               style={{
-                // 나무 버튼 이미지 (조건 2)
-                backgroundImage: `url('/studentboard/button.png')`, // 경로 수정
+                backgroundImage: `url('/studentboard/button.png')`,
               }}
             >
               {button.label}

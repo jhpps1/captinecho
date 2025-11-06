@@ -14,6 +14,7 @@ import Adventure2Page from '../pages/Adventure2Page.tsx';
 import Adventure3Page from '../pages/Adventure3Page.tsx';
 import Adventure4Page from '../pages/Adventure4Page.tsx';
 import NewUserTerms from '../pages/NewUserTerms.tsx';
+import FirstTestIntro from '../pages/FirstTestIntro.tsx';
 
 const router = createBrowserRouter([
   {
@@ -35,6 +36,10 @@ const router = createBrowserRouter([
   {
     path: '/select-profile',
     element: <SelectProfile />,
+  },
+  {
+    path: '/first-test-intro',
+    element: <FirstTestIntro />,
   },
   {
     path: '/student',
