@@ -5,6 +5,7 @@ import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -72,6 +73,22 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(CommonErrorCode.CONSTRAINT_VIOLATION.getHttpStatus())
                 .body(ErrorResponse.fail(CommonErrorCode.CONSTRAINT_VIOLATION.getCode(), message));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.error("JSON parsing error: ", e);
+
+        // 잘못된 enum 값이나 JSON 형식 오류 처리
+        String message = CommonErrorCode.INVALID_TYPE_VALUE.getMessage();
+
+        // 상세 메시지에서 enum 관련 정보 추출
+        if (e.getMessage() != null && e.getMessage().contains("Enum")) {
+            message = "잘못된 입력값입니다 유효한 값을 입력해주세요";
+        }
+
+        return ResponseEntity.status(CommonErrorCode.INVALID_TYPE_VALUE.getHttpStatus())
+                .body(ErrorResponse.fail(CommonErrorCode.INVALID_TYPE_VALUE.getCode(), message));
     }
 
     @ExceptionHandler(Exception.class)
