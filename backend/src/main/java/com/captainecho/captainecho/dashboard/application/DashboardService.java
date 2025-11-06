@@ -4,6 +4,7 @@ import com.captainecho.captainecho.dashboard.application.result.CurriculumResult
 import com.captainecho.captainecho.dashboard.application.result.DailyLearningTimeDto;
 import com.captainecho.captainecho.dashboard.application.result.DiscussionResult;
 import com.captainecho.captainecho.dashboard.application.result.LearningTimeResult;
+import com.captainecho.captainecho.dashboard.application.result.ProtectorGoalListResult;
 import com.captainecho.captainecho.dashboard.application.result.WeeklyLearningTimeDto;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
@@ -142,6 +143,13 @@ public class DashboardService {
                 .sum();
 
         return new WeeklyLearningTimeDto(totalMinutes, dailyList);
+    }
+
+    /**
+     * 보호자 학습 목표 선택지 조회
+     */
+    public ProtectorGoalListResult getProtectorGoals() {
+        return ProtectorGoalListResult.fromEnum();
     }
 
     /**
