@@ -12,9 +12,10 @@ DEFAULT_LANGUAGE = "ko"
 
 # 환경 변수에서 값 읽기 (.env 없을 경우 기본값)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-key-here")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+OPENAI_MODE2 = os.getenv("OPENAI_MODEL", "gpt-5")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://gms.ssafy.io/gmsapi/api.openai.com/v1")
-OPENAI_MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4.1")
+
 
 # 임베딩 환경변수 추가
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")

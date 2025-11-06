@@ -30,8 +30,6 @@ from app.src.crew import build_conversation_flow
 from app.src.core.models import Student, WeeklyPersonalReport
 from app.src.core.config import settings
 
-os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
-os.environ["OPENAI_MODEL"] = settings.OPENAI_MODEL
 if settings.OPENAI_BASE_URL:
     os.environ["OPENAI_BASE_URL"] = settings.OPENAI_BASE_URL
 os.environ["EMBEDDING_MODEL"] = settings.EMBEDDING_MODEL
@@ -59,38 +57,23 @@ def get_student_data(student_id: int):
     finally:
         db.close()
 
-# --------------------------------------------------------
-# Crew Debate 결과에서 구조 파싱 (대화/요일/협의안)
+# 💡 전체 로그에서 구간별로 가장 '마지막' 기준 커리큘럼, 대화 내역을 추출
 def extract_final_results(history):
     full_text = "\n".join(history)
 
-    # [대화] 구간 추출 (discussion_log)
-    dialogue_match = re.search(r'\[대화\](.*?)(?=\[월~금|\[요일별 목표 요약\])', full_text, re.DOTALL)
-    dialogue = dialogue_match.group(1).strip() if dialogue_match else ""
+    # 💡 [월~금 커리큘럼] ~ 논의 및 합의 요약: 전까지(개행 포함)
+    curriculum_match = re.search(
+        r'\[월~금 커리큘럼\](.*?)(?=\n논의 및 합의 요약:)', full_text, re.DOTALL)
+    curriculum = curriculum_match.group(1).strip() if curriculum_match else ""
 
-    # [월~금 커리큘럼] 또는 [요일별 목표 요약] (curriculum)
-    daily_goals_match = re.search(r'(\[월~금.*?\]|\[요일별 목표 요약\])(.*?)(?=논의 및 합의 요약:)', full_text, re.DOTALL)
-    daily_goals = daily_goals_match.group(2).strip() if daily_goals_match else ""
+    # 💡 논의 및 합의 요약: ~ 끝까지
+    discussion_match = re.search(
+        r'\n논의 및 합의 요약:(.*)', full_text, re.DOTALL)
+    discussion_log = discussion_match.group(1).strip() if discussion_match else ""
 
-    # 논의 및 합의 요약
-    discussion_match = re.search(r'논의 및 합의 요약:(.*)', full_text, re.DOTALL)
-    discussion = discussion_match.group(1).strip() if discussion_match else ""
-
-    curriculum = f"""\
-======================== 대화 요약 ========================
-{dialogue}
-
-==================== 요일별 학습 목표 =====================
-{daily_goals}
-
-================= 논의 및 합의 요약 ======================
-{discussion}
-==========================================================
-"""
-    return curriculum, discussion
+    return curriculum, discussion_log
 
 # --------------------------------------------------------
-# API 저장 함수: 3회 재시도 + 로컬 JSON 백업
 def save_report_via_api(student_id, curriculum, discussion_log):
     API_URL = "http://localhost:8000/save-report"
     payload = {
@@ -123,6 +106,7 @@ def save_report_via_api(student_id, curriculum, discussion_log):
         logger.error(f"로컬 백업 저장 실패: {e}")
     return None
 
+
 # --------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dyslexia Crew 대화형 세션")
@@ -136,10 +120,8 @@ if __name__ == "__main__":
 
     logger.info(f"학생 '{student_data['name']}' 대화형 분석 시작...")
 
-    # Crew Task/Agents가 Debate로 사회자 마크업에 맞춰 대화 흐름 생성
     flow = build_conversation_flow(student_data=student_data)
 
-    # 주요 프롬프트 입력(사회자처럼 대화 자연스러움 유도)
     auto_inputs = [
         "이번 주 커리큘럼 요약과 대화 근거(주요 협의·이유)를 요약해 주세요.",
         "감사합니다!",
@@ -155,6 +137,7 @@ if __name__ == "__main__":
         turn_duration = turn_end - turn_start
         logger.info(f"\n=========== 대화 턴 {idx+1} 결과({turn_duration:.2f}초) ===========\n" + flow.state.last_output)
         print(f"[TURN {idx+1}] [INPUT] {user_input}\n[CREWAI OUTPUT]:\n{flow.state.last_output}\n[TURN 시간: {turn_duration:.2f}초]\n---")
+        logger.info(f"[TURN {idx+1}] [INPUT] {user_input}\n[CREWAI OUTPUT]:\n{flow.state.last_output}\n[TURN 시간: {turn_duration:.2f}초]\n---")
         if flow.state.done:
             break
 
@@ -163,12 +146,11 @@ if __name__ == "__main__":
     logger.info(f"\n======= 전체 대화 로그 =======\n" + "\n".join(flow.state.history))
     logger.info(f"\n전체 대화 소요 시간: {overall_duration:.2f}초\n")
 
-    # Debate 결과 자연어 파싱 → 커리큘럼/협의안 구조화
+    # 💡 Debate 결과 파싱 → 깔끔하게 분리된 커리큘럼/대화 구조 저장
     curriculum, discussion_log = extract_final_results(flow.state.history)
     logger.info(f"추출된 커리큘럼(150자): {curriculum[:150]}...")
     logger.info(f"추출된 논의(150자): {discussion_log[:150]}...")
 
-    # API 저장 (재시도+백업)
     logger.info("최종 결과를 API에 저장 시도 중...")
     save_report_via_api(
         student_id=args.student_id,
@@ -176,13 +158,16 @@ if __name__ == "__main__":
         discussion_log=discussion_log
     )
 
-    # Local 결과 백업도 별도로 저장 (커리큘럼+논의)
     backup_path = f"backup_report_{args.student_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     with open(backup_path, 'w', encoding='utf-8') as f:
         f.write(curriculum + "\n\n===== 논의 요약 =====\n" + discussion_log)
     logger.info(f"로컬 백업 저장: {backup_path}")
 
     print("\n=== 전체 대화 로그 및 커리큘럼 요약 ===")
+    logger.info("\n=== 전체 대화 로그 및 커리큘럼 요약 ===")
     print(curriculum)
+    logger.info(curriculum)
     print("\n=== 논의 및 합의 요약 ===")
+    logger.info("\n=== 논의 및 합의 요약 ===")
     print(discussion_log)
+    logger.info(discussion_log)

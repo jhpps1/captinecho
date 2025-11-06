@@ -42,8 +42,8 @@ class Settings(BaseSettings):
 
     # OpenAI 설정 (CrewAI용)
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
-    OPENAI_MODEL_NAME: str = Field(default="gpt-4.1", env="OPENAI_MODEL_NAME")
-    OPENAI_MODEL: str = Field(default="openai/gpt-4.1", env="OPENAI_MODEL")  # ← 꼭 추가!
+    OPENAI_MODEL: str = Field(default="gpt-4o", env="OPENAI_MODEL")  # ← 꼭 추가!
+    OPENAI_MODEL2: str = Field(default="gpt-5", env="OPENAI_MODEL2")
     OPENAI_BASE_URL: Optional[str] = Field(default=None, env="OPENAI_BASE_URL")
     OPENAI_TEMPERATURE: float = Field(default=0.7, env="OPENAI_TEMPERATURE")
     OPENAI_MAX_TOKENS: int = Field(default=4000, env="OPENAI_MAX_TOKENS")
