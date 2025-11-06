@@ -5,6 +5,7 @@ import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.StudentService;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
@@ -23,11 +24,10 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-
 
 @Slf4j
 @RestController
@@ -39,6 +39,7 @@ public class StudentController {
     private final StudentService studentService;
 
     @PostMapping
+    @Operation(summary = "학생 등록", description = "보호자가 새로운 학생을 등록합니다")
     public ResponseEntity<RegisterStudentResponse> registerStudent(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @Valid @RequestBody RegisterStudentRequest request
@@ -54,6 +55,24 @@ public class StudentController {
         RegisterStudentResponse response = new RegisterStudentResponse(result.success());
 
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{student-id}")
+    @Operation(summary = "학생 삭제", description = "보호자가 자신의 학생을 삭제합니다")
+    public ResponseEntity<Void> deleteStudent(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("student-id") Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        DeleteStudentCommand command = new DeleteStudentCommand(protectorId, studentId);
+        studentService.deleteStudent(command);
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @GetMapping("/{studentId}/interests")

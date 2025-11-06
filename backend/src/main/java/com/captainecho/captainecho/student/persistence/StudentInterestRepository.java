@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface StudentInterestRepository extends JpaRepository<StudentInterest, Integer> {
+    void deleteByStudent_StudentId(Integer studentId);
     List<StudentInterest> findByStudent_StudentId(Integer studentId);
 }

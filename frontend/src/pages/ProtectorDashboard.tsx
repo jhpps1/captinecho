@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import PINInputModal from '../components/protector/PINInputModal';
 import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
@@ -8,18 +8,58 @@ import StudentCard from '../components/protector/StudentCard';
 import StreakCalendar from '../components/protector/StreakCalendar';
 import StudyGoalsCard from '../components/protector/StudyGoalsCard';
 import WeeklyLearningSection from '../components/protector/WeeklyLearningSection';
+import WeeklyComparisonChart from '../components/protector/WeeklyComparisonChart';
 import AIAgentSection from '../components/protector/AIAgentSection';
-import type { Student, WeeklyActivity } from '../mocks/protectorData';
+import type { Student, WeeklyActivity, StudyGoal } from '../mocks/protectorData';
 import {
   mockStudyGoals,
   mockJamoStats
 } from '../mocks/protectorData';
-import { getCurriculum, getDiscussion, getLearningTime } from '../api/dashboardApi';
+import {
+  getCurriculum,
+  getDiscussion,
+  getLearningTime,
+  getDailyGoalCount,
+  getDailyCompletedCount,
+  getWeeklyGoalPercent
+} from '../api/dashboardApi';
 import type { LearningTimeResponse } from '../api/dashboardApi';
 import { getStudents, type StudentResponse } from '../api/protectorApi';
 
+/**
+ * 이번 주 연속 학습일 계산
+ * 가장 최근 학습한 날부터 역순으로 연속된 학습일을 카운트
+ */
+const calculateWeeklyStreak = (activities: WeeklyActivity[]): number => {
+  if (!activities || activities.length === 0) return 0;
+
+  // 오늘 날짜 찾기
+  const today = new Date().toISOString().split('T')[0];
+  const todayIndex = activities.findIndex(a => a.date === today);
+
+  let streak = 0;
+  let startCounting = false;
+
+  // 오늘부터 역순으로 순회
+  const startIndex = todayIndex >= 0 ? todayIndex : activities.length - 1;
+
+  for (let i = startIndex; i >= 0; i--) {
+    if (activities[i].completed) {
+      startCounting = true;
+      streak++;
+    } else if (startCounting) {
+      // 학습일을 세다가 안 한 날을 만나면 중단
+      break;
+    }
+    // startCounting이 false면 아직 학습 시작 안 한 날들이므로 계속 스킵
+  }
+
+  return streak;
+};
+
 export default function ProtectorDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPinModal, setShowPinModal] = useState(false); // 임시로 false로 변경
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [showNewPinModal, setShowNewPinModal] = useState(false);
@@ -31,11 +71,14 @@ export default function ProtectorDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const lastLocationKey = useRef<string | undefined>(undefined);
 
   // API 데이터 상태
   const [curriculum, setCurriculum] = useState<string>('');
   const [discussion, setDiscussion] = useState<string>('');
   const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivity[]>([]);
+  const [studyGoals, setStudyGoals] = useState<StudyGoal[]>(mockStudyGoals); // 일일/주간 목표
+  const [learningTime, setLearningTime] = useState<LearningTimeResponse | null>(null); // 주간 학습 시간
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePinSubmit = (pin: string) => {
@@ -116,15 +159,20 @@ export default function ProtectorDashboard() {
         }));
 
         setStudents(studentList);
+        console.log('✅ 학생 목록 로드 완료:', studentList);
+      } catch (error: any) {
+        console.error('❌ 학생 목록 로드 실패:', error);
 
-        // 첫 번째 학생을 자동 선택
-        if (studentList.length > 0) {
-          setSelectedStudent(studentList[0]);
+        // 401 인증 에러인 경우 로그인 페이지로 리다이렉트
+        if (error.response?.status === 401) {
+          alert('로그인이 필요합니다.');
+          Cookies.remove('accessToken');
+          navigate('/');
+          return;
         }
 
-        console.log('✅ 학생 목록 로드 완료:', studentList);
-      } catch (error) {
-        console.error('❌ 학생 목록 로드 실패:', error);
+        // 학생이 없는 경우는 에러가 아니므로 빈 배열로 처리
+        setStudents([]);
       } finally {
         setIsLoadingStudents(false);
       }
@@ -133,18 +181,55 @@ export default function ProtectorDashboard() {
     fetchStudents();
   }, []);
 
+  // location.state에서 전달된 학생이 있으면 선택, 없으면 첫 번째 학생 선택
+  // location.key가 변경되었을 때만 실행 (페이지 새로 로드 or 다른 페이지에서 navigate)
+  useEffect(() => {
+    if (students.length === 0) return;
+
+    // location.key가 동일하면 이미 처리했으므로 skip
+    if (lastLocationKey.current === location.key) return;
+
+    lastLocationKey.current = location.key;
+
+    const stateStudent = (location.state as { selectedStudent?: Student })?.selectedStudent;
+    if (stateStudent) {
+      // 전달된 학생 ID로 목록에서 찾기
+      const foundStudent = students.find(s => s.id === stateStudent.id);
+      if (foundStudent) {
+        setSelectedStudent(foundStudent);
+      } else {
+        setSelectedStudent(students[0]);
+      }
+    } else if (!selectedStudent) {
+      // selectedStudent가 없으면 첫 번째 학생 선택
+      setSelectedStudent(students[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students, location.key]);
+
   // 학생 선택 시 대시보드 데이터 로드
   useEffect(() => {
     if (!selectedStudent) return;
 
     const fetchDashboardData = async () => {
       setIsLoading(true);
+      let calculatedStreak = 0;
       try {
-        // 3개 API 병렬 호출
-        const [curriculumData, discussionData, learningTimeData] = await Promise.all([
+        // 6개 API 병렬 호출
+        const [
+          curriculumData,
+          discussionData,
+          learningTimeData,
+          dailyGoalData,
+          dailyCompletedData,
+          weeklyPercentData
+        ] = await Promise.all([
           getCurriculum(selectedStudent.id),
           getDiscussion(selectedStudent.id),
-          getLearningTime(selectedStudent.id)
+          getLearningTime(selectedStudent.id),
+          getDailyGoalCount(selectedStudent.id),
+          getDailyCompletedCount(selectedStudent.id),
+          getWeeklyGoalPercent(selectedStudent.id)
         ]);
 
         // 커리큘럼 설정
@@ -153,14 +238,53 @@ export default function ProtectorDashboard() {
         // 협의 로그 설정
         setDiscussion(discussionData.discussion || '협의 로그가 없습니다.');
 
+        // 학습 시간 데이터 저장 (차트용)
+        setLearningTime(learningTimeData);
+
         // 학습 시간 데이터를 WeeklyActivity 형식으로 변환
         const activityData = convertToWeeklyActivity(learningTimeData);
+        calculatedStreak = calculateWeeklyStreak(activityData);
         setWeeklyActivity(activityData);
+
+        // students 배열에서 현재 학생의 streak 업데이트
+        setStudents(prevStudents =>
+          prevStudents.map(student =>
+            student.id === selectedStudent.id
+              ? { ...student, streak: calculatedStreak }
+              : student
+          )
+        );
+
+        // 학습 목표 데이터 설정
+        const goalsData: StudyGoal[] = [
+          {
+            type: 'daily',
+            target: dailyGoalData.todayGoalCount,
+            current: dailyCompletedData.completedCount,
+            unit: '개' // 문제 개수
+          },
+          {
+            type: 'daily',
+            target: 30, // 일일 학습 시간 목표 (30분 고정)
+            current: learningTimeData.thisWeekLearningTime.daily[new Date().getDay()]?.learningMinutes || 0,
+            unit: '분' // 학습 시간
+          },
+          {
+            type: 'weekly',
+            target: 100, // TODO: 주간 목표는 백분율이므로 100 고정
+            current: weeklyPercentData.weekGoalPercent,
+            unit: '%'
+          }
+        ];
+        setStudyGoals(goalsData);
 
         console.log('✅ 대시보드 데이터 로드 완료:', {
           curriculum: curriculumData,
           discussion: discussionData,
-          learningTime: learningTimeData
+          learningTime: learningTimeData,
+          dailyGoal: dailyGoalData,
+          dailyCompleted: dailyCompletedData,
+          weeklyPercent: weeklyPercentData
         });
       } catch (error) {
         console.error('❌ 대시보드 데이터 로드 실패:', error);
@@ -168,6 +292,7 @@ export default function ProtectorDashboard() {
         setCurriculum('데이터를 불러올 수 없습니다.');
         setDiscussion('데이터를 불러올 수 없습니다.');
         setWeeklyActivity([]);
+        setStudyGoals(mockStudyGoals); // 에러 시 mock 데이터 사용
       } finally {
         setIsLoading(false);
       }
@@ -276,13 +401,22 @@ export default function ProtectorDashboard() {
                   />
 
                   {/* 학습 목표 카드 */}
-                  <StudyGoalsCard goals={mockStudyGoals} />
+                  <StudyGoalsCard goals={studyGoals} />
+
+                  {/* 주간 학습 시간 비교 차트 */}
+                  {learningTime && (
+                    <WeeklyComparisonChart
+                      lastWeek={learningTime.lastWeekLearningTime.daily.map(d => d.learningMinutes)}
+                      thisWeek={learningTime.thisWeekLearningTime.daily.map(d => d.learningMinutes)}
+                      days={['월', '화', '수', '목', '금', '토', '일']}
+                    />
+                  )}
 
                   {/* 지난주 학습 분석 */}
                   <WeeklyLearningSection
                     averageAccuracy={83}
                     difficultJamos={mockJamoStats}
-                    onDetailClick={() => navigate('/protector/learning-analysis')}
+                    onDetailClick={() => navigate('/protector/learning-analysis', { state: { selectedStudent } })}
                   />
                 </div>
 
@@ -293,7 +427,7 @@ export default function ProtectorDashboard() {
                     curriculum={curriculum}
                     discussion={discussion}
                     isLoading={isLoading}
-                    onLogClick={() => navigate('/protector/ai-agent-log')}
+                    onLogClick={() => navigate('/protector/ai-agent-log', { state: { selectedStudent } })}
                   />
                 </div>
               </div>

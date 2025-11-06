@@ -1,54 +1,96 @@
 import { useState, useEffect } from 'react';
+import { getMajorInterests, getSubInterests } from '../../../api/interestApi';
+import type { MajorInterest, SubInterest } from '../../../api/interestApi';
 
-interface InterestCategory {
-  id: string;
+interface SelectedInterest {
+  id: number;
   name: string;
 }
 
 interface InterestSelectionModalProps {
   onClose: () => void;
-  onConfirm: (selectedInterests: string[]) => void;
-  initialSelection?: string[];
+  onConfirm: (selectedInterestIds: number[]) => void;
+  initialSelection?: number[];
 }
-
-// Mock data for interests
-const majorCategories: InterestCategory[] = [
-  { id: 'major1', name: '대분류 1' },
-  { id: 'major2', name: '대분류 2' },
-  { id: 'major3', name: '대분류 3' },
-  { id: 'major4', name: '대분류 4' },
-];
-
-const minorCategories: InterestCategory[] = [
-  { id: 'minor1', name: '소분류 1' },
-  { id: 'minor2', name: '소분류 2' },
-  { id: 'minor3', name: '소분류 3' },
-  { id: 'minor4', name: '소분류 4' },
-];
 
 export default function InterestSelectionModal({
   onClose,
   onConfirm,
   initialSelection = []
 }: InterestSelectionModalProps) {
-  const [selectedInterests, setSelectedInterests] = useState<string[]>(initialSelection);
+  const [majorInterests, setMajorInterests] = useState<MajorInterest[]>([]);
+  const [selectedMajor, setSelectedMajor] = useState<number | null>(null);
+  const [subInterests, setSubInterests] = useState<SubInterest[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<SelectedInterest[]>([]);
+  const [isLoadingMajor, setIsLoadingMajor] = useState(false);
+  const [isLoadingSub, setIsLoadingSub] = useState(false);
 
-  const toggleInterest = (interest: string) => {
+  // 대분류 목록 로드
+  useEffect(() => {
+    const fetchMajorInterests = async () => {
+      setIsLoadingMajor(true);
+      try {
+        const response = await getMajorInterests();
+        setMajorInterests(response.majorInterests);
+        console.log('✅ 대분류 관심사 로드 완료:', response.majorInterests);
+      } catch (error) {
+        console.error('❌ 대분류 관심사 로드 실패:', error);
+        alert('관심사 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoadingMajor(false);
+      }
+    };
+
+    fetchMajorInterests();
+  }, []);
+
+  // 대분류 선택 시 소분류 로드
+  useEffect(() => {
+    if (selectedMajor === null) {
+      setSubInterests([]);
+      return;
+    }
+
+    const fetchSubInterests = async () => {
+      setIsLoadingSub(true);
+      try {
+        const response = await getSubInterests(selectedMajor);
+        setSubInterests(response.subInterests);
+        console.log('✅ 소분류 관심사 로드 완료:', response.subInterests);
+      } catch (error) {
+        console.error('❌ 소분류 관심사 로드 실패:', error);
+        alert('하위 관심사 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoadingSub(false);
+      }
+    };
+
+    fetchSubInterests();
+  }, [selectedMajor]);
+
+  const toggleSubInterest = (subInterest: SubInterest) => {
     setSelectedInterests(prev => {
-      if (prev.includes(interest)) {
-        return prev.filter(item => item !== interest);
+      const exists = prev.find(item => item.id === subInterest.subInterestId);
+      if (exists) {
+        return prev.filter(item => item.id !== subInterest.subInterestId);
       } else {
-        return [...prev, interest];
+        // 최대 5개까지만 선택 가능
+        if (prev.length >= 5) {
+          alert('관심사는 최대 5개까지 선택할 수 있습니다.');
+          return prev;
+        }
+        return [...prev, { id: subInterest.subInterestId, name: subInterest.subInterestName }];
       }
     });
   };
 
-  const handleConfirm = () => {
-    onConfirm(selectedInterests);
+  const removeInterest = (interestId: number) => {
+    setSelectedInterests(prev => prev.filter(item => item.id !== interestId));
   };
 
-  const removeInterest = (interest: string) => {
-    setSelectedInterests(prev => prev.filter(item => item !== interest));
+  const handleConfirm = () => {
+    const interestIds = selectedInterests.map(item => item.id);
+    onConfirm(interestIds);
   };
 
   return (
@@ -64,56 +106,70 @@ export default function InterestSelectionModal({
         <div className="grid grid-cols-2 gap-8 mb-6 min-h-[300px]">
           {/* 대분류 */}
           <div className="space-y-3">
-            {majorCategories.map((category) => (
-              <label
-                key={category.id}
-                className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedInterests.includes(category.name)}
-                  onChange={() => toggleInterest(category.name)}
-                  className="w-5 h-5 mr-3"
-                />
-                <span className="text-gray-700">{category.name}</span>
-              </label>
-            ))}
+            {isLoadingMajor ? (
+              <div className="text-center text-gray-500">로딩 중...</div>
+            ) : (
+              majorInterests.map((major) => (
+                <button
+                  key={major.majorInterestId}
+                  onClick={() => setSelectedMajor(major.majorInterestId)}
+                  className={`w-full text-left p-3 rounded-lg transition-colors ${
+                    selectedMajor === major.majorInterestId
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                >
+                  {major.majorInterestName}
+                </button>
+              ))
+            )}
           </div>
 
           {/* 소분류 */}
           <div className="space-y-3">
-            {minorCategories.map((category) => (
-              <label
-                key={category.id}
-                className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedInterests.includes(category.name)}
-                  onChange={() => toggleInterest(category.name)}
-                  className="w-5 h-5 mr-3"
-                />
-                <span className="text-gray-700">{category.name}</span>
-              </label>
-            ))}
+            {!selectedMajor ? (
+              <div className="text-center text-gray-500">왼쪽에서 대분류를 선택하세요</div>
+            ) : isLoadingSub ? (
+              <div className="text-center text-gray-500">로딩 중...</div>
+            ) : (
+              subInterests.map((sub) => (
+                <label
+                  key={sub.subInterestId}
+                  className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedInterests.some(item => item.id === sub.subInterestId)}
+                    onChange={() => toggleSubInterest(sub)}
+                    className="w-5 h-5 mr-3"
+                  />
+                  <span className="text-gray-700">{sub.subInterestName}</span>
+                </label>
+              ))
+            )}
           </div>
         </div>
 
         {/* 선택된 항목 표시 */}
         <div className="mb-6 min-h-[60px]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">
+              선택된 관심사: {selectedInterests.length}/5
+            </span>
+          </div>
           <div className="flex flex-wrap gap-2">
             {selectedInterests.map((interest) => (
               <div
-                key={interest}
+                key={interest.id}
                 className="inline-flex items-center bg-blue-100 text-blue-800 px-4 py-2 rounded-full"
               >
                 <button
-                  onClick={() => removeInterest(interest)}
+                  onClick={() => removeInterest(interest.id)}
                   className="mr-2 text-blue-600 hover:text-blue-800 font-bold"
                 >
                   ✕
                 </button>
-                <span>{interest}</span>
+                <span>{interest.name}</span>
               </div>
             ))}
           </div>

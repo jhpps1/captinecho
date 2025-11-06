@@ -1,3 +1,14 @@
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+
 interface WeeklyComparisonChartProps {
   lastWeek: number[];
   thisWeek: number[];
@@ -5,77 +16,82 @@ interface WeeklyComparisonChartProps {
 }
 
 export default function WeeklyComparisonChart({ lastWeek, thisWeek, days }: WeeklyComparisonChartProps) {
-  const maxValue = Math.max(...lastWeek, ...thisWeek);
-  const chartHeight = 300;
+  // Recharts 데이터 형식으로 변환
+  const chartData = days.map((day, index) => ({
+    day,
+    지난주: lastWeek[index],
+    이번주: thisWeek[index]
+  }));
 
-  const getBarHeight = (value: number) => {
-    return (value / maxValue) * chartHeight;
-  };
+  // 총 학습 시간 계산
+  const lastWeekTotal = lastWeek.reduce((sum, val) => sum + val, 0);
+  const thisWeekTotal = thisWeek.reduce((sum, val) => sum + val, 0);
+  const difference = thisWeekTotal - lastWeekTotal;
+  const percentChange = lastWeekTotal > 0 ? Math.round((difference / lastWeekTotal) * 100) : 0;
 
   return (
     <div className="bg-white rounded-2xl p-6">
-      <h3 className="text-xl font-bold text-gray-800 mb-6">주간 학습 시간 비교</h3>
-
-      {/* 차트 */}
-      <div className="relative" style={{ height: `${chartHeight + 60}px` }}>
-        {/* Y축 레이블 */}
-        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500">
-          <span>{maxValue}분</span>
-          <span>{Math.round(maxValue / 2)}분</span>
-          <span>0분</span>
-        </div>
-
-        {/* 차트 영역 */}
-        <div className="ml-12 h-full flex items-end justify-around gap-2">
-          {days.map((day, index) => (
-            <div key={index} className="flex-1 flex flex-col items-center gap-2">
-              {/* 막대 그래프 */}
-              <div className="w-full flex justify-center items-end gap-1" style={{ height: chartHeight }}>
-                {/* 지난 주 */}
-                <div className="relative group">
-                  <div
-                    className="w-8 bg-pink-400 rounded-t transition-all duration-300 hover:bg-pink-500"
-                    style={{ height: `${getBarHeight(lastWeek[index])}px` }}
-                  ></div>
-                  {lastWeek[index] > 0 && (
-                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-gray-700">
-                      {lastWeek[index]}분
-                    </div>
-                  )}
-                </div>
-
-                {/* 이번 주 */}
-                <div className="relative group">
-                  <div
-                    className="w-8 bg-purple-500 rounded-t transition-all duration-300 hover:bg-purple-600"
-                    style={{ height: `${getBarHeight(thisWeek[index])}px` }}
-                  ></div>
-                  {thisWeek[index] > 0 && (
-                    <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-gray-700">
-                      {thisWeek[index]}분
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* X축 레이블 */}
-              <span className="text-sm text-gray-700">{day}</span>
-            </div>
-          ))}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold text-gray-800">주간 학습 시간 비교</h3>
+        {/* 변화량 표시 */}
+        <div className="text-right">
+          <div className="text-sm text-gray-600">이번주 총 학습 시간</div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-purple-600">{thisWeekTotal}분</span>
+            {difference !== 0 && (
+              <span className={`text-sm font-semibold ${difference > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {difference > 0 ? '+' : ''}{difference}분 ({percentChange > 0 ? '+' : ''}{percentChange}%)
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 범례 */}
-      <div className="flex justify-center gap-6 mt-6">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-pink-400 rounded"></div>
-          <span className="text-sm text-gray-700">지난 주 학습 시간</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-purple-500 rounded"></div>
-          <span className="text-sm text-gray-700">이번 주 학습 시간</span>
-        </div>
-      </div>
+      {/* Recharts 막대 그래프 */}
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart
+          data={chartData}
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis
+            dataKey="day"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            axisLine={{ stroke: '#e5e7eb' }}
+          />
+          <YAxis
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            axisLine={{ stroke: '#e5e7eb' }}
+            label={{ value: '학습 시간 (분)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '8px 12px'
+            }}
+            labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
+            formatter={(value: number) => [`${value}분`, '']}
+          />
+          <Legend
+            wrapperStyle={{ paddingTop: '20px' }}
+            iconType="rect"
+          />
+          <Bar
+            dataKey="지난주"
+            fill="#f472b6"
+            radius={[8, 8, 0, 0]}
+            animationDuration={800}
+          />
+          <Bar
+            dataKey="이번주"
+            fill="#a855f7"
+            radius={[8, 8, 0, 0]}
+            animationDuration={800}
+          />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }

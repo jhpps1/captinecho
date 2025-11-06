@@ -119,7 +119,7 @@ public class DashboardService {
         Map<Integer, Integer> dowToMinutes = new HashMap<>();
         for (Object[] row : dailyData) {
             Integer dow = ((Number) row[0]).intValue();  // PostgreSQL DOW
-            Double minutes = (Double) row[1];
+            Double minutes = ((Number) row[1]).doubleValue();
             dowToMinutes.put(dow, minutes.intValue());
         }
 
