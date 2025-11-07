@@ -30,10 +30,11 @@ class DayProblem(Base):
     sound_url = Column(Text)
     question_phonemes = Column(Text)
     blank_position = Column(Text)
-    blank_phoneme = Column(Text)
+    # blank_phoneme = Column(Text)
     choices = Column(Text)  # JSON string or list
-    correct_answer = Column(Text)
-
+    # correct_answer = Column(Text)
+    correct_answer = Column(String(100), nullable=True) # 5 -> 100 수정 필수
+    blank_phoneme = Column(String(50), nullable=True)   # 5 -> 50 수정 필수
 
 
 class Student(Base):
