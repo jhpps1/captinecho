@@ -4,9 +4,11 @@ import com.captainecho.captainecho.auth.domain.ProtectorPrincipal;
 import com.captainecho.captainecho.dashboard.application.DashboardService;
 import com.captainecho.captainecho.dashboard.application.result.CurriculumResult;
 import com.captainecho.captainecho.dashboard.application.result.DiscussionResult;
+import com.captainecho.captainecho.dashboard.application.result.GetProtectorGoalResult;
 import com.captainecho.captainecho.dashboard.application.result.LearningTimeResult;
 import com.captainecho.captainecho.dashboard.presentation.response.CurriculumResponse;
 import com.captainecho.captainecho.dashboard.presentation.response.DiscussionResponse;
+import com.captainecho.captainecho.dashboard.presentation.response.GetProtectorGoalResponse;
 import com.captainecho.captainecho.dashboard.presentation.response.LearningTimeResponse;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
@@ -168,6 +170,26 @@ public class DashboardController {
         GetWeeklyGoalPercentCommand command = new GetWeeklyGoalPercentCommand(studentId, protectorId);
         GetWeeklyGoalPercentResult result = studentService.getWeeklyGoalPercent(command);
         GetWeeklyGoalPercentResponse response = GetWeeklyGoalPercentResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 금주 보호자 학습 목표 조회
+     * GET /api/student/{studentId}/dashboard/goal
+     */
+    @GetMapping("/goal")
+    public ResponseEntity<GetProtectorGoalResponse> getProtectorGoal(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("studentId") Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+        GetProtectorGoalResult result = dashboardService.getProtectorGoal(protectorId, studentId);
+        GetProtectorGoalResponse response = GetProtectorGoalResponse.from(result);
 
         return ResponseEntity.ok(response);
     }

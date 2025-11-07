@@ -3,6 +3,7 @@ package com.captainecho.captainecho.dashboard.application;
 import com.captainecho.captainecho.dashboard.application.result.CurriculumResult;
 import com.captainecho.captainecho.dashboard.application.result.DailyLearningTimeDto;
 import com.captainecho.captainecho.dashboard.application.result.DiscussionResult;
+import com.captainecho.captainecho.dashboard.application.result.GetProtectorGoalResult;
 import com.captainecho.captainecho.dashboard.application.result.LearningTimeResult;
 import com.captainecho.captainecho.dashboard.application.result.ProtectorGoalListResult;
 import com.captainecho.captainecho.dashboard.application.result.WeeklyLearningTimeDto;
@@ -150,6 +151,34 @@ public class DashboardService {
      */
     public ProtectorGoalListResult getProtectorGoals() {
         return ProtectorGoalListResult.fromEnum();
+    }
+
+    /**
+     * 금주 보호자 학습 목표 조회
+     */
+    @Transactional(readOnly = true)
+    public GetProtectorGoalResult getProtectorGoal(Integer protectorId, Integer studentId) {
+        // 1. 학생 접근 권한 확인
+        verifyStudentAccess(protectorId, studentId);
+
+        // 2. 이번 주 범위 계산 (월요일 00:00 ~ 일요일 23:59)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime thisWeekStart = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime thisWeekEnd = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+                .withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+
+        // 3. 이번 주 리포트 조회
+        WeeklyPersonalReport report = weeklyPersonalReportRepository
+                .findFirstByStudent_StudentIdAndCreatedAtBetween(
+                        studentId,
+                        thisWeekStart,
+                        thisWeekEnd
+                )
+                .orElse(null);
+
+        // 4. protector_goal 반환 (없으면 null)
+        return GetProtectorGoalResult.from(report != null ? report.getProtectorGoal() : null);
     }
 
     /**

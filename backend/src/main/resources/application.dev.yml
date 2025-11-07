@@ -42,10 +42,12 @@ oauth2:
 
 logging:
   level:
-    org.hibernate.SQL: debug
-    org.hibernate.type.descriptor.sql: trace
-    com.captainecho.captainecho.jwt: debug
-    com.captainecho.captainecho.auth.filter: debug
+    com.captainecho: TRACE
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
 
 # Swagger (SpringDoc OpenAPI) 설정
 springdoc:
