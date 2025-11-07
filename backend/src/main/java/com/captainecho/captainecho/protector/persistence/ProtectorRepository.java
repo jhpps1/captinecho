@@ -1,4 +1,4 @@
-package com.captainecho.captainecho.protector.presentation.response.persistence;
+package com.captainecho.captainecho.protector.persistence;
 
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.domain.Provider;
