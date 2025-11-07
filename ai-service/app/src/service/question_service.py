@@ -6,8 +6,10 @@ import datetime
 import os
 from app.src.tasks.question import get_latest_curriculum, create_day_problem
 from app.src.utils.llm import llm_problem
-from app.src.utils.s3 import upload_to_local  # 로컬 개발용
-from app.src.api.gms_api import generate_image_with_gemini_flash
+from app.src.utils.s3 import upload_to_local # 로컬 개발용
+# 🚨 [수정 필요]: 파일명을 gms_api.py에서 gemini_api.py로 변경했다면 이 부분을 수정해야 합니다.
+# 파일명을 그대로 유지했다면 이 줄은 수정하지 않아도 됩니다. (여기서는 파일명이 바뀌었다고 가정하고 작성합니다)
+from app.src.api.gemini_api import generate_image_with_gemini_flash # <--- import 경로 수정!
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -77,7 +79,7 @@ def process_day_problem_items(session, student_id, llm_result):
 
 
     # 🚨 GMS API 키를 여기서 한 번 읽어옵니다. (OPENAI_API_KEY 사용)
-    GMS_API_KEY_FROM_ENV = os.getenv("OPENAI_API_KEY")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
     for item in llm_result:
         # 1. student_id 설정
@@ -128,17 +130,17 @@ def process_day_problem_items(session, student_id, llm_result):
 
         if adventure_type in [2, 3] and correct_answer_text:
             # GMS API 호출 시작 로그
-            print(f"✨ GMS API 호출 시작: '{correct_answer_text}'")
+            print(f"✨ Gemini API 호출 시작: '{correct_answer_text}'")
 
             # 1. Base64 데이터 생성 시도 로직 건너뛰기
-            if GMS_API_KEY_FROM_ENV:
+            if GEMINI_API_KEY:
                 # generate_image_with_gemini_flash 함수는 이제 파일 경로를 반환해야 함
                 generated_image_path = generate_image_with_gemini_flash(
                     correct_answer_text, 
-                    GMS_API_KEY_FROM_ENV 
+                    GEMINI_API_KEY 
                 )
             else:
-                print("❌ GMS API Key가 없어 이미지 생성을 시도하지 않았습니다.")
+                print("❌ Gemini API Key가 없어 이미지 생성을 시도하지 않았습니다.")
                 generated_image_path = ""
 
             # 호출 결과 처리 로직 (하나만 남김)
@@ -146,7 +148,7 @@ def process_day_problem_items(session, student_id, llm_result):
                 item["image_url"] = generated_image_path
                 print(f"✅ GMS 이미지 생성 성공! URL: {generated_image_path}")
             else:
-                print(f"❌ GMS 이미지 생성 실패! 기본 URL 사용.")
+                print(f"❌ Gemini 이미지 생성 실패! 기본 URL 사용.")
                 item["image_url"] = "" # 실패 시 image_url을 비워둠
 
 

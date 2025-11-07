@@ -68,7 +68,7 @@ def extract_final_results(history):
 
     # 💡 논의 및 합의 요약: ~ 끝까지
     discussion_match = re.search(
-        r'\n논의 및 합의 요약:(.*)', full_text, re.DOTALL)
+        r'\n논의 및 합의 요약:(.*?)(?=\n\[월~금 커리큘럼\]|$)', full_text, re.DOTALL)
     discussion_log = discussion_match.group(1).strip() if discussion_match else ""
 
     return curriculum, discussion_log

@@ -1,5 +1,3 @@
-#src/core/config.py
-
 """
 Application Configuration
 =========================
@@ -8,26 +6,33 @@ Application Configuration
 
 import os
 from typing import List, Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict # SettingsConfigDict 추가
 from pydantic import Field
 
 class Settings(BaseSettings):
     """애플리케이션 설정"""
 
+    # 🚨 [Pydantic V2 스타일]: 내부 Config 클래스를 model_config 속성으로 대체
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
+
     # 기본 설정
     PROJECT_NAME: str = "Captain Echo AI Service"
     VERSION: str = "1.0.0"
-    ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
-    DEBUG: bool = Field(default=True, env="DEBUG")
+    ENVIRONMENT: str = Field(default="development")
+    DEBUG: bool = Field(default=True)
 
     # 서버 설정
-    PORT: int = Field(default=8000, env="PORT")
-    HOST: str = Field(default="0.0.0.0", env="HOST")
-    WORKERS: int = Field(default=1, env="WORKERS")
+    PORT: int = Field(default=8000)
+    HOST: str = Field(default="0.0.0.0")
+    WORKERS: int = Field(default=1)
 
     # 로깅 설정
-    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
-    LOG_FILE: str = Field(default="/app/logs/ai-service.log", env="LOG_FILE")
+    LOG_LEVEL: str = Field(default="INFO")
+    LOG_FILE: str = Field(default="/app/logs/ai-service.log")
 
     # CORS 설정
     ALLOWED_ORIGINS: List[str] = Field(
@@ -36,54 +41,58 @@ class Settings(BaseSettings):
             "http://localhost:3000",
             "http://localhost:5173",
             "http://localhost:8080",
-        ],
-        env="ALLOWED_ORIGINS"
+        ]
     )
 
-    # OpenAI 설정 (CrewAI용)
-    OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
-    OPENAI_MODEL: str = Field(default="gpt-4o", env="OPENAI_MODEL")  # ← 꼭 추가!
-    OPENAI_MODEL2: str = Field(default="gpt-5", env="OPENAI_MODEL2")
-    OPENAI_BASE_URL: Optional[str] = Field(default=None, env="OPENAI_BASE_URL")
-    OPENAI_TEMPERATURE: float = Field(default=0.7, env="OPENAI_TEMPERATURE")
-    OPENAI_MAX_TOKENS: int = Field(default=4000, env="OPENAI_MAX_TOKENS")
+    # --- 🤖 AI 설정 ---
+
+    # OpenAI/GMS 설정 (CrewAI용 및 기존 LLM)
+    OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY") # Field(..., env="OPENAI_API_KEY")는 그대로 유지
+    OPENAI_MODEL: str = Field(default="gpt-4o")
+    # env 이름이 OPENAI_MODEL2인 경우, alias를 사용하여 Python 변수명을 명확하게 합니다.
+    OPENAI_MODEL_2: str = Field(default="gpt-5", alias="OPENAI_MODEL2") 
+    OPENAI_BASE_URL: Optional[str] = Field(default=None)
+    OPENAI_TEMPERATURE: float = Field(default=0.7)
+    OPENAI_MAX_TOKENS: int = Field(default=4000)
+    
+    # 🚨 [추가]: GEMINI API Key 필드 추가 (Validation 오류 해결)
+    GEMINI_API_KEY: Optional[str] = Field(default="")
 
     # Embedding(임베딩) 모델/엔드포인트 (gms 기반)
-    EMBEDDING_MODEL: str = Field(default="text-embedding-3-small", env="EMBEDDING_MODEL")
-    EMBEDDING_BASE_URL: str = Field(default="https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings", env="EMBEDDING_BASE_URL")
+    EMBEDDING_MODEL: str = Field(default="text-embedding-3-small")
+    EMBEDDING_BASE_URL: str = Field(default="https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings")
 
     # CrewAI 설정
-    CREWAI_TELEMETRY_OPT_OUT: bool = Field(default=True, env="CREWAI_TELEMETRY_OPT_OUT")
-    CREWAI_LOG_LEVEL: str = Field(default="WARNING", env="CREWAI_LOG_LEVEL")
+    CREWAI_TELEMETRY_OPT_OUT: bool = Field(default=True)
+    CREWAI_LOG_LEVEL: str = Field(default="WARNING")
+
+    # --- 💾 인프라 설정 ---
 
     # 데이터베이스 설정
-    DATABASE_URL: Optional[str] = Field(default=None, env="DATABASE_URL")
-    DB_HOST: str = Field(default="localhost", env="DB_HOST")
-    DB_PORT: int = Field(default=5432, env="DB_PORT")
-    DB_NAME: str = Field(default="captain_echo", env="DB_NAME")
-    DB_USER: str = Field(default="admin", env="DB_USER")
-    DB_PASSWORD: str = Field(default="changeme", env="DB_PASSWORD")
+    DATABASE_URL: Optional[str] = Field(default=None)
+    DB_HOST: str = Field(default="localhost")
+    DB_PORT: int = Field(default=5432)
+    DB_NAME: str = Field(default="captain_echo")
+    DB_USER: str = Field(default="admin")
+    DB_PASSWORD: str = Field(default="changeme")
 
     # Redis 설정
-    REDIS_HOST: str = Field(default="localhost", env="REDIS_HOST")
-    REDIS_PORT: int = Field(default=6379, env="REDIS_PORT")
-    REDIS_PASSWORD: Optional[str] = Field(default="changeme", env="REDIS_PASSWORD")
-    REDIS_DB: int = Field(default=0, env="REDIS_DB")
+    REDIS_HOST: str = Field(default="localhost")
+    REDIS_PORT: int = Field(default=6379)
+    REDIS_PASSWORD: Optional[str] = Field(default="changeme")
+    REDIS_DB: int = Field(default=0)
 
     # 백엔드 서비스 URL
-    BACKEND_URL: str = Field(default="http://localhost:8080", env="BACKEND_URL")
+    BACKEND_URL: str = Field(default="http://localhost:8080")
 
     # 캐시 설정
-    CACHE_TTL: int = Field(default=3600, env="CACHE_TTL")  # 1시간
+    CACHE_TTL: int = Field(default=3600)  # 1시간
 
     # 타임아웃 설정
-    REQUEST_TIMEOUT: int = Field(default=30, env="REQUEST_TIMEOUT")  # 30초
-    AI_PROCESSING_TIMEOUT: int = Field(default=120, env="AI_PROCESSING_TIMEOUT")  # 2분
+    REQUEST_TIMEOUT: int = Field(default=30)  # 30초
+    AI_PROCESSING_TIMEOUT: int = Field(default=120)  # 2분
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    # --- Helper Methods ---
 
     def get_database_url(self) -> str:
         """데이터베이스 URL 생성"""
