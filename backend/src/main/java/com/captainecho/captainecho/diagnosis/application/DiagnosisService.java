@@ -3,9 +3,13 @@ package com.captainecho.captainecho.diagnosis.application;
 import com.captainecho.captainecho.diagnosis.application.command.EndInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.command.StartInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.result.EndInitialDiagnosisResult;
+import com.captainecho.captainecho.diagnosis.application.result.GetInitialDiagnosisProblemsResult;
+import com.captainecho.captainecho.diagnosis.application.result.InitialDiagnosisProblemDto;
 import com.captainecho.captainecho.diagnosis.application.result.StartInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.domain.DiagnosisSession;
+import com.captainecho.captainecho.diagnosis.domain.InitialDiagnosisProblem;
 import com.captainecho.captainecho.diagnosis.persistence.DiagnosisSessionRepository;
+import com.captainecho.captainecho.diagnosis.persistence.InitialDiagnosisProblemRepository;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.DiagnosisErrorCode;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
@@ -24,6 +29,7 @@ public class DiagnosisService {
 
     private final StudentRepository studentRepository;
     private final DiagnosisSessionRepository diagnosisSessionRepository;
+    private final InitialDiagnosisProblemRepository initialDiagnosisProblemRepository;
 
     @Transactional
     public StartInitialDiagnosisResult startInitialDiagnosis(StartInitialDiagnosisCommand command) {
@@ -76,5 +82,35 @@ public class DiagnosisService {
                 session.getStartTime(),
                 session.getEndTime()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public GetInitialDiagnosisProblemsResult getInitialDiagnosisProblems(Integer studentId, Integer protectorId) {
+        // 1. 학생 존재 여부 확인
+        studentRepository.findById(studentId)
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(studentId, protectorId)) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 모든 초기 진단 문제 조회
+        List<InitialDiagnosisProblem> problems = initialDiagnosisProblemRepository.findAll();
+
+        // 4. DTO로 변환
+        List<InitialDiagnosisProblemDto> dtos = problems.stream()
+                .map(problem -> InitialDiagnosisProblemDto.builder()
+                        .initialDiagnosisProblemId(problem.getInitialDiagnosisProblemId())
+                        .diagnosisType(problem.getDiagnosisType())
+                        .problem(problem.getProblem())
+                        .choices(problem.getChoices())
+                        .problemImageUrl(problem.getProblemImageUrl())
+                        .problemSoundUrl(problem.getProblemSoundUrl())
+                        .correctAnswer(problem.getCorrectAnswer())
+                        .build())
+                .toList();
+
+        return new GetInitialDiagnosisProblemsResult(dtos);
     }
 }
