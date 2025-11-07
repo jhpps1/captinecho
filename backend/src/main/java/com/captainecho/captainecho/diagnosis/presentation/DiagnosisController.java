@@ -69,7 +69,7 @@ public class DiagnosisController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         EndInitialDiagnosisCommand command = new EndInitialDiagnosisCommand(studentId, protectorId);
         EndInitialDiagnosisResult result = diagnosisService.endInitialDiagnosis(command);
