@@ -1,7 +1,7 @@
 # src/agents/wellbeing.py
 
 from crewai import Agent
-from app.src.utils.llm import llm
+from ..utils.llm import llm
 
 def build():
     return Agent(
@@ -16,7 +16,6 @@ def build():
             "문제에 흥미를 갖고, 적절한 공부량을 유지하며 스스로 성장하기를 원한다."
             "학습 계획 내에서 적절한 도전과 재미를 찾으려 한다. "
             "부담을 줄이고, 자립적으로 성장하는 습관 형성을 중요하게 생각한다."
-        
         ),
         llm=llm,
         verbose=0,

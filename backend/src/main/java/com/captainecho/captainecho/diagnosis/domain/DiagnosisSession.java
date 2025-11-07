@@ -27,7 +27,7 @@ public class DiagnosisSession {
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(name = "end_time", nullable = false)
+    @Column(name = "end_time")
     private LocalDateTime endTime;
 
     @Builder
@@ -35,5 +35,9 @@ public class DiagnosisSession {
         this.student = student;
         this.startTime = startTime;
         this.endTime = endTime;
+    }
+
+    public void completeSession() {
+        this.endTime = LocalDateTime.now();
     }
 }

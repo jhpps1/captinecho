@@ -26,20 +26,14 @@ public class WeeklyPersonalReport {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    @Column(name = "total_time", nullable = false)
+    @Column(name = "total_time")
     @ColumnDefault("0")
     private Integer totalTime = 0;
 
-    @Column(name = "error_rate", nullable = false)
-    private Double errorRate;
-
-    @Column(name = "improvement_rate", nullable = false)
-    private Double improvementRate;
-
-    @Column(name = "curriculum", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "curriculum", columnDefinition = "TEXT")
     private String curriculum;
 
-    @Column(name = "discussion_log", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "discussion_log", columnDefinition = "TEXT")
     private String discussionLog;
 
     @Column(name = "protector_goal", length = 20)
@@ -51,14 +45,16 @@ public class WeeklyPersonalReport {
     private LocalDateTime createdAt;
 
     @Builder
-    public WeeklyPersonalReport(Student student, Integer totalTime, Double errorRate, Double improvementRate,
+    public WeeklyPersonalReport(Student student, Integer totalTime,
                                 String curriculum, String discussionLog, ProtectorGoal protectorGoal) {
         this.student = student;
         this.totalTime = totalTime != null ? totalTime : 0;
-        this.errorRate = errorRate;
-        this.improvementRate = improvementRate;
         this.curriculum = curriculum;
         this.discussionLog = discussionLog;
+        this.protectorGoal = protectorGoal;
+    }
+
+    public void updateProtectorGoal(ProtectorGoal protectorGoal) {
         this.protectorGoal = protectorGoal;
     }
 }

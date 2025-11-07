@@ -38,6 +38,7 @@ ENV NODE_ENV=production
 ENV GENERATE_SOURCEMAP=false
 ENV VITE_API_URL=http://localhost:8080/api
 ENV VITE_AI_SERVICE_URL=http://localhost:8000/api/ai
+ENV VITE_GOOGLE_CLIENT_ID=354888789925-a90npa5jacksapnjgna9ok47kc8jcj7v.apps.googleusercontent.com
 
 # 애플리케이션 빌드
 RUN npm run build

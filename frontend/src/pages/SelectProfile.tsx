@@ -82,9 +82,7 @@ const SelectProfile = () => {
 
   const handleClose = () => {
     setShowPinModal(false);
-    // alert('PIN 입력이 취소되었습니다.'); // SelectProfile 에서는 단순 닫기
   };
-  // --- PIN 모달 로직 끝 ---
 
   // 학생 목록 불러오기
   useEffect(() => {
@@ -133,9 +131,10 @@ const SelectProfile = () => {
   // -------------------------
 
   // 프로필 클릭 시 실행될 함수
-  const handleProfileClick = (profileName: string) => {
-    console.log(`${profileName} 프로필 선택됨`);
-    // TODO: 프로필 선택 후 메인 페이지로 이동하는 로직 추가
+// 프로필 클릭 시 실행될 함수
+  const handleProfileClick = (profileId: number) => {
+    sessionStorage.setItem('studentId', String(profileId));
+    navigate('/student');
   };
 
   // --- 2. 로그아웃 버튼 핸들러 ---
@@ -209,7 +208,7 @@ const SelectProfile = () => {
                   <div
                     key={profile.id}
                     className="flex flex-col items-center gap-4 group cursor-pointer"
-                    onClick={() => handleProfileClick(profile.name)}
+                    onClick={() => handleProfileClick(profile.id)}
                   >
                     {/* 프로필 이미지 (원형) */}
                     <div className="w-36 h-36 md:w-44 md:h-44 rounded-full bg-white shadow-lg overflow-hidden border-4 border-white transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-xl group-hover:border-blue-300">
@@ -236,7 +235,8 @@ const SelectProfile = () => {
                 disabled={!showPagination}
               >
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
+                  xmlns="http://www.
+                  w3.org/2000/svg"
                   className="h-6 w-6 text-gray-600"
                   fill="none"
                   viewBox="0 0 24 24"

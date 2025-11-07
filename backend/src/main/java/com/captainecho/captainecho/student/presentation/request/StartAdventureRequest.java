@@ -8,7 +8,7 @@ public record StartAdventureRequest(
         @NotNull(message = "학습 타입은 필수입니다")
         StudyType studyType
 ) {
-    public StartAdventureCommand toCommand(Integer studentId, Long protectorId) {
+    public StartAdventureCommand toCommand(Integer studentId, Integer protectorId) {
         return new StartAdventureCommand(studentId, protectorId, studyType);
     }
 }

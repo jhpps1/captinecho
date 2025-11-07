@@ -4,12 +4,16 @@ import com.captainecho.captainecho.dashboard.application.result.CurriculumResult
 import com.captainecho.captainecho.dashboard.application.result.DailyLearningTimeDto;
 import com.captainecho.captainecho.dashboard.application.result.DiscussionResult;
 import com.captainecho.captainecho.dashboard.application.result.LearningTimeResult;
+import com.captainecho.captainecho.dashboard.application.result.ProtectorGoalListResult;
 import com.captainecho.captainecho.dashboard.application.result.WeeklyLearningTimeDto;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
 import com.captainecho.captainecho.session.persistence.LearningSessionRepository;
 import com.captainecho.captainecho.stats.domain.WeeklyPersonalReport;
 import com.captainecho.captainecho.stats.persistence.WeeklyPersonalReportRepository;
+import com.captainecho.captainecho.student.application.command.SetProtectorGoalCommand;
+import com.captainecho.captainecho.student.application.result.SetProtectorGoalResult;
+import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +42,7 @@ public class DashboardService {
      * 금주 커리큘럼 조회
      */
     @Transactional(readOnly = true)
-    public CurriculumResult getCurriculum(Long protectorId, Integer studentId) {
+    public CurriculumResult getCurriculum(Integer protectorId, Integer studentId) {
         // 1. 학생 접근 권한 확인
         verifyStudentAccess(protectorId, studentId);
 
@@ -56,7 +60,7 @@ public class DashboardService {
      * 금주 협의 로그 조회
      */
     @Transactional(readOnly = true)
-    public DiscussionResult getDiscussion(Long protectorId, Integer studentId) {
+    public DiscussionResult getDiscussion(Integer protectorId, Integer studentId) {
         // 1. 학생 접근 권한 확인
         verifyStudentAccess(protectorId, studentId);
 
@@ -74,7 +78,7 @@ public class DashboardService {
      * 학습 시간 조회 (금주 vs 지난주)
      */
     @Transactional(readOnly = true)
-    public LearningTimeResult getLearningTime(Long protectorId, Integer studentId) {
+    public LearningTimeResult getLearningTime(Integer protectorId, Integer studentId) {
         // 1. 학생 접근 권한 확인
         verifyStudentAccess(protectorId, studentId);
 
@@ -119,7 +123,7 @@ public class DashboardService {
         Map<Integer, Integer> dowToMinutes = new HashMap<>();
         for (Object[] row : dailyData) {
             Integer dow = ((Number) row[0]).intValue();  // PostgreSQL DOW
-            Double minutes = (Double) row[1];
+            Double minutes = ((Number) row[1]).doubleValue();
             dowToMinutes.put(dow, minutes.intValue());
         }
 
@@ -142,9 +146,62 @@ public class DashboardService {
     }
 
     /**
+     * 보호자 학습 목표 선택지 조회
+     */
+    public ProtectorGoalListResult getProtectorGoals() {
+        return ProtectorGoalListResult.fromEnum();
+    }
+
+    /**
+     * 보호자 학습 목표 설정
+     */
+    @Transactional
+    public SetProtectorGoalResult setProtectorGoal(SetProtectorGoalCommand command) {
+        // 1. 학생 접근 권한 확인
+        verifyStudentAccess(command.protectorId(), command.studentId());
+
+        // 2. 이번 주 범위 계산 (월요일 00:00 ~ 일요일 23:59)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime thisWeekStart = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime thisWeekEnd = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+                .withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+
+        // 3. 이번 주 리포트 존재 확인
+        WeeklyPersonalReport existingReport = weeklyPersonalReportRepository
+                .findFirstByStudent_StudentIdAndCreatedAtBetween(
+                        command.studentId(),
+                        thisWeekStart,
+                        thisWeekEnd
+                )
+                .orElse(null);
+
+        if (existingReport != null) {
+            // 4-1. 이미 존재하면 UPDATE
+            existingReport.updateProtectorGoal(command.protectorGoal());
+        } else {
+            // 4-2. 없으면 INSERT (protectorGoal, student만 세팅, 나머지 null)
+            Student student = studentRepository.findById(command.studentId())
+                    .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+            WeeklyPersonalReport newReport = WeeklyPersonalReport.builder()
+                    .student(student)
+                    .protectorGoal(command.protectorGoal())
+                    .totalTime(0)
+                    .curriculum(null)
+                    .discussionLog(null)
+                    .build();
+
+            weeklyPersonalReportRepository.save(newReport);
+        }
+
+        return SetProtectorGoalResult.from(true);
+    }
+
+    /**
      * 학생 접근 권한 확인 (보호자가 해당 학생의 담당자인지 확인)
      */
-    private void verifyStudentAccess(Long protectorId, Integer studentId) {
+    private void verifyStudentAccess(Integer protectorId, Integer studentId) {
         // 학생 존재 여부 확인
         if (!studentRepository.existsById(studentId)) {
             throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);

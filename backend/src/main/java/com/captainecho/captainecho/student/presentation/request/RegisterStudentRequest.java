@@ -34,7 +34,7 @@ public record RegisterStudentRequest(
             Long interestId
     ) {}
 
-    public RegisterStudentCommand toCommand(Long protectorId) {
+    public RegisterStudentCommand toCommand(Integer protectorId) {
         List<Long> interestIds = (interests == null || interests.isEmpty())
                 ? List.of()
                 : interests.stream()

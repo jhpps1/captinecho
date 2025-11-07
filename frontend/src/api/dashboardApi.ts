@@ -25,6 +25,18 @@ export interface DiscussionResponse {
   discussion: string;
 }
 
+export interface DailyGoalCountResponse {
+  todayGoalCount: number;
+}
+
+export interface DailyCompletedCountResponse {
+  completedCount: number;
+}
+
+export interface WeeklyGoalPercentResponse {
+  weekGoalPercent: number;
+}
+
 // ===== API 함수 =====
 
 /**
@@ -56,6 +68,39 @@ export const getDiscussion = async (studentId: number): Promise<DiscussionRespon
 export const getLearningTime = async (studentId: number): Promise<LearningTimeResponse> => {
   const response = await axiosInstance.get<LearningTimeResponse>(
     `/student/${studentId}/dashboard/learning-time`
+  );
+  return response.data;
+};
+
+/**
+ * 오늘 목표 문제 수 조회
+ * GET /api/student/{studentId}/dashboard/daily/plan
+ */
+export const getDailyGoalCount = async (studentId: number): Promise<DailyGoalCountResponse> => {
+  const response = await axiosInstance.get<DailyGoalCountResponse>(
+    `/student/${studentId}/dashboard/daily/plan`
+  );
+  return response.data;
+};
+
+/**
+ * 오늘 완료한 문제 수 조회
+ * GET /api/student/{studentId}/dashboard/daily/count
+ */
+export const getDailyCompletedCount = async (studentId: number): Promise<DailyCompletedCountResponse> => {
+  const response = await axiosInstance.get<DailyCompletedCountResponse>(
+    `/student/${studentId}/dashboard/daily/count`
+  );
+  return response.data;
+};
+
+/**
+ * 주간 목표 도달률 조회
+ * GET /api/student/{studentId}/dashboard/weekly/plan
+ */
+export const getWeeklyGoalPercent = async (studentId: number): Promise<WeeklyGoalPercentResponse> => {
+  const response = await axiosInstance.get<WeeklyGoalPercentResponse>(
+    `/student/${studentId}/dashboard/weekly/plan`
   );
   return response.data;
 };

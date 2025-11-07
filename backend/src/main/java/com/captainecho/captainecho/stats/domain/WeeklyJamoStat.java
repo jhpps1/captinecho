@@ -1,5 +1,6 @@
 package com.captainecho.captainecho.stats.domain;
 
+import com.captainecho.captainecho.student.domain.Student;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -20,6 +21,10 @@ public class WeeklyJamoStat {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "stat_id")
     private Integer statId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id", nullable = false)
+    private Student student;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "report_id", nullable = false)
@@ -47,8 +52,9 @@ public class WeeklyJamoStat {
     private LocalDateTime createdAt;
 
     @Builder
-    public WeeklyJamoStat(WeeklyPersonalReport weeklyPersonalReport, String jamo, Short totalAttempts,
+    public WeeklyJamoStat(Student student, WeeklyPersonalReport weeklyPersonalReport, String jamo, Short totalAttempts,
                           Short failCount, Double weeklyFailRate, Double weeklyAccuracyRate) {
+        this.student = student;
         this.weeklyPersonalReport = weeklyPersonalReport;
         this.jamo = jamo;
         this.totalAttempts = totalAttempts != null ? totalAttempts : 0;

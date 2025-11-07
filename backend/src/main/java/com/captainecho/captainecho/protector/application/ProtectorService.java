@@ -110,7 +110,7 @@ public class ProtectorService {
      * 보호자의 학생 목록 조회
      */
     @Transactional(readOnly = true)
-    public StudentListResult getStudents(Long protectorId) {
+    public StudentListResult getStudents(Integer protectorId) {
         // 1. 학생 목록 조회
         List<Student> students = studentRepository.findByProtector_ProtectorId(protectorId);
 
@@ -142,8 +142,8 @@ public class ProtectorService {
         // 2. 총 할당 계정 수
         Integer totalCount = protector.getMaxStudentCount().intValue();
 
-        // 3. 현재 등록된 학생 수
-        Integer currentStudentCount = studentRepository.countByProtector_ProtectorId(command.protectorId());
+        // 3. 현재 등록된 학생 수 (삭제되지 않은 학생만)
+        Integer currentStudentCount = studentRepository.findActiveStudentsByProtectorId(command.protectorId()).size();
 
         // 4. 남은 계정 수 계산
         Integer remainCount = totalCount - currentStudentCount;

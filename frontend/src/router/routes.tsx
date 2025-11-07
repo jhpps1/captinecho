@@ -10,6 +10,9 @@ import AIAgentLogPage from '../pages/AIAgentLogPage.tsx';
 import ManageStudentsPage from '../pages/ManageStudentsPage.tsx';
 import StudentDashboard from '../pages/StudentDashboard.tsx';
 import NewUserTerms from '../pages/NewUserTerms.tsx';
+import FirstTestIntro from '../pages/FirstTestIntro.tsx';
+import FirstTestPage from '../pages/FirstTestPage.tsx';
+import FirstTestResult from '../pages/FirstTestResult.tsx';
 
 // Adventure 관련 컴포넌트 (새 구조)
 import { AdventureLayout } from '../components/adventure/AdventureLayout.tsx';
@@ -36,6 +39,18 @@ const router = createBrowserRouter([
   {
     path: '/select-profile',
     element: <SelectProfile />,
+  },
+  {
+    path: '/first-test-intro',
+    element: <FirstTestIntro />,
+  },
+  {
+    path: '/first-test',
+    element: <FirstTestPage />,
+  },
+  {
+    path: '/first-test-result',
+    element: <FirstTestResult />,
   },
   {
     path: '/student',

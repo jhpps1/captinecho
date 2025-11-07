@@ -2,6 +2,6 @@ package com.captainecho.captainecho.student.application.command;
 
 public record GetDailyCompletedCountCommand(
         Integer studentId,
-        Long protectorId
+        Integer protectorId
 ) {
 }

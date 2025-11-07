@@ -1,7 +1,7 @@
 # src/agents/parent.py
 
 from crewai import Agent
-from app.src.utils.llm import llm
+from ..utils.llm import llm
 
 def build(student_id, level, protector_goal, small_interest_name):
     return Agent(

@@ -11,9 +11,9 @@ import java.util.List;
 @Getter
 public class ProtectorPrincipal implements UserDetails {
 
-    private final Long protectorId;
+    private final Integer protectorId;
 
-    public ProtectorPrincipal(Long protectorId) {
+    public ProtectorPrincipal(Integer protectorId) {
         this.protectorId = protectorId;
     }
 
