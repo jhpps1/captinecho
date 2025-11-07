@@ -34,6 +34,31 @@ export interface StudentCountResponse {
   remainCount: number;
 }
 
+export interface VerifyPinRequest {
+  pin: string;
+}
+
+export interface VerifyPinResponse {
+  success: boolean;
+}
+
+export interface UpdatePinRequest {
+  currentPin: string;
+  newPin: string;
+}
+
+export interface UpdatePinResponse {
+  success: boolean;
+}
+
+export interface CreatePinRequest {
+  pin: string;
+}
+
+export interface CreatePinResponse {
+  success: boolean;
+}
+
 // ===== API 함수 =====
 
 /**
@@ -70,5 +95,35 @@ export const deleteStudent = async (studentId: number): Promise<void> => {
  */
 export const getStudentCount = async (): Promise<StudentCountResponse> => {
   const response = await axiosInstance.get<StudentCountResponse>('/protector/student/count');
+  return response.data;
+};
+
+/**
+ * 보호자 PIN 검증
+ * POST /api/protector/pin/verify
+ */
+export const verifyPin = async (pin: string): Promise<VerifyPinResponse> => {
+  const response = await axiosInstance.post<VerifyPinResponse>('/protector/pin/verify', { pin });
+  return response.data;
+};
+
+/**
+ * 보호자 PIN 생성 (최초 등록)
+ * POST /api/protector/pin
+ */
+export const createPin = async (pin: string): Promise<CreatePinResponse> => {
+  const response = await axiosInstance.post<CreatePinResponse>('/protector/pin', { pin });
+  return response.data;
+};
+
+/**
+ * 보호자 PIN 변경
+ * PATCH /api/protector/pin
+ */
+export const updatePin = async (currentPin: string, newPin: string): Promise<UpdatePinResponse> => {
+  const response = await axiosInstance.patch<UpdatePinResponse>('/protector/pin', {
+    currentPin,
+    newPin
+  });
   return response.data;
 };

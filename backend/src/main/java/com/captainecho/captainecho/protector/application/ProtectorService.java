@@ -19,7 +19,6 @@ import com.captainecho.captainecho.protector.application.result.StudentDto;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +32,6 @@ public class ProtectorService {
 
     private final ProtectorRepository protectorRepository;
     private final StudentRepository studentRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public CreatePinResult createPin(CreatePinCommand command) {
@@ -46,11 +44,8 @@ public class ProtectorService {
             throw new EchoException(ProtectorErrorCode.PIN_ALREADY_EXISTS);
         }
 
-        // 3. PIN 암호화
-        String encodedPin = passwordEncoder.encode(command.pin());
-
-        // 4. PIN 저장
-        protector.updateProtectorPin(encodedPin);
+        // 3. PIN 저장 (평문)
+        protector.updateProtectorPin(command.pin());
 
         return new CreatePinResult(true);
     }
@@ -68,8 +63,8 @@ public class ProtectorService {
             throw new EchoException(ProtectorErrorCode.PIN_NOT_FOUND);
         }
 
-        // 3. PIN 검증
-        boolean isValid = passwordEncoder.matches(command.pin(), storedPin);
+        // 3. PIN 검증 (평문 비교)
+        boolean isValid = command.pin().equals(storedPin);
 
         // 4. PIN 불일치 시 예외 발생
         if (!isValid) {
@@ -92,16 +87,13 @@ public class ProtectorService {
             throw new EchoException(ProtectorErrorCode.PIN_NOT_FOUND);
         }
 
-        // 3. 현재 PIN 검증
-        if (!passwordEncoder.matches(command.currentPin(), storedPin)) {
+        // 3. 현재 PIN 검증 (평문 비교)
+        if (!command.currentPin().equals(storedPin)) {
             throw new EchoException(ProtectorErrorCode.PIN_NOT_MATCH);
         }
 
-        // 4. 새 PIN 암호화
-        String encodedNewPin = passwordEncoder.encode(command.newPin());
-
-        // 5. PIN 업데이트
-        protector.updateProtectorPin(encodedNewPin);
+        // 4. 새 PIN 업데이트 (평문)
+        protector.updateProtectorPin(command.newPin());
 
         return new UpdatePinResult(true);
     }
