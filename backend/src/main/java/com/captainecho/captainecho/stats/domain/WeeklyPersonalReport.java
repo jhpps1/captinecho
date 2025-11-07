@@ -26,7 +26,7 @@ public class WeeklyPersonalReport {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    @Column(name = "total_time", nullable = false)
+    @Column(name = "total_time")
     @ColumnDefault("0")
     private Integer totalTime = 0;
 

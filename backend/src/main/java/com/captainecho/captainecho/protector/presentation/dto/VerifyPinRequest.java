@@ -9,7 +9,7 @@ public record VerifyPinRequest(
         @Pattern(regexp = "^\\d{6}$", message = "PIN은 6자리 숫자여야합니다")
         String pin
 ) {
-    public VerifyPinCommand toCommand(Long protectorId) {
+    public VerifyPinCommand toCommand(Integer protectorId) {
         return new VerifyPinCommand(protectorId, pin);
     }
 }

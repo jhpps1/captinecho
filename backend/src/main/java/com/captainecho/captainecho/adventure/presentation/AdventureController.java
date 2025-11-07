@@ -62,7 +62,7 @@ public class AdventureController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         StartAdventureCommand command = request.toCommand(studentId, protectorId);
         StartAdventureResult result = adventureService.startAdventure(command);
@@ -84,7 +84,7 @@ public class AdventureController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         EndAdventureCommand command = new EndAdventureCommand(studentId, protectorId);
         EndAdventureResult result = adventureService.endAdventure(command);
@@ -106,7 +106,7 @@ public class AdventureController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         GetAdventureProblemsCommand command = new GetAdventureProblemsCommand(studentId, protectorId);
         GetAdventureProblemsResult result = adventureService.getAdventureProblems(command);

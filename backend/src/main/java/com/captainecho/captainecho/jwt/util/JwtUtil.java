@@ -28,7 +28,7 @@ public class JwtUtil {
         this.accessTokenValidityMs = accessTokenValidityMs;
     }
 
-    public String generateAccessToken(Long protectorId) {
+    public String generateAccessToken(Integer protectorId) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessTokenValidityMs);
 
@@ -48,8 +48,8 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public Long getProtectorId(String token) {
-        return Long.valueOf(parseToken(token).getSubject());
+    public Integer getProtectorId(String token) {
+        return Integer.valueOf(parseToken(token).getSubject());
     }
 
     public boolean validateToken(String token) {

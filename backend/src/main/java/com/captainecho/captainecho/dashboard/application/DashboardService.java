@@ -41,7 +41,7 @@ public class DashboardService {
      * 금주 커리큘럼 조회
      */
     @Transactional(readOnly = true)
-    public CurriculumResult getCurriculum(Long protectorId, Integer studentId) {
+    public CurriculumResult getCurriculum(Integer protectorId, Integer studentId) {
         // 1. 학생 접근 권한 확인
         verifyStudentAccess(protectorId, studentId);
 
@@ -59,7 +59,7 @@ public class DashboardService {
      * 금주 협의 로그 조회
      */
     @Transactional(readOnly = true)
-    public DiscussionResult getDiscussion(Long protectorId, Integer studentId) {
+    public DiscussionResult getDiscussion(Integer protectorId, Integer studentId) {
         // 1. 학생 접근 권한 확인
         verifyStudentAccess(protectorId, studentId);
 
@@ -77,7 +77,7 @@ public class DashboardService {
      * 학습 시간 조회 (금주 vs 지난주)
      */
     @Transactional(readOnly = true)
-    public LearningTimeResult getLearningTime(Long protectorId, Integer studentId) {
+    public LearningTimeResult getLearningTime(Integer protectorId, Integer studentId) {
         // 1. 학생 접근 권한 확인
         verifyStudentAccess(protectorId, studentId);
 
@@ -193,7 +193,7 @@ public class DashboardService {
     /**
      * 학생 접근 권한 확인 (보호자가 해당 학생의 담당자인지 확인)
      */
-    private void verifyStudentAccess(Long protectorId, Integer studentId) {
+    private void verifyStudentAccess(Integer protectorId, Integer studentId) {
         // 학생 존재 여부 확인
         if (!studentRepository.existsById(studentId)) {
             throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);

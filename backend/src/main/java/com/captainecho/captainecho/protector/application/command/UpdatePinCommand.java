@@ -1,7 +1,7 @@
 package com.captainecho.captainecho.protector.application.command;
 
 public record UpdatePinCommand(
-        Long protectorId,
+        Integer protectorId,
         String currentPin,
         String newPin
 ) {

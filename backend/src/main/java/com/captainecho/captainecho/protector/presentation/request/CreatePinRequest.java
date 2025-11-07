@@ -9,7 +9,7 @@ public record CreatePinRequest(
         @Pattern(regexp = "^[0-9]{6}$", message = "PIN은 6자리 숫자여야 합니다")
         String pin
 ) {
-    public CreatePinCommand toCommand(Long protectorId) {
+    public CreatePinCommand toCommand(Integer protectorId) {
         return new CreatePinCommand(protectorId, pin);
     }
 }
