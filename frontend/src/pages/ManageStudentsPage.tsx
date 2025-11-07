@@ -1,29 +1,39 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bell, Settings, Users } from 'lucide-react';
 import Cookies from 'js-cookie';
-import StudentSidebar from '../components/protector/StudentSidebar';
+import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import AddStudentModal from '../components/protector/modals/AddStudentModal';
 import InterestSelectionModal from '../components/protector/modals/InterestSelectionModal';
 import { getStudents, registerStudent, deleteStudent, getStudentCount } from '../api/protectorApi';
 import {
   mapGenderToBackend,
   mapGradeToBackend,
-  formatDateToBackend
+  formatDateToBackend,
+  mapGenderToFrontend
 } from '../utils/studentMapper';
-import type { Student } from '../mocks/protectorData';
+
+interface Student {
+  id: number;
+  name: string;
+  level: number;
+  birthDate: string;
+  gender: string;
+  grade: string;
+  interests: string[];
+  profileImage?: string;
+  deleteTimer?: string;
+}
 
 export default function ManageStudentsPage() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedForDelete, setSelectedForDelete] = useState<number | null>(null);
-  const [selectedInterests, setSelectedInterests] = useState<number[]>([]); // 관심사 ID 배열
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [selectedInterests, setSelectedInterests] = useState<number[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
-  const [isDeletingStudent, setIsDeletingStudent] = useState(false);
   const [studentCount, setStudentCount] = useState<{ total: number; remain: number } | null>(null);
 
   // 학생 수 조회
@@ -34,7 +44,7 @@ export default function ManageStudentsPage() {
         total: response.totalCount,
         remain: response.remainCount
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ 학생 수 조회 실패:', error);
     }
   };
@@ -46,75 +56,38 @@ export default function ManageStudentsPage() {
       const response = await getStudents();
       const studentList: Student[] = response.students.map(s => ({
         id: s.studentId,
-        lastName: s.name.charAt(0),
-        fullName: s.name,
-        level: s.level || 0,
-        streak: 0, // TODO: 연속 학습일 API 추가 필요
-        profileImage: s.profileImage,
-        grade: s.grade || '미취학'
+        name: s.name,
+        level: s.level || 1,
+        birthDate: s.birth || '1996.01.03',
+        gender: s.gender ? mapGenderToFrontend(s.gender) : '남',
+        grade: s.grade || '미취학',
+        interests: [],
+        profileImage: s.profileImage
       }));
       setStudents(studentList);
+
+      // 첫 번째 학생 자동 선택
+      if (studentList.length > 0 && !selectedStudentId) {
+        setSelectedStudentId(studentList[0].id);
+      }
     } catch (error: any) {
       console.error('❌ 학생 목록 로드 실패:', error);
-
-      // 401 인증 에러인 경우 로그인 페이지로 리다이렉트
       if (error.response?.status === 401) {
         alert('로그인이 필요합니다.');
         Cookies.remove('accessToken');
         navigate('/');
         return;
       }
-
-      // 학생이 없는 경우는 에러가 아니므로 빈 배열로 처리
       setStudents([]);
     } finally {
       setIsLoadingStudents(false);
     }
   };
 
-  // 컴포넌트 마운트 시 학생 목록 및 학생 수 로드
   useEffect(() => {
     fetchStudents();
     fetchStudentCount();
   }, []);
-
-  const handleDelete = (id: number) => {
-    setSelectedForDelete(id);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    if (deleteConfirmText !== '삭제하겠습니다') {
-      alert('정확한 문구를 입력해주세요.');
-      return;
-    }
-
-    if (selectedForDelete === null) return;
-
-    setIsDeletingStudent(true);
-    try {
-      await deleteStudent(selectedForDelete);
-      alert('학생이 삭제되었습니다.');
-
-      // 학생 목록 및 학생 수 새로고침
-      await fetchStudents();
-      await fetchStudentCount();
-
-      setShowDeleteModal(false);
-      setSelectedForDelete(null);
-      setDeleteConfirmText('');
-    } catch (error: any) {
-      console.error('❌ 학생 삭제 실패:', error);
-
-      let errorMessage = '학생 삭제에 실패했습니다.';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      alert(errorMessage);
-    } finally {
-      setIsDeletingStudent(false);
-    }
-  };
 
   const handleAddStudent = async (studentData: {
     name: string;
@@ -125,7 +98,6 @@ export default function ManageStudentsPage() {
   }) => {
     setIsAddingStudent(true);
     try {
-      // 프론트엔드 데이터를 백엔드 형식으로 변환
       const requestData = {
         studentName: studentData.name,
         gender: mapGenderToBackend(studentData.gender),
@@ -134,40 +106,21 @@ export default function ManageStudentsPage() {
         interests: selectedInterests.map(id => ({ interestId: id }))
       };
 
-      console.log('📤 학생 등록 요청:', requestData);
-
-      // API 호출
       const response = await registerStudent(requestData);
 
       if (response.success) {
-        console.log('✅ 학생 등록 성공');
         alert(`학생 "${studentData.name}"이(가) 추가되었습니다!`);
-
-        // 학생 목록 및 학생 수 새로고침
         await fetchStudents();
         await fetchStudentCount();
-
-        // 모달 닫기
         setShowAddModal(false);
         setSelectedInterests([]);
       }
     } catch (error: any) {
       console.error('❌ 학생 등록 실패:', error);
-
-      // 에러 메시지 파싱
       let errorMessage = '학생 등록에 실패했습니다.';
-
       if (error.response?.data?.message) {
-        const message = error.response.data.message;
-        if (message.includes('MAX_STUDENT_COUNT_EXCEEDED')) {
-          errorMessage = '최대 학생 수를 초과했습니다.';
-        } else if (message.includes('UNAUTHORIZED')) {
-          errorMessage = '인증이 필요합니다. 다시 로그인해주세요.';
-        } else {
-          errorMessage = message;
-        }
+        errorMessage = error.response.data.message;
       }
-
       alert(errorMessage);
     } finally {
       setIsAddingStudent(false);
@@ -179,64 +132,26 @@ export default function ManageStudentsPage() {
     setShowInterestModal(false);
   };
 
+  const handleLogout = () => {
+    Cookies.remove('accessToken');
+    navigate('/');
+  };
+
+  const handleStudentSelect = (studentId: number) => {
+    setSelectedStudentId(studentId);
+  };
+
+  // DashboardSidebar용 학생 데이터 변환
+  const sidebarStudents = students.map(s => ({
+    id: s.id,
+    name: s.name,
+    level: s.level,
+    streak: 0, // TODO: API에서 streak 데이터 받아오기
+    isActive: s.id === selectedStudentId
+  }));
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* 삭제 확인 모달 */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-pink-100 rounded-2xl p-8 max-w-lg w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-              관리 학생 삭제하기
-            </h2>
-            <p className="text-center mb-2">정말 삭제 하시겠습니까?</p>
-            <p className="text-center mb-6">
-              삭제를 원한다면<br />
-              '삭제하겠습니다'를 입력해주세요.
-            </p>
-            <input
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 mb-4"
-              placeholder="삭제하겠습니다"
-              disabled={isDeletingStudent}
-            />
-            <ul className="text-sm text-gray-700 mb-6 space-y-1">
-              <li>• 삭제된 학생 계정은 복구가 불가능합니다.</li>
-              <li>• 신중하게 생각해주세요.</li>
-            </ul>
-            <div className="flex gap-4">
-              <button
-                onClick={confirmDelete}
-                disabled={isDeletingStudent}
-                className={`flex-1 px-6 py-3 rounded-lg font-semibold ${
-                  isDeletingStudent
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-white hover:bg-gray-50'
-                }`}
-              >
-                {isDeletingStudent ? '삭제 중...' : '삭제하기'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteConfirmText('');
-                }}
-                disabled={isDeletingStudent}
-                className={`flex-1 px-6 py-3 rounded-lg font-semibold ${
-                  isDeletingStudent
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-white hover:bg-gray-50'
-                }`}
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
+    <div className="min-h-screen bg-neutral-50 flex font-pretendard">
       {/* 학생 추가 모달 */}
       {showAddModal && (
         <AddStudentModal
@@ -261,102 +176,105 @@ export default function ManageStudentsPage() {
       )}
 
       {/* 왼쪽 사이드바 */}
-      <StudentSidebar
-        students={students}
-        selectedStudent={null}
-        onSelectStudent={(student) => navigate('/protector', { state: { selectedStudent: student } })}
-        onSettings={() => navigate('/protector/settings')}
-        onLogout={() => {
-          localStorage.removeItem('accessToken');
-          sessionStorage.removeItem('accessToken');
-          Cookies.remove('accessToken');
-          navigate('/');
-        }}
+      <DashboardSidebar
+        students={sidebarStudents}
+        selectedStudentId={selectedStudentId || 0}
+        onStudentSelect={handleStudentSelect}
+        onLogout={handleLogout}
       />
 
-      {/* 메인 컨텐츠 영역 */}
-      <div className="flex-1 ml-24 bg-gray-50 min-h-screen p-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">관리 학생 연결 설정</h1>
-
-          {/* 학생 수 정보 카드 */}
-          {studentCount && (
-            <div className="bg-white rounded-xl p-6 mb-8 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">등록 가능한 학생 수</p>
-                  <p className="text-2xl font-bold text-gray-800">
-                    {studentCount.remain} / {studentCount.total}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">현재 등록된 학생</p>
-                  <p className="text-2xl font-bold text-cyan-600">
-                    {studentCount.total - studentCount.remain}명
-                  </p>
-                </div>
-              </div>
-              {studentCount.remain === 0 && (
-                <div className="mt-4 p-3 bg-red-50 rounded-lg">
-                  <p className="text-sm text-red-600">
-                    ⚠️ 학생을 더 이상 추가할 수 없습니다. 기존 학생을 삭제한 후 추가해주세요.
-                  </p>
-                </div>
-              )}
+      {/* 메인 컨텐츠 */}
+      <main className="flex-1 overflow-y-auto">
+        {/* 헤더 */}
+        <header className="bg-white border-b border-neutral-200 p-4 sticky top-0 z-10">
+          <div className="flex items-center justify-end max-w-7xl mx-auto">
+            <div className="flex items-center gap-2">
+              <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
+                <Bell size={20} className="text-neutral-600" />
+              </button>
+              <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
+                <Settings size={20} className="text-neutral-600" />
+              </button>
             </div>
-          )}
+          </div>
+        </header>
 
-          {/* 학생 목록 */}
-          <div className="space-y-4 mb-8">
+        {/* 컨텐츠 영역 */}
+        <div className="max-w-7xl mx-auto p-6">
+          {/* 학생 추가 버튼 */}
+          <div className="flex justify-end mb-6">
+            <button
+              onClick={() => setShowAddModal(true)}
+              disabled={studentCount?.remain === 0}
+              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 ${
+                studentCount?.remain === 0
+                  ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                  : 'bg-primary text-white hover:bg-primary/90'
+              }`}
+            >
+              <Users size={20} />+ 학생 추가
+            </button>
+          </div>
+
+          {/* 학생 카드 리스트 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {students.map((student) => (
               <div
                 key={student.id}
-                className="bg-cyan-100 rounded-xl p-6 flex items-center justify-between"
+                className="bg-white rounded-xl border border-neutral-200 p-6 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center">
-                    <span className="text-2xl font-bold">{student.lastName}</span>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-white">
+                        {student.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-neutral-800">
+                        {student.name}
+                      </h3>
+                      <p className="text-sm text-neutral-500">Lv.{student.level}</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xl font-bold">{student.fullName}</span>
+                  <button className="p-2 hover:bg-neutral-100 rounded-lg">
+                    <span className="text-2xl text-neutral-400">⋯</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex">
+                    <span className="w-20 text-neutral-500">생년월일</span>
+                    <span className="text-neutral-800">{student.birthDate}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-20 text-neutral-500">성별</span>
+                    <span className="text-neutral-800">{student.gender}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-20 text-neutral-500">구분</span>
+                    <span className="text-neutral-800">{student.grade}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-20 text-neutral-500">관심사</span>
+                    <span className="text-neutral-800">
+                      {student.interests.join(', ') || '-'}
+                    </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(student.id)}
-                  className="text-2xl text-gray-600 hover:text-gray-800"
-                >
-                  ⋯
-                </button>
+
+                {student.deleteTimer && (
+                  <div className="mt-4 p-3 bg-error/10 rounded-lg">
+                    <p className="text-sm text-error font-medium">
+                      ⏰ 삭제 준비 완료 ({student.deleteTimer})
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-
-          {/* 버튼들 */}
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-8 py-3 bg-white border-2 border-gray-300 rounded-lg
-                       font-semibold hover:bg-gray-50"
-            >
-              추가하기
-            </button>
-            <button
-              onClick={() => alert('삭제하기 기능')}
-              className="px-8 py-3 bg-white border-2 border-gray-300 rounded-lg
-                       font-semibold hover:bg-gray-50"
-            >
-              삭제하기
-            </button>
-            <button
-              onClick={() => navigate('/protector/settings')}
-              className="px-8 py-3 bg-white border-2 border-gray-300 rounded-lg
-                       font-semibold hover:bg-gray-50"
-            >
-              돌아가기
-            </button>
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
