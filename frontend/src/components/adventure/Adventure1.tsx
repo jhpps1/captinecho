@@ -36,16 +36,16 @@ export const Adventure1 = ({ problem, onSubmit }: Adventure1Props) => {
   const [attemptCount, setAttemptCount] = useState(1);
 
   // API Problem → ProblemData 변환
-  // questionPhonemes: ["ㄱ,ㅏ"] → { initial: 'ㄱ', medial: 'ㅏ' }
+  // questionPhonemes: ["ㄱ","ㅏ"] 또는 ["ㄱ","ㅏ","ㅂ"] → { initial: 'ㄱ', medial: 'ㅏ', final?: 'ㅂ' }
   const convertToProblemData = (): ProblemData => {
-    const syllable = problem.questionPhonemes[0]; // 단일 글자이므로 첫 번째 음절
-    const phonemes = syllable.split(',').map(p => p.trim());
+    // questionPhonemes는 이미 배열 형태: ["ㅂ","ㅓ","ㄴ"]
+    const phonemes = problem.questionPhonemes;
 
     return {
       id: problem.dayProblemId,
       initial: phonemes[0] || '',
       medial: phonemes[1] || '',
-      final: phonemes[2],
+      final: phonemes[2], // undefined일 수 있음 (종성 없는 경우)
       hiddenTarget: problem.blankPosition as 'initial' | 'medial' | 'final',
       options: problem.choices,
     };

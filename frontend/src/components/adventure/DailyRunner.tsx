@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getDailyProblems } from '../../api/adventureApi';
 import type{ Problem } from '../../types/adventure';
 import { ProblemRunner } from './ProblemRunner';
+import { AdventureLayout } from './AdventureLayout';
 
 /**
  * DailyRunner - 일일탐험 문제 관리 컴포넌트
@@ -22,6 +23,7 @@ export const DailyRunner = () => {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentAdventureTypeId, setCurrentAdventureTypeId] = useState<1 | 2 | 3 | 4 | undefined>();
 
   // studentId 검증
   const parsedStudentId = studentId ? parseInt(studentId, 10) : null;
@@ -90,12 +92,15 @@ export const DailyRunner = () => {
     );
   }
 
-  // ProblemRunner에 데이터 전달
+  // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   return (
-    <ProblemRunner
-      problems={problems}
-      mode="daily"
-      studentId={parsedStudentId!}
-    />
+    <AdventureLayout adventureTypeId={currentAdventureTypeId}>
+      <ProblemRunner
+        problems={problems}
+        mode="daily"
+        studentId={parsedStudentId!}
+        onAdventureTypeChange={setCurrentAdventureTypeId}
+      />
+    </AdventureLayout>
   );
 };

@@ -29,29 +29,62 @@ export const Adventure2 = ({ problem, onSubmit }: Adventure2Props) => {
   const [attemptCount, setAttemptCount] = useState(1);
 
   // API Problem → SyllableData[] 변환
-  // questionPhonemes: ["ㄱ,ㅏ", "ㅂ,ㅏ,ㅇ"] → [{ initial: 'ㄱ', medial: 'ㅏ' }, { initial: 'ㅂ', medial: 'ㅏ', final: 'ㅇ', hiddenTarget: 'final' }]
+  // questionPhonemes: ["ㅋ","ㅏ","ㄷ","ㅡ"] → [{ initial: 'ㅋ', medial: 'ㅏ' }, { initial: 'ㄷ', medial: 'ㅡ' }]
   const convertToSyllables = (): SyllableData[] => {
-    return problem.questionPhonemes.map((syllable, index) => {
-      const phonemes = syllable.split(',').map(p => p.trim());
+    const syllables: SyllableData[] = [];
+    const phonemes = problem.questionPhonemes;
+    const correctAnswer = problem.correctAnswer[0]; // 단일 정답
+    const blankPosition = problem.blankPosition?.toLowerCase() as 'initial' | 'medial' | 'final' | null;
+
+    // 자음 판별 함수 (초성 또는 종성)
+    const CONSONANTS = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+    const VOWELS = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+
+    const isConsonant = (char: string) => CONSONANTS.includes(char);
+    const isVowel = (char: string) => VOWELS.includes(char);
+
+    let phonemeIndex = 0;
+
+    while (phonemeIndex < phonemes.length) {
+      const initial = phonemes[phonemeIndex];
+      const medial = phonemes[phonemeIndex + 1];
+      const next = phonemes[phonemeIndex + 2];
 
       const syllableData: SyllableData = {
-        initial: phonemes[0] || '',
-        medial: phonemes[1] || '',
+        initial: initial || '',
+        medial: medial || '',
       };
 
-      if (phonemes[2]) {
-        syllableData.final = phonemes[2];
+      // 다음 음소가 자음이고 그 다음이 모음이면 종성 없음
+      // 다음 음소가 자음이고 그 다음도 자음이거나 없으면 종성 있음
+      if (next && isConsonant(next)) {
+        const afterNext = phonemes[phonemeIndex + 3];
+        if (!afterNext || isConsonant(afterNext)) {
+          // 종성 있음
+          syllableData.final = next;
+          phonemeIndex += 3;
+        } else {
+          // 종성 없음, next는 다음 음절의 초성
+          phonemeIndex += 2;
+        }
+      } else {
+        // 다음이 모음이거나 없음 = 종성 없음
+        phonemeIndex += 2;
       }
 
-      // 빈칸이 이 음절에 있는지 확인 (seqNo와 index 비교 또는 blankPhoneme으로 판단)
-      // 간단히 정답이 이 음절의 구성요소인지 확인
-      const correctAnswer = problem.correctAnswer[0]; // 단일 정답
-      if (syllableData.initial === correctAnswer || syllableData.medial === correctAnswer || syllableData.final === correctAnswer) {
-        syllableData.hiddenTarget = problem.blankPosition as 'initial' | 'medial' | 'final';
+      // 빈칸 위치 확인: blankPhoneme이 이 음절에 있는지 확인
+      if (blankPosition && (
+        (blankPosition === 'initial' && initial === correctAnswer) ||
+        (blankPosition === 'medial' && medial === correctAnswer) ||
+        (blankPosition === 'final' && syllableData.final === correctAnswer)
+      )) {
+        syllableData.hiddenTarget = blankPosition;
       }
 
-      return syllableData;
-    });
+      syllables.push(syllableData);
+    }
+
+    return syllables;
   };
 
   const syllables = convertToSyllables();

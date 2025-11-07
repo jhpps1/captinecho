@@ -6,6 +6,7 @@ import { useTutorialVoice } from '../../hooks/useTutorialVoice';
 
 interface AdventureLayoutProps {
   children: ReactNode;
+  adventureTypeId?: 1 | 2 | 3 | 4; // 탐험 유형 (배경 변경용)
 }
 
 /**
@@ -19,10 +20,18 @@ interface AdventureLayoutProps {
  *
  * @param children - DailyRunner 또는 SuppleRunner
  */
-export const AdventureLayout = ({ children }: AdventureLayoutProps) => {
+export const AdventureLayout = ({ children, adventureTypeId }: AdventureLayoutProps) => {
   const navigate = useNavigate();
   const [isTutorialMode, setIsTutorialMode] = useState(false);
   const { playVoice, stopVoice } = useTutorialVoice();
+
+  // adventureTypeId에 따른 배경 이미지 선택
+  const getBackgroundImage = () => {
+    if (adventureTypeId) {
+      return `/adventurepage/adventure_${adventureTypeId}_background.png`;
+    }
+    return '/adventurepage/map_background.png'; // 기본 배경
+  };
 
   // ESC 키로 튜토리얼 닫기
   useEffect(() => {
@@ -52,6 +61,7 @@ export const AdventureLayout = ({ children }: AdventureLayoutProps) => {
     <div
       className="flex flex-col min-h-screen relative"
       style={{
+        backgroundImage: `url(${getBackgroundImage()})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
@@ -59,7 +69,7 @@ export const AdventureLayout = ({ children }: AdventureLayoutProps) => {
         minWidth: '100vw',
       }}
     >
-      {/* 양피지 배경 장식 */}
+      {/* 양피지 배경 장식 (탐험 배경 위에 오버레이) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
         <div
           style={{

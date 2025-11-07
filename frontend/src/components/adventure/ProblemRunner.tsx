@@ -15,6 +15,7 @@ interface ProblemRunnerProps {
   problems: Problem[];
   mode: 'daily' | 'supple';
   studentId: number;
+  onAdventureTypeChange?: (typeId: 1 | 2 | 3 | 4) => void; // 배경 변경을 위한 콜백
 }
 
 // Adventure 컴포넌트 import
@@ -45,7 +46,7 @@ const ADVENTURE_VIEWS: Record<number, ComponentType<AdventureViewProps>> = {
  * @param mode - 'daily' (일일문제) | 'supple' (추가학습)
  * @param studentId - 학생 ID
  */
-export const ProblemRunner = ({ problems, mode, studentId }: ProblemRunnerProps) => {
+export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange }: ProblemRunnerProps) => {
   const navigate = useNavigate();
   const { idx } = useParams<{ idx?: string }>();
 
@@ -65,6 +66,13 @@ export const ProblemRunner = ({ problems, mode, studentId }: ProblemRunnerProps)
   const [isAllCompleted, setIsAllCompleted] = useState(false);
 
   const currentProblem = problems[currentIndex];
+
+  // 현재 문제의 adventureTypeId가 변경될 때마다 부모에게 알림 (배경 변경용)
+  useEffect(() => {
+    if (currentProblem && onAdventureTypeChange) {
+      onAdventureTypeChange(currentProblem.adventureTypeId);
+    }
+  }, [currentProblem, onAdventureTypeChange]);
 
   // URL idx 파라미터와 currentIndex 동기화
   useEffect(() => {

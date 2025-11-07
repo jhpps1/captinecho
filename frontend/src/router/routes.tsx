@@ -15,7 +15,6 @@ import FirstTestPage from '../pages/FirstTestPage.tsx';
 import FirstTestResult from '../pages/FirstTestResult.tsx';
 
 // Adventure 관련 컴포넌트 (새 구조)
-import { AdventureLayout } from '../components/adventure/AdventureLayout.tsx';
 import { DailyRunner } from '../components/adventure/DailyRunner.tsx';
 import { SuppleRunner } from '../components/adventure/SuppleRunner.tsx';
 
@@ -79,19 +78,11 @@ const router = createBrowserRouter([
   // 새로운 Adventure 라우트 (설계 문서 기반)
   {
     path: '/daily/:studentId/:idx?',
-    element: (
-      <AdventureLayout>
-        <DailyRunner />
-      </AdventureLayout>
-    ),
+    element: <DailyRunner />,
   },
   {
     path: '/adventure/:studentId/:typeId',
-    element: (
-      <AdventureLayout>
-        <SuppleRunner />
-      </AdventureLayout>
-    ),
+    element: <SuppleRunner />,
   },
 ]);
 
