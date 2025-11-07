@@ -8,9 +8,11 @@ import com.captainecho.captainecho.session.domain.LearningSession;
 import com.captainecho.captainecho.session.persistence.LearningSessionRepository;
 import com.captainecho.captainecho.student.application.command.EndAdventureCommand;
 import com.captainecho.captainecho.student.application.command.GetAdventureProblemsCommand;
+import com.captainecho.captainecho.student.application.command.GetSupplementaryProblemsCommand;
 import com.captainecho.captainecho.student.application.command.StartAdventureCommand;
 import com.captainecho.captainecho.student.application.result.EndAdventureResult;
 import com.captainecho.captainecho.student.application.result.GetAdventureProblemsResult;
+import com.captainecho.captainecho.student.application.result.GetSupplementaryProblemsResult;
 import com.captainecho.captainecho.student.application.result.StartAdventureResult;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
@@ -149,5 +151,69 @@ public class AdventureService {
                 .toList();
 
         return GetAdventureProblemsResult.of(problemInfos, problemInfos.size());
+    }
+
+    @Transactional(readOnly = true)
+    public GetSupplementaryProblemsResult getSupplementaryProblems(GetSupplementaryProblemsCommand command) {
+        log.info("getSupplementaryProblems called - studentId: {}, protectorId: {}, adventureTypeId: {}",
+                command.studentId(), command.protectorId(), command.adventureTypeId());
+
+        // 1. 학생 존재 여부 및 레벨 조회
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            log.error("Student access denied - studentId: {}, protectorId: {}", command.studentId(), command.protectorId());
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 학생의 레벨 가져오기
+        Short level = student.getLevel();
+        log.info("Student level: {}", level);
+
+        // 4. 탐험 타입과 레벨에 맞는 랜덤 문제 10개 조회
+        List<DayProblem> dayProblems = dayProblemRepository.findRandomSupplementaryProblems(
+                command.adventureTypeId(),
+                level
+        );
+
+        log.info("Found {} supplementary problems", dayProblems.size());
+
+        // 5. DayProblem -> ProblemInfo 변환
+        List<GetSupplementaryProblemsResult.ProblemInfo> problemInfos = dayProblems.stream()
+                .map(dp -> {
+                    // Null-safe array to list conversion
+                    List<String> problemPhonemes = dp.getProblemPhonemes() != null
+                            ? Arrays.asList(dp.getProblemPhonemes())
+                            : List.of();
+
+                    List<String> choices = dp.getChoices() != null
+                            ? Arrays.asList(dp.getChoices())
+                            : null;
+
+                    return new GetSupplementaryProblemsResult.ProblemInfo(
+                            dp.getDayProblemId(),
+                            dp.getStudent().getStudentId(),
+                            dp.getSubInterest().getSubInterestId(),
+                            dp.getAdventureType().getAdventureTypeId(),
+                            dp.getAssignedDate(),
+                            dp.getSeqNo(),
+                            dp.getLevel(),
+                            dp.getProblemText(),
+                            dp.getHint(),
+                            dp.getImageUrl(),
+                            dp.getSoundUrl(),
+                            problemPhonemes,
+                            dp.getBlankPosition(),
+                            dp.getBlankPhoneme(),
+                            choices,
+                            dp.getCorrectAnswer(),
+                            dp.getIsCompleted()
+                    );
+                })
+                .toList();
+
+        return GetSupplementaryProblemsResult.of(problemInfos);
     }
 }
