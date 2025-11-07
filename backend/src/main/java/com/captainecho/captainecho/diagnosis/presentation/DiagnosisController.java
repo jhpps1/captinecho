@@ -5,9 +5,11 @@ import com.captainecho.captainecho.diagnosis.application.DiagnosisService;
 import com.captainecho.captainecho.diagnosis.application.command.EndInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.command.StartInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.result.EndInitialDiagnosisResult;
+import com.captainecho.captainecho.diagnosis.application.result.GetInitialDiagnosisProblemsResult;
 import com.captainecho.captainecho.diagnosis.application.result.StartInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.presentation.request.StartInitialDiagnosisRequest;
 import com.captainecho.captainecho.diagnosis.presentation.response.EndInitialDiagnosisResponse;
+import com.captainecho.captainecho.diagnosis.presentation.response.GetInitialDiagnosisProblemsResponse;
 import com.captainecho.captainecho.diagnosis.presentation.response.StartInitialDiagnosisResponse;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
@@ -19,6 +21,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -74,6 +77,27 @@ public class DiagnosisController {
         EndInitialDiagnosisCommand command = new EndInitialDiagnosisCommand(studentId, protectorId);
         EndInitialDiagnosisResult result = diagnosisService.endInitialDiagnosis(command);
         EndInitialDiagnosisResponse response = EndInitialDiagnosisResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 초기 진단 문제 조회
+     * GET /api/student/{student-id}/diagnosis/initial/problems
+     */
+    @GetMapping("/{studentId}/diagnosis/initial/problems")
+    public ResponseEntity<GetInitialDiagnosisProblemsResponse> getInitialDiagnosisProblems(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetInitialDiagnosisProblemsResult result = diagnosisService.getInitialDiagnosisProblems(studentId, protectorId);
+        GetInitialDiagnosisProblemsResponse response = GetInitialDiagnosisProblemsResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
