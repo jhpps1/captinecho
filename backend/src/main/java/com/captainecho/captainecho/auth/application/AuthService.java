@@ -8,7 +8,7 @@ import com.captainecho.captainecho.auth.application.command.LoginCommand;
 import com.captainecho.captainecho.auth.application.result.LoginResult;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.domain.Provider;
-import com.captainecho.captainecho.protector.presentation.response.persistence.ProtectorRepository;
+import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

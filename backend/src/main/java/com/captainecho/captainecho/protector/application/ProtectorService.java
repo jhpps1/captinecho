@@ -11,7 +11,7 @@ import com.captainecho.captainecho.protector.application.result.GetStudentCountR
 import com.captainecho.captainecho.protector.application.result.UpdatePinResult;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 import com.captainecho.captainecho.protector.domain.Protector;
-import com.captainecho.captainecho.protector.presentation.response.persistence.ProtectorRepository;
+import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
 import com.captainecho.captainecho.protector.application.result.StudentListResult;

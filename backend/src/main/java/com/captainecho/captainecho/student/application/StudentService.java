@@ -7,7 +7,7 @@ import com.captainecho.captainecho.exception.code.StudentErrorCode;
 import com.captainecho.captainecho.interest.domain.SubInterest;
 import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
-import com.captainecho.captainecho.protector.presentation.response.persistence.ProtectorRepository;
+import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
