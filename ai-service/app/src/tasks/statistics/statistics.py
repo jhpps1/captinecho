@@ -16,16 +16,9 @@ def make_weekly_report_values(student_id: int, db: Session):
     - db: 세션
     """
     jamo_stats = db.query(WeeklyJamoStat).filter_by(student_id=student_id).all()
-    if not jamo_stats:
-        return {"error_rate": 0.0, "improvement_rate": 0.0}
     total_attempts = sum(j.total_attempts for j in jamo_stats)
     total_fail = sum(j.fail_count for j in jamo_stats)
-    error_rate = (total_fail / total_attempts) if total_attempts else 0.0
-    improvement_rate = 0.0  # 필요 시 직전주 stat 계산 추가
-    return {
-        "error_rate": error_rate,
-        "improvement_rate": improvement_rate
-    }
+
 
 def fill_reset_and_make_weekly_report(db: Session):
     try:
@@ -42,8 +35,6 @@ def fill_reset_and_make_weekly_report(db: Session):
                 total_time=0,
                 curriculum="",      # 실제 데이터 있으면 여기에!
                 discussion_log="",  # 실제 데이터 있으면 여기에!
-                error_rate=stat_dict["error_rate"],
-                improvement_rate=stat_dict["improvement_rate"],
                 created_at=now
             )
             db.add(report)
