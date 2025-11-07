@@ -13,6 +13,9 @@ from app.src.core.models import (
 )
 from app.src.tasks.statistics.statistics import fill_reset_and_make_weekly_report
 from app.src.service.question_service import generate_problems_for_one_week
+from app.src.api.scheduler.batch_scheduler import start_scheduler
+
+start_scheduler()
 
 router = APIRouter()
 

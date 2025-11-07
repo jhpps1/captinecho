@@ -12,6 +12,10 @@ from app.src.utils.s3 import upload_to_local # 로컬 개발용
 from app.src.api.tts_api import generate_tts_and_upload
 from app.src.api.gemini_api import generate_image_with_gemini_flash # <--- import 경로 수정!
 from dotenv import load_dotenv
+from app.src.api.scheduler.batch_scheduler import start_scheduler
+
+start_scheduler()
+
 
 load_dotenv()
 

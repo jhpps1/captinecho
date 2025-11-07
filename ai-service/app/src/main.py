@@ -10,6 +10,10 @@ from dotenv import load_dotenv
 from datetime import datetime
 import logging
 import requests
+from app.src.api.scheduler.batch_scheduler import start_scheduler
+
+start_scheduler()
+
 
 # --------------- 기본 환경 로딩 ------------------------------
 logging.basicConfig(
