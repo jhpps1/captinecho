@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react'; // 1. useState, useEffect 임포트
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
-// 2. 이전에 추가했던 모달 컴포넌트를 임포트합니다.
-// (파일 이름은 상황에 맞게 StudentModal 또는 ProfileSettingsModal로 수정하세요)
-import StudentModal from '../components/StudentModal'; 
+import StudentModal from '../components/StudentModal';
 
-// 오른쪽 나무 버튼 데이터
+// 오른쪽 나무 버튼 데이터 (기존과 동일)
 const woodenButtons = [
   { id: 1, label: '자모맞추기', path: '/adventure/1' },
   { id: 2, label: '빈칸맞추기', path: '/adventure/2' },
@@ -13,13 +11,31 @@ const woodenButtons = [
   { id: 4, label: '단어읽기', path: '/adventure/4' },
 ];
 
-// 학생 프로필 데이터 타입을 정의합니다.
+// 학생 프로필 데이터 타입을 정의합니다. (기존과 동일)
 interface StudentProfile {
   name: string;
   imageUrl: string;
 }
 
-// 3. 설정 아이콘 컴포넌트가 onClick 이벤트를 받을 수 있도록 수정
+// --- 1. API 응답에 맞춘 타입 정의 (이미지 기반) ---
+// API 응답의 개별 학생 객체 타입
+interface ApiStudent {
+  studentId: number;
+  name: string;
+  gender: string;
+  profileImage: string; // API 필드명은 profileImage 입니다.
+  grade: string;
+  level: number;
+  coin: number;
+}
+
+// API 응답의 최상위 객체 타입
+interface ApiResponse {
+  students: ApiStudent[];
+}
+// --- 여기까지 ---
+
+// 설정 아이콘 컴포넌트 (기존과 동일)
 const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -28,7 +44,7 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
     strokeWidth={1.5}
     stroke="currentColor"
     className="w-8 h-8 text-gray-700 cursor-pointer hover:rotate-45 transition-transform"
-    {...props} // onClick 등의 props를 받아서 적용
+    {...props}
   >
     <path
       strokeLinecap="round"
@@ -46,72 +62,115 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function StudentDashboard() {
   const navigate = useNavigate();
 
-  // 4. 학생 프로필과 로딩 상태를 state로 관리
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // 5. 모달 상태 추가
   const [isModalOpen, setIsModalOpen] = useState(false);
+
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
-  // 6. 세션 스토리지에서 ID를 확인하고 데이터를 불러오는 로직
   useEffect(() => {
-    // 세션 스토리지에서 학생 ID를 가져옵니다.
-    const studentId = sessionStorage.getItem('studentId');
+    
+    const studentIdFromSession = sessionStorage.getItem('studentId');
 
-    if (!studentId) {
-      // ID가 없으면 경고 후 프로필 선택 페이지로 리디렉션
+    if (!studentIdFromSession) {
       alert('학생을 먼저 선택해주세요.');
       navigate('/select-profile');
-      return; // 로직 중단
+      return;
     }
 
-    // --- (시뮬레이션) ID가 있다면, 해당 ID로 학생 데이터를 불러옵니다 ---
+    // --- 2. fetchStudentData 함수를 실제 API 호출 로직으로 수정 ---
     const fetchStudentData = async (id: string) => {
-      console.log(`학생 ID (${id})의 데이터를 API로 요청합니다.`);
-      try {
-        // !! 중요 !!
-        // 실제로는 여기서 API를 호출해야 합니다.
-        // 예: const studentData = await getStudentById(id);
-        
-        // 지금은 API가 없으므로, 더미 데이터를 사용합니다.
-        // (주의: 실제로는 API 응답을 기반으로 프로필을 설정해야 함)
-        const dummyDataFromApi = {
-          name: '존 슨제', // (API에서 받아온 이름)
-          imageUrl: '/studentboard/image 11.png', // (API에서 받아온 이미지)
-        };
+      // 세션 스토리지의 ID는 문자열이므로, 비교를 위해 숫자로 변환합니다.
+      const targetStudentId = parseInt(id, 10);
+      console.log(`학생 ID (${targetStudentId})의 데이터를 API로 요청합니다.`);
 
-        setProfile(dummyDataFromApi);
+      try {
+        // --- 2. 'accessToken'을 쿠키에서 직접 읽어오기 ---
+        const accessToken = Cookies.get('accessToken');
+
+        if (!accessToken) {
+          // 토큰이 아예 없으면 로그인 페이지로 보냅니다.
+          alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
+          navigate('/'); // (로그인 페이지 경로)
+          return;
+        }
+
+        // --- 3. fetch 요청 수정 ---
+        const response = await fetch('/api/protector/students', {
+          // 'credentials: 'include'' 옵션 제거!
+          
+          // 대신 'Authorization' 헤더를 수동으로 추가합니다.
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            // (필요한 경우 다른 헤더도 추가, 예: 'Content-Type')
+          },
+        });
+        // --- 여기까지 ---
+
+        if (!response.ok) {
+          // 401 에러가 발생하면, 토큰이 만료되었을 가능성이 높습니다.
+          if (response.status === 401) {
+            alert('인증 정보가 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.');
+            // 로그아웃 처리 후 로그인 페이지로 보냅니다.
+            Cookies.remove('accessToken', { path: '/' });
+            sessionStorage.removeItem('studentId');
+            navigate('/'); // (로그인 페이지 경로)
+            return; // 추가 실행 중단
+          }
+          // 그 외 에러
+          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+
+        // JSON 파싱 (ApiResponse 타입 적용)
+        const data: ApiResponse = await response.json();
+
+        // API가 반환한 { students: [...] } 배열에서
+        // 세션 스토리지 ID와 일치하는 학생을 찾습니다.
+        const foundStudent = data.students.find(
+          (student) => student.studentId === targetStudentId
+        );
+
+        if (foundStudent) {
+          // 학생을 찾았으면, 'profile' 상태를 업데이트합니다.
+          // (주의: API의 profileImage 필드를 앱의 imageUrl 필드로 매핑)
+          setProfile({
+            name: foundStudent.name,
+            imageUrl: foundStudent.profileImage,
+          });
+        } else {
+          // API 호출은 성공했으나, 리스트에 해당 ID의 학생이 없는 경우
+          console.error(`학생 ID (${targetStudentId})를 찾을 수 없습니다.`);
+          alert('학생 정보를 찾는 데 실패했습니다. 다시 선택해주세요.');
+          navigate('/select-profile');
+        }
 
       } catch (error) {
         console.error('학생 정보 로드 실패:', error);
         alert('학생 정보를 불러오는 데 실패했습니다.');
         navigate('/select-profile'); // 실패 시에도 돌려보내기
       } finally {
-        setIsLoading(false); // 로딩 완료
+        setIsLoading(false); // 로딩 완료 (성공/실패 무관)
       }
     };
+    // --- 여기까지 ---
 
-    fetchStudentData(studentId); // 함수 실행
-    
+    fetchStudentData(studentIdFromSession); // 함수 실행
   }, [navigate]); // navigate 함수를 의존성 배열에 추가
 
-  // 7. 계정 변경 핸들러
+  // 계정 변경 핸들러 (기존과 동일)
   const handleChangeAccount = () => {
-    // 계정 변경 시 세션 스토리지 ID를 지워주는 것이 좋습니다 (선택 사항)
-    // sessionStorage.removeItem('selectedStudentId');
     navigate('/select-profile');
   };
 
-  // 8. 로그아웃 핸들러
+  // 로그아웃 핸들러 (기존과 동일)
   const handleLogout = () => {
     Cookies.remove('accessToken', { path: '/' });
-    sessionStorage.removeItem('selectedStudentId'); // 로그아웃 시에도 ID 제거
+    sessionStorage.removeItem('studentId'); // 'selectedStudentId' -> 'studentId' 통일
     navigate('/');
   };
 
-  // 9. 로딩 중일 때 표시할 화면
+  // 로딩 중일 때 표시할 화면 (기존과 동일)
   if (isLoading || !profile) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center bg-gray-100 font-sans">
@@ -122,9 +181,9 @@ export default function StudentDashboard() {
     );
   }
 
-  // 10. 로딩 완료 후 실제 대시보드 화면
+  // 로딩 완료 후 실제 대시보드 화면 (profile 사용 부분만 확인)
   return (
-    <> {/* 모달을 위해 Fragment로 감싸기 */}
+    <>
       <div
         className="w-full min-h-screen py-8 bg-cover bg-center flex items-end justify-center font-sans"
         style={{ backgroundImage: `url('/studentboard/background.png')` }}
@@ -134,16 +193,15 @@ export default function StudentDashboard() {
             <header className="flex items-center justify-between w-full bg-white rounded-2xl p-4 shadow-sm">
               <div className="flex items-center gap-4">
                 <img
-                  src={profile.imageUrl} // dummyProfile -> profile
+                  src={profile.imageUrl} // 3. 상태(profile)에서 이미지 URL 사용
                   alt="프로필"
                   className="w-16 h-16 rounded-full border-4 border-white object-cover shadow-md"
                 />
                 <span className="text-3xl font-bold text-gray-800">
-                  {profile.name} {/* dummyProfile -> profile */}
+                  {profile.name} {/* 3. 상태(profile)에서 이름 사용 */}
                 </span>
-                
-                {/* 11. SettingsIcon에 모달 열기(openModal) 기능 연결 */}
-                <SettingsIcon onClick={openModal} /> 
+
+                <SettingsIcon onClick={openModal} />
               </div>
 
               <div className="flex items-center gap-4">
@@ -162,15 +220,11 @@ export default function StudentDashboard() {
               </div>
             </header>
 
-            {/* ... (메인 카드 그리드) ... */}
+            {/* ... (메인 카드 그리드) ... (기존과 동일) */}
             <main className="flex-1 grid grid-cols-3 gap-6">
-              {/* 왼쪽: 목표 카드 */}
               <div className="bg-white/90 rounded-2xl p-6 shadow-md">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">목표</h2>
-                {/* 목표 관련 내용... */}
               </div>
-
-              {/* 중앙: 2개 카드 */}
               <div className="col-span-1 flex flex-col gap-6">
                 <div className="bg-white/90 rounded-2xl p-6 shadow-md flex-1 flex flex-col items-center justify-center text-center">
                   <h2 className="text-xl font-bold text-gray-800 mb-2">
@@ -193,16 +247,13 @@ export default function StudentDashboard() {
                   />
                 </div>
               </div>
-
-              {/* 오른쪽: 준비중 카드 */}
               <div className="bg-white/90 rounded-2xl p-6 shadow-md">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">준비중</h2>
-                {/* 준비중 관련 내용... */}
               </div>
             </main>
           </div>
 
-          {/* ... (오른쪽 나무 버튼 사이드바) ... */}
+          {/* ... (오른쪽 나무 버튼 사이드바) ... (기존과 동일) */}
           <aside className="w-52 flex flex-col justify-center items-center gap-5">
             {woodenButtons.map((button) => (
               <button
@@ -224,7 +275,7 @@ export default function StudentDashboard() {
       <StudentModal
         isOpen={isModalOpen}
         onClose={closeModal}
-        currentImageUrl={profile.imageUrl} // dummyProfile -> profile
+        currentImageUrl={profile.imageUrl} // 3. 상태(profile)에서 이미지 URL 사용
       />
     </>
   );
