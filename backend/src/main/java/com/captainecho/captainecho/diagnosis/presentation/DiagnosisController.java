@@ -2,9 +2,12 @@ package com.captainecho.captainecho.diagnosis.presentation;
 
 import com.captainecho.captainecho.auth.domain.ProtectorPrincipal;
 import com.captainecho.captainecho.diagnosis.application.DiagnosisService;
+import com.captainecho.captainecho.diagnosis.application.command.EndInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.command.StartInitialDiagnosisCommand;
+import com.captainecho.captainecho.diagnosis.application.result.EndInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.application.result.StartInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.presentation.request.StartInitialDiagnosisRequest;
+import com.captainecho.captainecho.diagnosis.presentation.response.EndInitialDiagnosisResponse;
 import com.captainecho.captainecho.diagnosis.presentation.response.StartInitialDiagnosisResponse;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
@@ -49,6 +52,28 @@ public class DiagnosisController {
         StartInitialDiagnosisCommand command = new StartInitialDiagnosisCommand(studentId, protectorId);
         StartInitialDiagnosisResult result = diagnosisService.startInitialDiagnosis(command);
         StartInitialDiagnosisResponse response = StartInitialDiagnosisResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 초기 진단 종료
+     * POST /api/student/{student-id}/diagnosis/end
+     */
+    @PostMapping("/{studentId}/diagnosis/end")
+    public ResponseEntity<EndInitialDiagnosisResponse> endInitialDiagnosis(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Long protectorId = principal.getProtectorId();
+
+        EndInitialDiagnosisCommand command = new EndInitialDiagnosisCommand(studentId, protectorId);
+        EndInitialDiagnosisResult result = diagnosisService.endInitialDiagnosis(command);
+        EndInitialDiagnosisResponse response = EndInitialDiagnosisResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
