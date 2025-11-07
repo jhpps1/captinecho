@@ -175,6 +175,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
 
       {/* Adventure 컴포넌트 렌더링 */}
       <AdventureComponent
+        key={currentProblem.dayProblemId}
         problem={currentProblem}
         onSubmit={(answer) => handleSubmit(answer, attemptCount)}
       />
