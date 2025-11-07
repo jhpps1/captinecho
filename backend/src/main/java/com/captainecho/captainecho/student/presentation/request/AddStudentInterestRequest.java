@@ -18,7 +18,7 @@ public record AddStudentInterestRequest(
             Long interestId
     ) {}
 
-    public AddStudentInterestCommand toCommand(Integer studentId, Long protectorId) {
+    public AddStudentInterestCommand toCommand(Integer studentId, Integer protectorId) {
         List<Short> subInterestIds = interests.stream()
                 .map(interest -> interest.interestId().shortValue())
                 .toList();

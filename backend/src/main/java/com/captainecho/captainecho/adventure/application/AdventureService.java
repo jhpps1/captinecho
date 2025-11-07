@@ -118,8 +118,8 @@ public class AdventureService {
         List<GetAdventureProblemsResult.ProblemInfo> problemInfos = dayProblems.stream()
                 .map(dp -> {
                     // Null-safe array to list conversion
-                    List<String> questionPhonemes = dp.getQuestionPhonemes() != null
-                            ? Arrays.asList(dp.getQuestionPhonemes())
+                    List<String> problemPhonemes = dp.getProblemPhonemes() != null
+                            ? Arrays.asList(dp.getProblemPhonemes())
                             : List.of();
 
                     List<String> choices = dp.getChoices() != null
@@ -134,11 +134,11 @@ public class AdventureService {
                             dp.getAssignedDate(),
                             dp.getSeqNo(),
                             dp.getLevel(),
-                            dp.getQuestionText(),
+                            dp.getProblemText(),
                             dp.getHint(),
                             dp.getImageUrl(),
                             dp.getSoundUrl(),
-                            questionPhonemes,
+                            problemPhonemes,
                             dp.getBlankPosition(),
                             dp.getBlankPhoneme(),
                             choices,

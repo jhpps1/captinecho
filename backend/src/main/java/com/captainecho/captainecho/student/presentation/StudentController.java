@@ -48,7 +48,7 @@ public class StudentController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         RegisterStudentResult result = studentService.registerStudent(request.toCommand(protectorId));
 
@@ -67,7 +67,7 @@ public class StudentController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         DeleteStudentCommand command = new DeleteStudentCommand(protectorId, studentId);
         studentService.deleteStudent(command);
@@ -84,7 +84,7 @@ public class StudentController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         GetStudentInterestCommand command = new GetStudentInterestCommand(studentId, protectorId);
         GetStudentInterestResult result = studentService.getStudentInterests(command);
@@ -104,7 +104,7 @@ public class StudentController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         AddStudentInterestCommand command = request.toCommand(studentId, protectorId);
         AddStudentInterestResult result = studentService.addStudentInterest(command);
@@ -124,7 +124,7 @@ public class StudentController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         DeleteStudentInterestCommand command = new DeleteStudentInterestCommand(studentId, interestId, protectorId);
         DeleteStudentInterestResult result = studentService.deleteStudentInterest(command);

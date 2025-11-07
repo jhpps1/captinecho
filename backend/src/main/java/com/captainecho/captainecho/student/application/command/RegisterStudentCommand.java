@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record RegisterStudentCommand(
-        Long protectorId,
+        Integer protectorId,
         String studentName,
         Gender gender,
         LocalDate birth,

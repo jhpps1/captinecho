@@ -13,7 +13,7 @@ public record UpdatePinRequest(
         @Pattern(regexp = "^[0-9]{6}$", message = "새 PIN은 6자리 숫자여야 합니다")
         String newPin
 ) {
-    public UpdatePinCommand toCommand(Long protectorId) {
+    public UpdatePinCommand toCommand(Integer protectorId) {
         return new UpdatePinCommand(protectorId, currentPin, newPin);
     }
 }

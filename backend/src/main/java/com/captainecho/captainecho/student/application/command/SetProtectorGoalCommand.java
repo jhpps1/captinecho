@@ -4,7 +4,7 @@ import com.captainecho.captainecho.stats.domain.ProtectorGoal;
 
 public record SetProtectorGoalCommand(
         Integer studentId,
-        Long protectorId,
+        Integer protectorId,
         ProtectorGoal protectorGoal
 ) {
 }

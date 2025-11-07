@@ -13,7 +13,7 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
     /**
      * 특정 보호자의 학생 목록 조회 (삭제된 학생 포함)
      */
-    List<Student> findByProtector_ProtectorId(Long protectorId);
+    List<Student> findByProtector_ProtectorId(Integer protectorId);
 
     /**
      * 특정 보호자의 삭제되지 않은 학생 목록 조회
@@ -24,7 +24,7 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
             WHERE s.protector.protectorId = :protectorId
               AND s.deletedAt IS NULL
             """)
-    List<Student> findActiveStudentsByProtectorId(@Param("protectorId") Long protectorId);
+    List<Student> findActiveStudentsByProtectorId(@Param("protectorId") Integer protectorId);
 
     /**
      * 특정 학생이 특정 보호자에게 속하는지 확인
@@ -37,7 +37,7 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
             """)
     boolean existsByStudentIdAndProtectorId(
             @Param("studentId") Integer studentId,
-            @Param("protectorId") Long protectorId
+            @Param("protectorId") Integer protectorId
     );
 
     /**
@@ -51,11 +51,11 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
             """)
     Optional<Student> findByStudentIdAndProtectorId(
             @Param("studentId") Integer studentId,
-            @Param("protectorId") Long protectorId
+            @Param("protectorId") Integer protectorId
     );
 
     /**
      * 특정 보호자의 학생 수 조회
      */
-    Integer countByProtector_ProtectorId(Long protectorId);
+    Integer countByProtector_ProtectorId(Integer protectorId);
 }

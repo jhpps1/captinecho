@@ -110,7 +110,7 @@ public class ProtectorService {
      * 보호자의 학생 목록 조회
      */
     @Transactional(readOnly = true)
-    public StudentListResult getStudents(Long protectorId) {
+    public StudentListResult getStudents(Integer protectorId) {
         // 1. 학생 목록 조회
         List<Student> students = studentRepository.findByProtector_ProtectorId(protectorId);
 

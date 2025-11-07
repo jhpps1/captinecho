@@ -26,7 +26,7 @@ public class StudentInterest {
     private Student student;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "sub_interest_id", referencedColumnName = "sub_interest_id")
+    @JoinColumn(name = "interest_id", referencedColumnName = "sub_interest_id")
     private SubInterest subInterest;
 
     @CreationTimestamp
