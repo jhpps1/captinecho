@@ -4,7 +4,7 @@ import java.util.List;
 
 public record AddStudentInterestCommand(
         Integer studentId,
-        Long protectorId,
+        Integer protectorId,
         List<Short> subInterestIds
 ) {
 }

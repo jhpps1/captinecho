@@ -39,14 +39,14 @@ public class DayProblem {
     @Column(name = "assigned_date", nullable = false)
     private LocalDate assignedDate;
 
+    @Column(name="problem_text", nullable = false, length = 150)
+    private String problemText;
+
     @Column(name = "seq_no", nullable = false)
     private Short seqNo;
 
     @Column(name = "level", nullable = false)
     private Short level;
-
-    @Column(name = "question_text", nullable = false, length = 150)
-    private String questionText;
 
     @Column(name = "hint", length = 300)
     private String hint;
@@ -54,11 +54,11 @@ public class DayProblem {
     @Column(name = "image_url", length = 2048)
     private String imageUrl;
 
-    @Column(name = "sound_url", nullable = false, length = 2048)
+    @Column(name = "sound_url", length = 2048)
     private String soundUrl;
 
-    @Column(name = "question_phonemes", nullable = false, columnDefinition = "TEXT[]")
-    private String[] questionPhonemes;
+    @Column(name = "problem_phonemes", columnDefinition = "TEXT[]", nullable = false)
+    private String[] problemPhonemes;
 
     @Column(name = "blank_position", length = 20)
     @Enumerated(EnumType.STRING)
@@ -70,7 +70,7 @@ public class DayProblem {
     @Column(name = "choices", columnDefinition = "TEXT[]")
     private String[] choices;
 
-    @Column(name = "correct_answer", length = 5)
+    @Column(name = "correct_answer", length = 100)
     private String correctAnswer;
 
     @CreationTimestamp
@@ -83,8 +83,8 @@ public class DayProblem {
 
     @Builder
     public DayProblem(Student student, SubInterest subInterest, AdventureType adventureType,
-                      LocalDate assignedDate, Short seqNo, Short level, String questionText,
-                      String hint, String imageUrl, String soundUrl, String[] questionPhonemes,
+                      LocalDate assignedDate, Short seqNo, Short level, String problemText,
+                      String hint, String imageUrl, String soundUrl, String[] problemPhonemes,
                       BlankPosition blankPosition, String blankPhoneme, String[] choices,
                       String correctAnswer) {
         this.student = student;
@@ -93,11 +93,11 @@ public class DayProblem {
         this.assignedDate = assignedDate;
         this.seqNo = seqNo;
         this.level = level;
-        this.questionText = questionText;
+        this.problemText = problemText;
         this.hint = hint;
         this.imageUrl = imageUrl;
         this.soundUrl = soundUrl;
-        this.questionPhonemes = questionPhonemes;
+        this.problemPhonemes = problemPhonemes;
         this.blankPosition = blankPosition;
         this.blankPhoneme = blankPhoneme;
         this.choices = choices;

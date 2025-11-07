@@ -13,22 +13,26 @@ import java.time.LocalDateTime;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
+@Table(name = "protector")
 public class Protector {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "protector_id")
-    private Long protectorId;
+    private Integer protectorId;
 
-    @Column(name = "protector_pin", length = 60)
+    @Column(name = "protector_pin", length = 100)
     private String protectorPin;
 
-    @Column(name = "provider", nullable = false, length = 10)
+    @Column(name = "provider", nullable = false)
     @Enumerated(EnumType.STRING)
     private Provider provider;
 
-    @Column(name = "social_id", nullable = false)
+    @Column(name = "social_id", nullable = false, length = 255)
     private String socialId;
+
+    @Column(name = "email", length = 500)
+    private String email;
 
     @Column(name = "max_student_count")
     @ColumnDefault("2")
@@ -46,10 +50,11 @@ public class Protector {
     private LocalDateTime deletedAt;
 
     @Builder
-    public Protector(String protectorPin, Provider provider, String socialId, Short maxStudentCount) {
+    public Protector(String protectorPin, Provider provider, String socialId, String email, Short maxStudentCount) {
         this.protectorPin = protectorPin;
         this.provider = provider;
         this.socialId = socialId;
+        this.email = email;
         this.maxStudentCount = maxStudentCount != null ? maxStudentCount : 2;
         this.isDeleted = false;
     }

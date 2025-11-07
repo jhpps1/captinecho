@@ -323,7 +323,7 @@ CREATE TABLE initial_diagnosis_problem (
     choices TEXT[],
     problem_image_url VARCHAR(2048),
     problem_sound_url VARCHAR(2048),
-    corrrect_answer VARCHAR(500) NOT NULL
+    correct_answer VARCHAR(500) NOT NULL
 );
 
 COMMENT ON TABLE initial_diagnosis_problem IS '초기 진단 문제 풀';

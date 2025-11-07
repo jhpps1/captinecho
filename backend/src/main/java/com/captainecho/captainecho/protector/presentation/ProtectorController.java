@@ -44,7 +44,7 @@ public class ProtectorController {
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @Valid @RequestBody CreatePinRequest request
     ) {
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         CreatePinResult result = protectorService.createPin(request.toCommand(protectorId));
 
@@ -62,7 +62,7 @@ public class ProtectorController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         VerifyPinResult result = protectorService.verifyPin(request.toCommand(protectorId));
 
@@ -83,7 +83,7 @@ public class ProtectorController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         StudentListResult result = protectorService.getStudents(protectorId);
         StudentListResponse response = StudentListResponse.from(result);
@@ -100,7 +100,7 @@ public class ProtectorController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         UpdatePinResult result = protectorService.updatePin(request.toCommand(protectorId));
 
@@ -121,7 +121,7 @@ public class ProtectorController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         GetStudentCountCommand command = new GetStudentCountCommand(protectorId);
         GetStudentCountResult result = protectorService.getStudentCount(command);

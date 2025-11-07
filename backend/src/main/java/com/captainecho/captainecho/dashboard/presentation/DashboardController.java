@@ -59,7 +59,7 @@ public class DashboardController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         CurriculumResult result = dashboardService.getCurriculum(protectorId, studentId);
         CurriculumResponse response = CurriculumResponse.from(result);
@@ -80,7 +80,7 @@ public class DashboardController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         DiscussionResult result = dashboardService.getDiscussion(protectorId, studentId);
         DiscussionResponse response = DiscussionResponse.from(result);
@@ -101,7 +101,7 @@ public class DashboardController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
 
         LearningTimeResult result = dashboardService.getLearningTime(protectorId, studentId);
         LearningTimeResponse response = LearningTimeResponse.from(result);
@@ -122,7 +122,7 @@ public class DashboardController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
         GetDailyGoalCountCommand command = new GetDailyGoalCountCommand(studentId, protectorId);
         GetDailyGoalCountResult result = studentService.getDailyGoalCount(command);
         GetDailyGoalCountResponse response = GetDailyGoalCountResponse.from(result);
@@ -143,7 +143,7 @@ public class DashboardController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
         GetDailyCompletedCountCommand command = new GetDailyCompletedCountCommand(studentId, protectorId);
         GetDailyCompletedCountResult result = studentService.getDailyCompletedCount(command);
         GetDailyCompletedCountResponse response = GetDailyCompletedCountResponse.from(result);
@@ -164,7 +164,7 @@ public class DashboardController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
         GetWeeklyGoalPercentCommand command = new GetWeeklyGoalPercentCommand(studentId, protectorId);
         GetWeeklyGoalPercentResult result = studentService.getWeeklyGoalPercent(command);
         GetWeeklyGoalPercentResponse response = GetWeeklyGoalPercentResponse.from(result);
@@ -186,7 +186,7 @@ public class DashboardController {
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        Long protectorId = principal.getProtectorId();
+        Integer protectorId = principal.getProtectorId();
         SetProtectorGoalCommand command = request.toCommand(studentId, protectorId);
         SetProtectorGoalResult result = dashboardService.setProtectorGoal(command);
         SetProtectorGoalResponse response = SetProtectorGoalResponse.from(result);

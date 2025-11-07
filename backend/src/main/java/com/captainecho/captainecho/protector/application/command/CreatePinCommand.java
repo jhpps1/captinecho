@@ -1,7 +1,7 @@
 package com.captainecho.captainecho.protector.application.command;
 
 public record CreatePinCommand(
-        Long protectorId,
+        Integer protectorId,
         String pin
 ) {
 }

@@ -40,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             log.info("Token validation result: {}", isValid ? "VALID" : "INVALID");
 
             if (isValid) {
-                Long protectorId = jwtUtil.getProtectorId(token);
+                Integer protectorId = jwtUtil.getProtectorId(token);
                 log.info("Authenticated protectorId: {}", protectorId);
 
                 ProtectorPrincipal principal = new ProtectorPrincipal(protectorId);
