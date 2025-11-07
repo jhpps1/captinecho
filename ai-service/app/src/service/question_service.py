@@ -9,6 +9,7 @@ from app.src.utils.llm import llm_problem
 from app.src.utils.s3 import upload_to_local # 로컬 개발용
 # 🚨 [수정 필요]: 파일명을 gms_api.py에서 gemini_api.py로 변경했다면 이 부분을 수정해야 합니다.
 # 파일명을 그대로 유지했다면 이 줄은 수정하지 않아도 됩니다. (여기서는 파일명이 바뀌었다고 가정하고 작성합니다)
+from app.src.api.tts_api import generate_tts_and_upload
 from app.src.api.gemini_api import generate_image_with_gemini_flash # <--- import 경로 수정!
 from dotenv import load_dotenv
 
@@ -85,6 +86,10 @@ def process_day_problem_items(session, student_id, llm_result):
         # 1. student_id 설정
         item["student_id"] = student_id if student_id is not None else 0
 
+        # 💡 [수정] UnboundLocalError 해결: TTS 및 이미지 로직 전에 변수들을 먼저 할당합니다.
+        correct_answer_text = item.get("correct_answer")
+        adventure_type = item.get("adventure_type_id")
+
         # 🚨 기본 URL 초기화 (제거된 로직 대체)
         item["image_url"] = ""
         item["sound_url"] = "problems/default_tts.mp3"
@@ -112,6 +117,27 @@ def process_day_problem_items(session, student_id, llm_result):
         #         item["sound_url"] = "problems/default_tts.mp3"
         # else:
         #     item["sound_url"] = "problems/default_tts.mp3"
+        generated_sound_path = ""
+        if correct_answer_text: # 정답 텍스트가 있는 경우에만 TTS 생성 시도
+            try:
+                # TTS API 호출: 정답 텍스트를 음성으로 변환하고 업로드 후 URL 반환
+                generated_sound_path = generate_tts_and_upload(
+                    correct_answer_text, 
+                    student_id=student_id, 
+                    key_prefix='problems/sound/' # 저장 경로 지정
+                )
+            except Exception as e:
+                print(f"❌ TTS 생성 및 업로드 실패: {e}")
+                generated_sound_path = ""
+                
+            if generated_sound_path:
+                item["sound_url"] = generated_sound_path
+                print(f"✅ TTS 생성 성공! sound_url: {generated_sound_path}")
+            # 실패 시, item["sound_url"]은 'problems/default_tts.mp3' 기본값을 유지함
+
+
+
+
 
 # 🚨 [새로운 로직] 탐험 4의 correct_answer를 빈 문자열로 강제 처리
         if item.get("adventure_type_id") == 4:
