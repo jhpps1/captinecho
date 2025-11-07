@@ -42,4 +42,20 @@ public interface DayProblemRepository extends JpaRepository<DayProblem, Integer>
             @Param("assignedDate") LocalDate assignedDate,
             @Param("isCompleted") Boolean isCompleted
     );
+
+    /**
+     * 특정 탐험 타입과 레벨에 맞는 랜덤 문제 10개 조회 (추가 학습용)
+     */
+    @Query(value = """
+            SELECT dp.*
+            FROM day_problem dp
+            WHERE dp.adventure_type_id = :adventureTypeId
+              AND dp.level = :level
+            ORDER BY RANDOM()
+            LIMIT 10
+            """, nativeQuery = true)
+    List<DayProblem> findRandomSupplementaryProblems(
+            @Param("adventureTypeId") Integer adventureTypeId,
+            @Param("level") Short level
+    );
 }
