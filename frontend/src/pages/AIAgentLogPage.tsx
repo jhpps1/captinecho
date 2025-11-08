@@ -4,7 +4,16 @@ import Cookies from 'js-cookie';
 import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import { getStudents } from '../api/protectorApi';
 import { getDiscussion } from '../api/dashboardApi';
-import type { Student } from '../mocks/protectorData';
+
+interface Student {
+  id: number;
+  lastName: string;
+  fullName: string;
+  level: number;
+  streak: number;
+  profileImage?: string;
+  grade: string;
+}
 
 interface ParsedLog {
   timestamp: string;
