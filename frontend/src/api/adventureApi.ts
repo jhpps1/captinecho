@@ -4,6 +4,9 @@ import type {
   Problem,
   AnswerResult,
   SubmitAnswerRequest,
+  StudyType,
+  StartAdventureResponse,
+  EndAdventureResponse,
 } from '../types/adventure';
 import { normalizeProblemsResponse } from '../types/adventure';
 
@@ -98,4 +101,63 @@ export const submitSingleProblemResult = async (
   result: AnswerResult
 ): Promise<void> => {
   await submitProblemResults(studentId, [result]);
+};
+
+/**
+ * 어드벤처 세션 시작
+ * POST /api/student/{studentId}/adventure/start
+ *
+ * @param studentId - 학생 ID
+ * @param studyType - 학습 타입 ('DAILY' | 'SUPPLE')
+ * @returns sessionId - 생성된 세션 ID
+ *
+ * @description
+ * - 어드벤처 세션을 시작하고 학습 기록 생성
+ * - DAILY: 일일탐험 (혼합 10문제)
+ * - SUPPLE: 추가학습 (특정 타입 10문제)
+ * - 반환된 sessionId는 결과 제출 시 사용
+ *
+ * @example
+ * const sessionId = await startAdventure(123, 'DAILY');
+ * console.log(`세션 시작됨: ${sessionId}`);
+ */
+export const startAdventure = async (
+  studentId: number,
+  studyType: StudyType
+): Promise<number> => {
+  const response = await axiosInstance.post<StartAdventureResponse>(  // 👈 타입 명시
+    `/student/${studentId}/adventure/start`,
+    { studyType }
+  );
+
+  return response.data.sessionId;
+};
+
+/**
+ * 어드벤처 세션 종료
+ * POST /api/student/{studentId}/adventure/end
+ *
+ * @param studentId - 학생 ID
+ * @returns success - 종료 성공 여부
+ *
+ * @description
+ * - 현재 진행 중인 어드벤처 세션 종료
+ * - 학습 통계 및 결과 저장
+ * - 보상 지급 처리
+ * - 모든 문제 완료 시 또는 중도 이탈 시 호출
+ *
+ * @example
+ * const success = await endAdventure(123);
+ * if (success) {
+ *   console.log('세션 종료 성공');
+ * }
+ */
+export const endAdventure = async (
+  studentId: number
+): Promise<boolean> => {
+   const response = await axiosInstance.post<EndAdventureResponse>(  // 👈 타입 사용
+    `/student/${studentId}/adventure/end`
+  );
+
+  return response.data.success;
 };

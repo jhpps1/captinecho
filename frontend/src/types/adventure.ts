@@ -170,3 +170,43 @@ export function normalizeProblemsResponse(response: ProblemsResponse): {
     totalCount: response.totalCount,
   };
 }
+
+ // ==================== 세션 관리 관련 타입 ====================
+
+  /**
+   * 학습 타입
+   * DAILY: 일일탐험 (혼합 10문제)
+   * SUPPLE: 추가학습 (특정 타입 10문제)
+   */
+  export type StudyType = 'DAILY' | 'SUPPLE';
+
+  /**
+   * 어드벤처 세션 시작 요청
+   */
+  export interface StartAdventureRequest {
+    studyType: StudyType;
+  }
+
+  /**
+   * 어드벤처 세션 시작 응답
+   */
+  export interface StartAdventureResponse {
+    sessionId: number;
+  }
+
+  /**
+   * 어드벤처 세션 종료 응답
+   */
+  export interface EndAdventureResponse {
+    success: boolean;
+  }
+
+  /**
+   * 세션 상태 (프론트엔드 관리용)
+   */
+  export interface SessionState {
+    sessionId: number | null;
+    studyType: StudyType | null;
+    isActive: boolean;
+    startedAt: string | null; // ISO 8601 timestamp
+  }

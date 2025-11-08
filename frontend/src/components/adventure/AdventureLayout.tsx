@@ -1,4 +1,5 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TutorialOverlay } from './TutorialOverlay';
 import { TopActionsBar } from './TopActionsBar';

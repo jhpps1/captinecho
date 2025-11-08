@@ -18,6 +18,8 @@ interface ProblemRunnerProps {
   studentId: number;
   onAdventureTypeChange?: (typeId: 1 | 2 | 3 | 4) => void; // 배경 변경을 위한 콜백
   isTutorialMode: boolean;
+  onComplete?: () => void | Promise<void>; // 모든 문제 완료 시 호출되는 콜백
+  onProblemComplete?: (problemId: number) => void; // TODO: API 개발되면 수정 예정 - 문제 하나 완료 시 호출되는 콜백 (localStorage 업데이트용)
 }
 
 // Adventure 컴포넌트 import
@@ -48,14 +50,21 @@ const ADVENTURE_VIEWS: Record<number, ComponentType<AdventureViewProps>> = {
  * @param mode - 'daily' (일일문제) | 'supple' (추가학습)
  * @param studentId - 학생 ID
  */
-export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange, isTutorialMode }: ProblemRunnerProps) => {
+export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange, isTutorialMode, onComplete, onProblemComplete }: ProblemRunnerProps) => {
   const navigate = useNavigate();
   const { idx } = useParams<{ idx?: string }>();
 
-  // 현재 문제 인덱스 (URL에서 복원 또는 0부터 시작)
+  // TODO: API 개발되면 수정 예정
+  // 현재 문제 인덱스 (이어하기 기능: 첫 번째 미완료 문제부터 시작)
   const [currentIndex, setCurrentIndex] = useState(() => {
-    const urlIdx = idx ? parseInt(idx, 10) : 0;
-    return urlIdx >= 0 && urlIdx < problems.length ? urlIdx : 0;
+    // localStorage에서 세션을 복원한 경우, 첫 번째 미완료 문제부터 시작
+    const firstIncompleteIndex = problems.findIndex(p => !p.isCompleted);
+
+    // 미완료 문제가 있으면 그 인덱스로, 없으면 0번부터
+    const startIndex = firstIncompleteIndex >= 0 ? firstIncompleteIndex : 0;
+
+    console.log(`🎯 시작 인덱스: ${startIndex} (전체 ${problems.length}문제)`);
+    return startIndex;
   });
 
   // 현재 문제의 시도 횟수 추적
@@ -97,7 +106,10 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
       submittedAt: new Date().toISOString(),
     };
 
-    // ✅ 매 문제마다 즉시 백엔드에 제출
+    // TODO: API 개발되면 수정 예정
+    // 현재: POST /api/student/{studentId}/adventure/result 엔드포인트 미구현 (404 에러)
+    // 추후: 백엔드 API 구현 후 isCompleted 필드 업데이트 처리
+    // ✅ 매 문제마다 즉시 백엔드에 제출 시도
     try {
       await submitSingleProblemResult(studentId, result);
       console.log(`✅ 문제 ${currentProblem.dayProblemId} 결과 제출 완료`);
@@ -111,6 +123,13 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
       setCompletedResults((prev) => [...prev, result]);
     }
 
+    // TODO: API 개발되면 수정 예정
+    // 임시: 현재 문제를 완료 상태로 표시하고 부모에게 알림 (localStorage 업데이트용)
+    currentProblem.isCompleted = true;
+    if (onProblemComplete) {
+      onProblemComplete(currentProblem.dayProblemId);
+    }
+
     // 다음 문제로 이동 또는 완료 처리
     if (currentIndex < problems.length - 1) {
       // 다음 문제로
@@ -118,7 +137,18 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
       setAttemptCount(1); // 시도 횟수 초기화
     } else {
       // 모든 문제 완료
+      console.log('🎉 모든 문제 완료!');
       setIsAllCompleted(true);
+
+      // 👇 추가: 세션 종료 콜백 호출
+      if (onComplete) {
+        try {
+          await onComplete();
+          console.log('✅ 세션 종료 완료');
+        } catch (error) {
+          console.error('❌ 세션 종료 실패:', error);
+        }
+      }
     }
   };
 
@@ -145,18 +175,13 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
   };
   // ==================================================
   
-  // 완료 화면
+  // 완료 화면 - DailyRunner에서 관리하므로 여기서는 제거
+  // 완료 시 onComplete() 콜백이 호출되어 DailyRunner의 isCompleted가 true로 설정됨
   if (isAllCompleted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-4xl font-bold mb-4">🎉 모든 문제 완료!</h1>
-        <p className="text-xl mb-8">총 {problems.length}문제를 풀었습니다.</p>
-        <button
-          onClick={() => navigate('/')}
-          className="px-8 py-4 bg-green-500 text-white rounded-lg text-xl"
-        >
-          메인으로 돌아가기
-        </button>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
+        <p className="text-xl text-gray-600">완료 처리 중...</p>
       </div>
     );
   }
