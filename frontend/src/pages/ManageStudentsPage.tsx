@@ -152,7 +152,7 @@ export default function ManageStudentsPage() {
     id: s.id,
     name: s.name,
     level: s.level,
-    streak: 0, // TODO: API에서 streak 데이터 받아오기
+    streak: 0, // 백엔드 API 미지원 (향후 추가 예정)
     isActive: s.id === selectedStudentId
   }));
 
