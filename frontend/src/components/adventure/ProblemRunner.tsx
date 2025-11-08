@@ -8,6 +8,7 @@ import { submitSingleProblemResult } from '../../api/adventureApi';
 export interface AdventureViewProps {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
+  isTutorialMode: boolean;
 }
 
 // ProblemRunner Props
@@ -16,6 +17,7 @@ interface ProblemRunnerProps {
   mode: 'daily' | 'supple';
   studentId: number;
   onAdventureTypeChange?: (typeId: 1 | 2 | 3 | 4) => void; // 배경 변경을 위한 콜백
+  isTutorialMode: boolean;
 }
 
 // Adventure 컴포넌트 import
@@ -46,7 +48,7 @@ const ADVENTURE_VIEWS: Record<number, ComponentType<AdventureViewProps>> = {
  * @param mode - 'daily' (일일문제) | 'supple' (추가학습)
  * @param studentId - 학생 ID
  */
-export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange }: ProblemRunnerProps) => {
+export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange, isTutorialMode }: ProblemRunnerProps) => {
   const navigate = useNavigate();
   const { idx } = useParams<{ idx?: string }>();
 
@@ -125,6 +127,24 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
     setAttemptCount((prev) => prev + 1);
   };
 
+  // ========개발자용 버튼 : 추후 삭제 예정 ===============
+  // 개발자용: 이전 문제로 이동
+  const handlePrevProblem = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+      setAttemptCount(1); // 시도 횟수 초기화
+    }
+  };
+
+  // 개발자용: 다음 문제로 이동
+  const handleNextProblem = () => {
+    if (currentIndex < problems.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+      setAttemptCount(1); // 시도 횟수 초기화
+    }
+  };
+  // ==================================================
+  
   // 완료 화면
   if (isAllCompleted) {
     return (
@@ -165,7 +185,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
 
   // 문제 렌더링
   return (
-    <div className="min-h-screen">
+    <div className="w-full">
       {/* 진행도 표시 */}
       <div className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
         <span className="text-sm font-semibold">
@@ -178,6 +198,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         key={currentProblem.dayProblemId}
         problem={currentProblem}
         onSubmit={(answer) => handleSubmit(answer, attemptCount)}
+        isTutorialMode={isTutorialMode}
       />
 
       {/* 개발용: 오답 버튼 (실제로는 각 Adventure 컴포넌트 내부에서 처리) */}
@@ -187,6 +208,24 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
           className="text-sm text-red-500 hover:text-red-700"
         >
           오답 처리 (시도: {attemptCount})
+        </button>
+      </div>
+
+      {/* 개발용: 문제 네비게이션 버튼 */}
+      <div className="fixed bottom-4 right-4 flex gap-2 z-50">
+        <button
+          onClick={handlePrevProblem}
+          disabled={currentIndex === 0}
+          className="px-3 py-2 bg-white rounded-lg shadow-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+        >
+          ◀ 이전
+        </button>
+        <button
+          onClick={handleNextProblem}
+          disabled={currentIndex >= problems.length - 1}
+          className="px-3 py-2 bg-white rounded-lg shadow-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+        >
+          다음 ▶
         </button>
       </div>
     </div>

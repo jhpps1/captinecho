@@ -3,10 +3,12 @@ import type { Problem } from '../../types/adventure';
 import { WordCard } from './WordCard';
 import { MicrophoneButton } from './MicrophoneButton';
 import { FeedbackCharacter } from './FeedbackCharacter';
+import { TutorialBubble } from './TutorialBubble';
 
 interface Adventure4Props {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
+  isTutorialMode: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Adventure4Props {
  * @param problem - API에서 받은 문제 데이터
  * @param onSubmit - 정답 제출 콜백
  */
-export const Adventure4 = ({ problem, onSubmit }: Adventure4Props) => {
+export const Adventure4 = ({ problem, onSubmit, isTutorialMode }: Adventure4Props) => {
   const [isRecording, setIsRecording] = useState(false);
   const [attemptCount, setAttemptCount] = useState(1);
   const [showSpeakerButton, setShowSpeakerButton] = useState(false);
@@ -97,7 +99,12 @@ export const Adventure4 = ({ problem, onSubmit }: Adventure4Props) => {
     <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
       {/* 안내문 */}
       <div className="flex items-center justify-center mb-4 sm:mb-6" style={{ minHeight: '3rem' }}>
-        {/* 튜토리얼 말풍선 필요 시 추가 */}
+        {isTutorialMode && (
+          <TutorialBubble
+            text="단어를 보고 똑같이 말해보세요!"
+            className="max-w-[90%] text-center"
+          />
+        )}
       </div>
 
       {/* 단어 카드 + 스피커 버튼 */}

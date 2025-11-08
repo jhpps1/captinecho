@@ -2,12 +2,12 @@ import { useState } from 'react';
 import type { Problem } from '../../types/adventure';
 import {
   splitVowelForLayout,
-  getVowelLayoutType,
-  getCorrectAnswerForProblem
+  getVowelLayoutType
 } from '../../utils/hangulUtils';
 import { SingleSyllableCard } from './SingleSyllableCard';
 import { OptionsList } from './OptionsList';
 import { FeedbackCharacter } from './FeedbackCharacter';
+import { TutorialBubble } from './TutorialBubble';
 
 // Adventure1 전용 문제 데이터 타입 (기존 ProblemData 사용)
 import type { ProblemData } from '../../types/problem';
@@ -15,6 +15,7 @@ import type { ProblemData } from '../../types/problem';
 interface Adventure1Props {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
+  isTutorialMode: boolean;
 }
 
 /**
@@ -28,7 +29,7 @@ interface Adventure1Props {
  * @param problem - API에서 받은 문제 데이터
  * @param onSubmit - 정답 제출 콜백
  */
-export const Adventure1 = ({ problem, onSubmit }: Adventure1Props) => {
+export const Adventure1 = ({ problem, onSubmit, isTutorialMode }: Adventure1Props) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -37,22 +38,37 @@ export const Adventure1 = ({ problem, onSubmit }: Adventure1Props) => {
 
   // API Problem → ProblemData 변환
   // questionPhonemes: ["ㄱ","ㅏ"] 또는 ["ㄱ","ㅏ","ㅂ"] → { initial: 'ㄱ', medial: 'ㅏ', final?: 'ㅂ' }
-  const convertToProblemData = (): ProblemData => {
+  const convertToProblemData = (): ProblemData | null => {
     // questionPhonemes는 이미 배열 형태: ["ㅂ","ㅓ","ㄴ"]
     const phonemes = problem.questionPhonemes;
+
+    // blankPosition이 null이면 문제 데이터가 유효하지 않음
+    if (!problem.blankPosition) {
+      return null;
+    }
 
     return {
       id: problem.dayProblemId,
       initial: phonemes[0] || '',
       medial: phonemes[1] || '',
       final: phonemes[2], // undefined일 수 있음 (종성 없는 경우)
-      hiddenTarget: problem.blankPosition as 'initial' | 'medial' | 'final',
+      hiddenTarget: problem.blankPosition,
       options: problem.choices,
     };
   };
 
   const currentProblem = convertToProblemData();
-  const correctAnswer = getCorrectAnswerForProblem(currentProblem);
+
+  // 유효하지 않은 문제 데이터 처리
+  if (!currentProblem) {
+    return (
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
+        <div className="text-xl text-gray-600">문제 데이터를 불러올 수 없습니다.</div>
+      </main>
+    );
+  }
+
+  const correctAnswer = problem.correctAnswer[0];
   const vowelLayoutType = getVowelLayoutType(currentProblem.medial);
   const vowelParts = splitVowelForLayout(currentProblem.medial);
 
@@ -87,11 +103,11 @@ export const Adventure1 = ({ problem, onSubmit }: Adventure1Props) => {
     partName: 'initial' | 'medialTop' | 'medialBottom' | 'final'
   ) => {
     const isTargetInitial =
-      currentProblem.hiddenTarget === 'initial' && partName === 'initial';
+      currentProblem.hiddenTarget === 'INITIAL' && partName === 'initial';
     const isTargetFinal =
-      currentProblem.hiddenTarget === 'final' && partName === 'final';
+      currentProblem.hiddenTarget === 'FINAL' && partName === 'final';
     const isTargetMedial =
-      currentProblem.hiddenTarget === 'medial' &&
+      currentProblem.hiddenTarget === 'MEDIAL' &&
       (partName === 'medialTop' || partName === 'medialBottom');
 
     const isTarget = isTargetInitial || isTargetFinal || isTargetMedial;
@@ -104,12 +120,17 @@ export const Adventure1 = ({ problem, onSubmit }: Adventure1Props) => {
 
   return (
     <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
-      {/* 안내문 (위쪽) - 튜토리얼 모드는 Layout에서 관리 */}
+      {/* 안내문 (위쪽) */}
       <div
         className="flex items-center justify-center mb-4 sm:mb-6"
         style={{ minHeight: '3rem' }}
       >
-        {/* 튜토리얼 말풍선은 필요 시 추가 */}
+        {isTutorialMode && (
+          <TutorialBubble
+            text="회색 칸에 들어갈 글자를 골라보세요!"
+            className="max-w-[90%]"
+          />
+        )}
       </div>
 
       {/* 문제 카드 */}
@@ -138,7 +159,7 @@ export const Adventure1 = ({ problem, onSubmit }: Adventure1Props) => {
         wrongAnswers={wrongAnswers}
         isAnswered={isAnswered}
         isAnimating={isAnimating}
-        isTutorialMode={false}
+        isTutorialMode={isTutorialMode}
         onSelect={handleOptionClick}
       />
 

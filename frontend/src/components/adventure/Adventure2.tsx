@@ -4,10 +4,12 @@ import { MultiSyllableCard, type SyllableData } from './MultiSyllableCard';
 import { ImageProblemCard } from './ImageProblemCard';
 import { OptionsList } from './OptionsList';
 import { FeedbackCharacter } from './FeedbackCharacter';
+import { TutorialBubble } from './TutorialBubble';
 
 interface Adventure2Props {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
+  isTutorialMode: boolean;
 }
 
 /**
@@ -21,7 +23,7 @@ interface Adventure2Props {
  * @param problem - API에서 받은 문제 데이터
  * @param onSubmit - 정답 제출 콜백
  */
-export const Adventure2 = ({ problem, onSubmit }: Adventure2Props) => {
+export const Adventure2 = ({ problem, onSubmit, isTutorialMode }: Adventure2Props) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -34,7 +36,7 @@ export const Adventure2 = ({ problem, onSubmit }: Adventure2Props) => {
     const syllables: SyllableData[] = [];
     const phonemes = problem.questionPhonemes;
     const correctAnswer = problem.correctAnswer[0]; // 단일 정답
-    const blankPosition = problem.blankPosition?.toLowerCase() as 'initial' | 'medial' | 'final' | null;
+    const blankPosition = problem.blankPosition as 'INITIAL' | 'MEDIAL' | 'FINAL' | null;
 
     // 자음 판별 함수 (초성 또는 종성)
     const CONSONANTS = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
@@ -73,12 +75,13 @@ export const Adventure2 = ({ problem, onSubmit }: Adventure2Props) => {
       }
 
       // 빈칸 위치 확인: blankPhoneme이 이 음절에 있는지 확인
+      // blankPosition이 null이 아닌 경우에만 할당
       if (blankPosition && (
-        (blankPosition === 'initial' && initial === correctAnswer) ||
-        (blankPosition === 'medial' && medial === correctAnswer) ||
-        (blankPosition === 'final' && syllableData.final === correctAnswer)
+        (blankPosition === 'INITIAL' && initial === correctAnswer) ||
+        (blankPosition === 'MEDIAL' && medial === correctAnswer) ||
+        (blankPosition === 'FINAL' && syllableData.final === correctAnswer)
       )) {
-        syllableData.hiddenTarget = blankPosition;
+        syllableData.hiddenTarget = blankPosition; // blankPosition은 이미 null이 아님을 확인했으므로 안전
       }
 
       syllables.push(syllableData);
@@ -120,7 +123,12 @@ export const Adventure2 = ({ problem, onSubmit }: Adventure2Props) => {
     <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
       {/* 안내문 */}
       <div className="flex items-center justify-center mb-4 sm:mb-6" style={{ minHeight: '3rem' }}>
-        {/* 튜토리얼 말풍선 필요 시 추가 */}
+        {isTutorialMode && (
+          <TutorialBubble
+            text="그림을 보고 빈칸에 들어갈 글자를 선택하세요!"
+            className="max-w-[90%] text-center"
+          />
+        )}
       </div>
 
       {/* 문제 영역: 이미지 카드 + 단어 카드 */}
@@ -143,7 +151,7 @@ export const Adventure2 = ({ problem, onSubmit }: Adventure2Props) => {
         wrongAnswers={wrongAnswers}
         isAnswered={isAnswered}
         isAnimating={isAnimating}
-        isTutorialMode={false}
+        isTutorialMode={isTutorialMode}
         onSelect={handleOptionClick}
         variant="square"
       />

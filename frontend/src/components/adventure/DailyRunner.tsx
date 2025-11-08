@@ -95,12 +95,15 @@ export const DailyRunner = () => {
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   return (
     <AdventureLayout adventureTypeId={currentAdventureTypeId}>
-      <ProblemRunner
-        problems={problems}
-        mode="daily"
-        studentId={parsedStudentId!}
-        onAdventureTypeChange={setCurrentAdventureTypeId}
-      />
+      {(isTutorialMode) => (
+        <ProblemRunner
+          problems={problems}
+          mode="daily"
+          studentId={parsedStudentId!}
+          onAdventureTypeChange={setCurrentAdventureTypeId}
+          isTutorialMode={isTutorialMode}
+        />
+      )}
     </AdventureLayout>
   );
 };

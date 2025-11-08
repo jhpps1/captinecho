@@ -102,11 +102,14 @@ export const SuppleRunner = () => {
   // 추가학습은 모든 문제가 같은 타입이므로 parsedTypeId를 직접 사용
   return (
     <AdventureLayout adventureTypeId={parsedTypeId as 1 | 2 | 3 | 4}>
-      <ProblemRunner
-        problems={problems}
-        mode="supple"
-        studentId={parsedStudentId!}
-      />
+      {(isTutorialMode) => (
+        <ProblemRunner
+          problems={problems}
+          mode="supple"
+          studentId={parsedStudentId!}
+          isTutorialMode={isTutorialMode}
+        />
+      )}
     </AdventureLayout>
   );
 };

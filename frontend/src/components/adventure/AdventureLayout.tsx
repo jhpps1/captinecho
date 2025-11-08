@@ -5,7 +5,7 @@ import { TopActionsBar } from './TopActionsBar';
 import { useTutorialVoice } from '../../hooks/useTutorialVoice';
 
 interface AdventureLayoutProps {
-  children: ReactNode;
+  children: (isTutorialMode: boolean) => ReactNode;
   adventureTypeId?: 1 | 2 | 3 | 4; // 탐험 유형 (배경 변경용)
 }
 
@@ -45,13 +45,29 @@ export const AdventureLayout = ({ children, adventureTypeId }: AdventureLayoutPr
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTutorialMode, stopVoice]);
 
+  // Adventure 타입별 튜토리얼 음성 메시지
+  const getTutorialVoice = (): string => {
+    switch (adventureTypeId) {
+      case 1:
+        return '회색 칸에 들어갈 글자를 골라보세요!';
+      case 2:
+        return '그림을 보고 빈칸에 들어갈 글자를 선택하세요!';
+      case 3:
+        return '그림을 보고 알맞은 단어를 선택하세요!';
+      case 4:
+        return '단어를 보고 똑같이 말해보세요!';
+      default:
+        return '문제를 풀어보세요!';
+    }
+  };
+
   // 튜토리얼 버튼 클릭
   const handleTutorialClick = () => {
     const goingToTutorial = !isTutorialMode;
     setIsTutorialMode(goingToTutorial);
 
     if (goingToTutorial) {
-      playVoice('tutorial', '문제를 풀어보세요!');
+      playVoice('tutorial', getTutorialVoice());
     } else {
       stopVoice();
     }
@@ -90,8 +106,8 @@ export const AdventureLayout = ({ children, adventureTypeId }: AdventureLayoutPr
       <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={false} />
 
       {/* Runner 컴포넌트 렌더링 */}
-      <div className="relative z-10 flex-1">
-        {children}
+      <div className="relative z-10 flex-1 flex items-center justify-center">
+        {children(isTutorialMode)}
       </div>
     </div>
   );

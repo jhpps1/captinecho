@@ -22,7 +22,7 @@ export interface ProblemRaw {
   imageUrl: string | null; // 이미지 URL (nullable)
   soundUrl: string | null; // 음성 URL (nullable)
   questionPhonemes: string | string[]; // 문제 음소 배열 (문자열 또는 배열)
-  blankPosition: string | null; // 빈칸 위치 (초성/중성/종성, nullable)
+  blankPosition: 'INITIAL' | 'MEDIAL' | 'FINAL' | null; // 빈칸 위치 (초성/중성/종성, nullable)
   blankPhoneme: string | null; // 빈칸 음소 (nullable)
   choices: string | string[]; // 선택지 배열 (문자열 또는 배열)
   correctAnswer: string | string[]; // 정답 (문자열 또는 배열)
@@ -46,7 +46,7 @@ export interface Problem {
   imageUrl: string | null;
   soundUrl: string | null;
   questionPhonemes: string[]; // 정규화: 항상 배열
-  blankPosition: string | null;
+  blankPosition: 'INITIAL' | 'MEDIAL' | 'FINAL' | null;
   blankPhoneme: string | null;
   choices: string[]; // 정규화: 항상 배열
   correctAnswer: string[]; // 정규화: 항상 배열

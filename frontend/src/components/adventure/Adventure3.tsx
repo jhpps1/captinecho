@@ -3,10 +3,12 @@ import type { Problem } from '../../types/adventure';
 import { ImageProblemCard } from './ImageProblemCard';
 import { OptionsList } from './OptionsList';
 import { FeedbackCharacter } from './FeedbackCharacter';
+import { TutorialBubble } from './TutorialBubble';
 
 interface Adventure3Props {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
+  isTutorialMode: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Adventure3Props {
  * @param problem - API에서 받은 문제 데이터
  * @param onSubmit - 정답 제출 콜백
  */
-export const Adventure3 = ({ problem, onSubmit }: Adventure3Props) => {
+export const Adventure3 = ({ problem, onSubmit, isTutorialMode }: Adventure3Props) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -58,7 +60,12 @@ export const Adventure3 = ({ problem, onSubmit }: Adventure3Props) => {
     <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
       {/* 안내문 */}
       <div className="flex items-center justify-center mb-4 sm:mb-6" style={{ minHeight: '3rem' }}>
-        {/* 튜토리얼 말풍선 필요 시 추가 */}
+        {isTutorialMode && (
+          <TutorialBubble
+            text="그림을 보고 알맞은 단어를 선택하세요!"
+            className="max-w-[90%] text-center"
+          />
+        )}
       </div>
 
       {/* 이미지 카드 */}
@@ -77,7 +84,7 @@ export const Adventure3 = ({ problem, onSubmit }: Adventure3Props) => {
         wrongAnswers={wrongAnswers}
         isAnswered={isAnswered}
         isAnimating={isAnimating}
-        isTutorialMode={false}
+        isTutorialMode={isTutorialMode}
         onSelect={handleOptionClick}
         variant="rectangle"
       />
