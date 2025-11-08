@@ -167,7 +167,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
   return (
     <div className="min-h-screen">
       {/* 진행도 표시 */}
-      <div className="fixed top-4 right-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
+      <div className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
         <span className="text-sm font-semibold">
           {currentIndex + 1} / {problems.length}
         </span>
