@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Settings, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import Cookies from 'js-cookie';
 import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import AddStudentModal from '../components/protector/modals/AddStudentModal';
@@ -191,20 +191,6 @@ export default function ManageStudentsPage() {
 
       {/* 메인 컨텐츠 */}
       <main className="flex-1 overflow-y-auto">
-        {/* 헤더 */}
-        <header className="bg-white border-b border-neutral-200 p-4 sticky top-0 z-10">
-          <div className="flex items-center justify-end max-w-7xl mx-auto">
-            <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
-                <Bell size={20} className="text-neutral-600" />
-              </button>
-              <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
-                <Settings size={20} className="text-neutral-600" />
-              </button>
-            </div>
-          </div>
-        </header>
-
         {/* 컨텐츠 영역 */}
         <div className="max-w-7xl mx-auto p-6">
           {/* 학생 추가 버튼 */}
