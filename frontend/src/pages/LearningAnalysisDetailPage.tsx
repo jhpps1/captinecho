@@ -86,6 +86,7 @@ export default function LearningAnalysisDetailPage() {
     <div className="flex min-h-screen bg-neutral-50 font-pretendard">
       {/* 사이드바 */}
       <DashboardSidebar
+        title="학습 분석"
         students={students}
         selectedStudentId={selectedStudent?.id}
         onStudentSelect={(studentId) => {

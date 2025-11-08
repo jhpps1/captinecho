@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import Cookies from 'js-cookie';
@@ -41,6 +41,7 @@ export default function ManageStudentsPage() {
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [studentCount, setStudentCount] = useState<{ total: number; remain: number } | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
   // 학생 수 조회
   const fetchStudentCount = async () => {
@@ -60,11 +61,12 @@ export default function ManageStudentsPage() {
     setIsLoadingStudents(true);
     try {
       const response = await getStudents();
+      console.log('📥 학생 목록 조회 응답:', response);
       const studentList: Student[] = response.students.map(s => ({
         id: s.studentId,
         name: s.name,
         level: s.level || 1,
-        birthDate: s.birth || '1996.01.03',
+        birthDate: s.birth || '생년월일 미등록',
         gender: s.gender ? mapGenderToFrontend(s.gender) : '남',
         grade: s.grade ? mapGradeToFrontend(s.grade) : '미취학',
         interests: [],
@@ -95,6 +97,24 @@ export default function ManageStudentsPage() {
     fetchStudentCount();
   }, []);
 
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (openDropdownId !== null && !target.closest('.dropdown-container')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    if (openDropdownId !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdownId]);
+
   const handleAddStudent = async (studentData: {
     name: string;
     gender: 'male' | 'female';
@@ -112,7 +132,9 @@ export default function ManageStudentsPage() {
         interests: selectedInterests.map(id => ({ interestId: id }))
       };
 
+      console.log('📤 학생 등록 요청 데이터:', requestData);
       const response = await registerStudent(requestData);
+      console.log('📥 학생 등록 응답:', response);
 
       if (response.success) {
         alert(`학생 "${studentData.name}"이(가) 추가되었습니다!`);
@@ -145,6 +167,24 @@ export default function ManageStudentsPage() {
 
   const handleStudentSelect = (studentId: number) => {
     setSelectedStudentId(studentId);
+  };
+
+  const handleDeleteStudent = async (studentId: number) => {
+    try {
+      await deleteStudent(studentId);
+      alert('학생이 삭제되었습니다.');
+      await fetchStudents();
+      await fetchStudentCount();
+    } catch (error: any) {
+      console.error('❌ 학생 삭제 실패:', error);
+      if (error.response?.status === 401) {
+        alert('로그인이 필요합니다.');
+        Cookies.remove('accessToken');
+        navigate('/');
+      } else {
+        alert('학생 삭제에 실패했습니다.');
+      }
+    }
   };
 
   // DashboardSidebar용 학생 데이터 변환
@@ -183,6 +223,7 @@ export default function ManageStudentsPage() {
 
       {/* 왼쪽 사이드바 */}
       <DashboardSidebar
+        title="학생 관리"
         students={sidebarStudents}
         selectedStudentId={selectedStudentId || 0}
         onStudentSelect={handleStudentSelect}
@@ -229,9 +270,40 @@ export default function ManageStudentsPage() {
                       <p className="text-sm text-neutral-500">Lv.{student.level}</p>
                     </div>
                   </div>
-                  <button className="p-2 hover:bg-neutral-100 rounded-lg">
-                    <span className="text-2xl text-neutral-400">⋯</span>
-                  </button>
+                  <div className="relative dropdown-container">
+                    <button
+                      onClick={() => setOpenDropdownId(openDropdownId === student.id ? null : student.id)}
+                      className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+                    >
+                      <span className="text-2xl text-neutral-400">⋯</span>
+                    </button>
+
+                    {/* 드롭다운 메뉴 */}
+                    {openDropdownId === student.id && (
+                      <div className="absolute right-0 top-12 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                        <button
+                          onClick={() => {
+                            alert('수정 기능은 준비 중입니다.');
+                            setOpenDropdownId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
+                        >
+                          ✏️ 수정하기
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`${student.name} 학생을 삭제하시겠습니까?`)) {
+                              await handleDeleteStudent(student.id);
+                            }
+                            setOpenDropdownId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-error hover:bg-error/5 transition-colors last:rounded-b-lg"
+                        >
+                          🗑️ 삭제하기
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2 text-sm">

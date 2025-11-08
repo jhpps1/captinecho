@@ -165,6 +165,7 @@ export default function SettingsPage() {
 
       {/* Sidebar */}
       <DashboardSidebar
+        title="설정"
         students={students}
         selectedStudentId={selectedStudentId || 0}
         onStudentSelect={handleStudentSelect}
