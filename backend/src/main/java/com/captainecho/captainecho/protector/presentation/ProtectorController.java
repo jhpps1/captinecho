@@ -14,8 +14,10 @@ import com.captainecho.captainecho.protector.presentation.dto.VerifyPinRequest;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinResponse;
 import com.captainecho.captainecho.protector.presentation.request.CreatePinRequest;
 import com.captainecho.captainecho.protector.presentation.request.UpdatePinRequest;
+import com.captainecho.captainecho.protector.presentation.request.VerifyRecoveryCodeRequest;
 import com.captainecho.captainecho.protector.presentation.response.CreatePinResponse;
 import com.captainecho.captainecho.protector.presentation.response.GetStudentCountResponse;
+import com.captainecho.captainecho.protector.presentation.response.RecoveryCodeResponse;
 import com.captainecho.captainecho.protector.presentation.response.StudentListResponse;
 import com.captainecho.captainecho.protector.presentation.response.UpdatePinResponse;
 import jakarta.validation.Valid;
@@ -128,5 +130,44 @@ public class ProtectorController {
         GetStudentCountResponse response = GetStudentCountResponse.from(result);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * PIN 복구 인증 코드 전송
+     * POST /api/protector/pin/send-recovery-code
+     */
+    @PostMapping("/pin/send-recovery-code")
+    public ResponseEntity<RecoveryCodeResponse> sendRecoveryCode(
+            @AuthenticationPrincipal ProtectorPrincipal principal
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        protectorService.sendRecoveryCode(protectorId);
+
+        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
+    }
+
+    /**
+     * PIN 복구 인증 코드 검증 및 PIN 초기화
+     * POST /api/protector/pin/verify-recovery-code
+     */
+    @PostMapping("/pin/verify-recovery-code")
+    public ResponseEntity<RecoveryCodeResponse> verifyRecoveryCode(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @Valid @RequestBody VerifyRecoveryCodeRequest request
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        protectorService.verifyRecoveryCodeAndResetPin(protectorId, request.code());
+
+        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
     }
 }

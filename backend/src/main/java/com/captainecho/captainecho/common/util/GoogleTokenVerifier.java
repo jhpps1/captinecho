@@ -25,7 +25,7 @@ public class GoogleTokenVerifier {
                 .build();
     }
 
-    public String verify(String idToken) {
+    public GoogleTokenInfo verify(String idToken) {
         try {
             GoogleIdToken googleIdToken = verifier.verify(idToken);
             if (googleIdToken == null) {
@@ -34,7 +34,10 @@ public class GoogleTokenVerifier {
 
             GoogleIdToken.Payload payload = googleIdToken.getPayload();
 
-            return payload.getSubject();
+            String socialId = payload.getSubject();
+            String email = payload.getEmail();
+
+            return new GoogleTokenInfo(socialId, email);
         } catch (Exception e) {
             throw new EchoException(AuthErrorCode.INVALID_TOKEN);
         }

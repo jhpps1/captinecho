@@ -55,6 +55,20 @@ export interface SetProtectorGoalResponse {
   success: boolean;
 }
 
+// ===== PIN 복구 관련 타입 =====
+
+export interface SendRecoveryCodeResponse {
+  success: boolean;
+}
+
+export interface VerifyRecoveryCodeRequest {
+  code: string;
+}
+
+export interface VerifyRecoveryCodeResponse {
+  success: boolean;
+}
+
 // ===== API 함수 =====
 
 /**
@@ -145,6 +159,31 @@ export const setProtectorGoal = async (
   const response = await axiosInstance.post<SetProtectorGoalResponse>(
     `/student/${studentId}/dashboard/goal`,
     { protectorGoal }
+  );
+  return response.data;
+};
+
+// ===== PIN 복구 API =====
+
+/**
+ * PIN 복구 코드 발송 (이메일)
+ * POST /api/protector/pin/send-recovery-code
+ */
+export const sendRecoveryCode = async (): Promise<SendRecoveryCodeResponse> => {
+  const response = await axiosInstance.post<SendRecoveryCodeResponse>(
+    `/protector/pin/send-recovery-code`
+  );
+  return response.data;
+};
+
+/**
+ * PIN 복구 코드 검증
+ * POST /api/protector/pin/verify-recovery-code
+ */
+export const verifyRecoveryCode = async (code: string): Promise<VerifyRecoveryCodeResponse> => {
+  const response = await axiosInstance.post<VerifyRecoveryCodeResponse>(
+    `/protector/pin/verify-recovery-code`,
+    { code }
   );
   return response.data;
 };
