@@ -5,12 +5,12 @@ def call_gms_openai(prompt, model=None, temperature=0.3, max_tokens=4096):
     """
     텍스트 생성(gpt, chat, 분석, 에이전트 답변 등)이 필요할 때 호출하는 함수.
     - prompt: 프롬프트(질문/지시/명령어)
-    - model: 사용할 LLM(gpt-4.1 등, .env의 OPENAI_MODEL로 읽게 하면 좋음)
+    - model: 사용할 LLM(gpt-4o 등, .env의 OPENAI_MODEL로 읽게 하면 좋음)
     - temperature, max_tokens 등은 필요에 따라 조절
     """
     # .env에서 모델명 없으면 default
     if model is None:
-        model = os.getenv("OPENAI_MODEL", "gpt-4.1")
+        model = os.getenv("OPENAI_MODEL", "gpt-4o")
     api_key = os.getenv("OPENAI_API_KEY")
     url = os.getenv("OPENAI_BASE_URL", "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions")
     headers = {

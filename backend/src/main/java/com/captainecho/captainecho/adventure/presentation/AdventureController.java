@@ -9,13 +9,16 @@ import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.student.application.command.EndAdventureCommand;
 import com.captainecho.captainecho.student.application.command.GetAdventureProblemsCommand;
+import com.captainecho.captainecho.student.application.command.GetSupplementaryProblemsCommand;
 import com.captainecho.captainecho.student.application.command.StartAdventureCommand;
 import com.captainecho.captainecho.student.application.result.EndAdventureResult;
 import com.captainecho.captainecho.student.application.result.GetAdventureProblemsResult;
+import com.captainecho.captainecho.student.application.result.GetSupplementaryProblemsResult;
 import com.captainecho.captainecho.student.application.result.StartAdventureResult;
 import com.captainecho.captainecho.student.presentation.request.StartAdventureRequest;
 import com.captainecho.captainecho.student.presentation.response.EndAdventureResponse;
 import com.captainecho.captainecho.student.presentation.response.GetAdventureProblemsResponse;
+import com.captainecho.captainecho.student.presentation.response.GetSupplementaryProblemsResponse;
 import com.captainecho.captainecho.student.presentation.response.StartAdventureResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,6 +33,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -111,6 +115,33 @@ public class AdventureController {
         GetAdventureProblemsCommand command = new GetAdventureProblemsCommand(studentId, protectorId);
         GetAdventureProblemsResult result = adventureService.getAdventureProblems(command);
         GetAdventureProblemsResponse response = GetAdventureProblemsResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 추가 학습 문제 조회 (탐험 타입별 랜덤 10문제)
+     * GET /api/student/{student-id}/adventure/problem/supple
+     */
+    @GetMapping("/student/{studentId}/adventure/problem/supple")
+    public ResponseEntity<GetSupplementaryProblemsResponse> getSupplementaryProblems(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId,
+            @RequestParam Integer adventureTypeId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetSupplementaryProblemsCommand command = new GetSupplementaryProblemsCommand(
+                studentId,
+                protectorId,
+                adventureTypeId
+        );
+        GetSupplementaryProblemsResult result = adventureService.getSupplementaryProblems(command);
+        GetSupplementaryProblemsResponse response = GetSupplementaryProblemsResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
