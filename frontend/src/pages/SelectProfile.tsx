@@ -24,6 +24,7 @@ const SelectProfile = () => {
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [isSendingRecoveryCode, setIsSendingRecoveryCode] = useState(false);
 
   const handlePinSubmit = async (pin: string) => {
     try {
@@ -53,6 +54,7 @@ const SelectProfile = () => {
   };
 
   const handleForgotPin = async () => {
+    setIsSendingRecoveryCode(true);
     try {
       // PIN 복구 코드 발송 API 호출
       const result = await sendRecoveryCode();
@@ -67,6 +69,8 @@ const SelectProfile = () => {
     } catch (error) {
       console.error('PIN 복구 코드 발송 실패:', error);
       alert('인증 번호 발송 중 오류가 발생했습니다.');
+    } finally {
+      setIsSendingRecoveryCode(false);
     }
   };
 
@@ -320,6 +324,7 @@ const SelectProfile = () => {
               onSubmit={handlePinSubmit}
               onForgotPin={handleForgotPin}
               onClose={handleClose}
+              isSendingRecoveryCode={isSendingRecoveryCode}
             />
           )}
 
