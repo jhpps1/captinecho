@@ -1,5 +1,7 @@
 package com.captainecho.captainecho.protector.application;
 
+import com.captainecho.captainecho.common.mail.EmailService;
+import com.captainecho.captainecho.common.mail.RecoveryCodeService;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
 import com.captainecho.captainecho.protector.application.command.CreatePinCommand;
@@ -32,6 +34,8 @@ public class ProtectorService {
 
     private final ProtectorRepository protectorRepository;
     private final StudentRepository studentRepository;
+    private final EmailService emailService;
+    private final RecoveryCodeService recoveryCodeService;
 
     @Transactional
     public CreatePinResult createPin(CreatePinCommand command) {
@@ -112,6 +116,7 @@ public class ProtectorService {
                         .studentId(student.getStudentId())
                         .name(student.getName())
                         .gender(student.getGender() != null ? student.getGender().name() : null)
+                        .birth(student.getBirth() != null ? student.getBirth().toString() : null)
                         .profileImage(student.getProfileImage())
                         .grade(student.getGrade() != null ? student.getGrade().name() : null)
                         .level(student.getLevel() != null ? student.getLevel().intValue() : null)
@@ -141,5 +146,51 @@ public class ProtectorService {
         Integer remainCount = totalCount - currentStudentCount;
 
         return GetStudentCountResult.of(totalCount, remainCount);
+    }
+
+    /**
+     * PIN 복구 인증 코드 전송
+     */
+    @Transactional
+    public void sendRecoveryCode(Integer protectorId) {
+        // 1. Protector 조회
+        Protector protector = protectorRepository.findById(protectorId)
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+
+        // 2. 이메일 확인
+        String email = protector.getEmail();
+        if (email == null || email.isEmpty()) {
+            throw new EchoException(ProtectorErrorCode.EMAIL_NOT_FOUND);
+        }
+
+        // 3. 인증 코드 생성 및 Redis 저장
+        String code = recoveryCodeService.generateAndSaveCode(protectorId);
+
+        // 4. 이메일 발송
+        emailService.sendPinRecoveryCode(email, code);
+
+        log.info("PIN 복구 인증 코드 전송 완료 - Protector ID: {}, Email: {}", protectorId, email);
+    }
+
+    /**
+     * PIN 복구 인증 코드 검증 및 PIN 초기화
+     */
+    @Transactional
+    public void verifyRecoveryCodeAndResetPin(Integer protectorId, String code) {
+        // 1. Protector 조회
+        Protector protector = protectorRepository.findById(protectorId)
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+
+        // 2. 인증 코드 검증
+        boolean isValid = recoveryCodeService.verifyCode(protectorId, code);
+
+        if (!isValid) {
+            throw new EchoException(ProtectorErrorCode.INVALID_RECOVERY_CODE);
+        }
+
+        // 3. PIN 초기화 (기본값 "000000"으로 리셋)
+        protector.updateProtectorPin("000000");
+
+        log.info("PIN 초기화 완료 - Protector ID: {}", protectorId);
     }
 }

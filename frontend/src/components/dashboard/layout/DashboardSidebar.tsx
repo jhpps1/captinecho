@@ -18,6 +18,7 @@ interface DashboardSidebarProps {
   selectedStudentId: number;
   onStudentSelect: (studentId: number) => void;
   onLogout: () => void;
+  title?: string;
 }
 
 export default function DashboardSidebar({
@@ -25,6 +26,7 @@ export default function DashboardSidebar({
   selectedStudentId,
   onStudentSelect,
   onLogout,
+  title = '대시보드',
 }: DashboardSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -79,7 +81,7 @@ export default function DashboardSidebar({
           <div className="p-4 border-b border-neutral-200">
             {isExpanded ? (
               <h1 className="text-lg font-bold font-pretendard text-neutral-800">
-                대시보드
+                {title}
               </h1>
             ) : (
               <div className="w-8 h-8 bg-primary rounded-lg mx-auto" />

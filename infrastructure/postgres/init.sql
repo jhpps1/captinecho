@@ -170,7 +170,6 @@ COMMENT ON COLUMN day_problem.correct_answer IS '탐험 1,2,3 전용, 정답';
 -- ==============================================
 -- 6. 학습 세션 (LEARNING_SESSION)
 -- ==============================================
-
 CREATE TABLE learning_session (
     session_id SERIAL PRIMARY KEY,
     student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
@@ -179,49 +178,27 @@ CREATE TABLE learning_session (
     end_time TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
-
 COMMENT ON TABLE learning_session IS '학습 세션 (학습 시작~종료)';
 COMMENT ON COLUMN learning_session.study_type IS '학습 유형 (DAILY: 일일학습, SUPPLE: 보충학습)';
 COMMENT ON COLUMN learning_session.start_time IS '학습 시작 시간';
 COMMENT ON COLUMN learning_session.end_time IS '학습 종료 시간';
 
 -- ==============================================
--- 7. 세션 상세 (SESSION_DETAIL)
+-- 7. 오류 패턴 (ERROR_PATTERN)
 -- ==============================================
-
-CREATE TABLE session_detail (
-    session_detail_id SERIAL PRIMARY KEY,
-    session_id INTEGER NOT NULL REFERENCES learning_session(session_id) ON DELETE CASCADE,
-    day_problem_id INTEGER NOT NULL REFERENCES day_problem(day_problem_id) ON DELETE CASCADE,
-    used_hint BOOLEAN DEFAULT false NOT NULL,
-    attempt_no SMALLINT NOT NULL CHECK (attempt_no > 0),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE session_detail IS '세션별 문제 풀이 상세';
-COMMENT ON COLUMN session_detail.used_hint IS '힌트 사용 여부';
-COMMENT ON COLUMN session_detail.attempt_no IS '시도 횟수';
-
--- ==============================================
--- 8. 오류 패턴 (ERROR_PATTERN)
--- ==============================================
-
 CREATE TABLE error_pattern (
     error_pattern_id SERIAL PRIMARY KEY,
-    session_detail_id INTEGER NOT NULL REFERENCES session_detail(session_detail_id) ON DELETE CASCADE,
-    student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
+    session_id INTEGER NOT NULL REFERENCES learning_session(session_id) ON DELETE CASCADE,
     real_jamo CHAR(1) NOT NULL,
     confusion_jamo CHAR(1) NOT NULL,
-    phoneme_position VARCHAR(10) NOT NULL,
-    syllable_type VARCHAR(10) NOT NULL,
+    phoneme_position VARCHAR(10),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
-
 COMMENT ON TABLE error_pattern IS '학생별 음소 오류 패턴';
+COMMENT ON COLUMN error_pattern.session_id IS '학습 세션 ID';
 COMMENT ON COLUMN error_pattern.real_jamo IS '정답 음소';
 COMMENT ON COLUMN error_pattern.confusion_jamo IS '학생이 입력한 오답 음소';
 COMMENT ON COLUMN error_pattern.phoneme_position IS '음소 위치 (초성/중성/종성)';
-COMMENT ON COLUMN error_pattern.syllable_type IS '음절 유형 (의미/무의미)';
 
 -- ==============================================
 -- 9. 자모 통계 (JAMO_STAT)

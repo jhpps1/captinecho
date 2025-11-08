@@ -1,6 +1,5 @@
 package com.captainecho.captainecho.session.domain;
 
-import com.captainecho.captainecho.student.domain.Student;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -22,12 +21,8 @@ public class ErrorPattern {
     private Integer errorPatternId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "session_detail_id", nullable = false)
-    private SessionDetail sessionDetail;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id", nullable = false)
-    private Student student;
+    @JoinColumn(name = "session_id", nullable = false)
+    private LearningSession learningSession;
 
     @Column(name = "real_jamo", nullable = false, length = 1)
     private Character realJamo;
@@ -35,26 +30,20 @@ public class ErrorPattern {
     @Column(name = "confusion_jamo", nullable = false, length = 1)
     private Character confusionJamo;
 
+    @Column(name = "phoneme_position", length = 10)
+    @Enumerated(EnumType.STRING)
+    private PhonemePosition phonemePosition;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "phoneme_position", nullable = false, length = 10)
-    @Enumerated(EnumType.STRING)
-    private PhonemePosition phonemePosition;
-
-    @Column(name = "syllable_type", nullable = false, length = 10)
-    @Enumerated(EnumType.STRING)
-    private SyllableType syllableType;
-
     @Builder
-    public ErrorPattern(SessionDetail sessionDetail, Student student, Character realJamo,
-                        Character confusionJamo, PhonemePosition phonemePosition, SyllableType syllableType) {
-        this.sessionDetail = sessionDetail;
-        this.student = student;
+    public ErrorPattern(LearningSession learningSession, Character realJamo,
+                        Character confusionJamo, PhonemePosition phonemePosition) {
+        this.learningSession = learningSession;
         this.realJamo = realJamo;
         this.confusionJamo = confusionJamo;
         this.phonemePosition = phonemePosition;
-        this.syllableType = syllableType;
     }
 }

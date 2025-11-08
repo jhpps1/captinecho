@@ -7,6 +7,7 @@ export interface StudentResponse {
   studentId: number;
   name: string;
   gender?: string;
+  birth?: string;
   profileImage?: string;
   grade?: string;
   level?: number;

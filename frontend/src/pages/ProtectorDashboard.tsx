@@ -259,6 +259,7 @@ export default function ProtectorDashboard() {
     <div className="flex min-h-screen bg-neutral-50 font-pretendard">
       {/* Sidebar */}
       <DashboardSidebar
+        title="대시보드"
         students={students}
         selectedStudentId={selectedStudentId || 0}
         onStudentSelect={setSelectedStudentId}
