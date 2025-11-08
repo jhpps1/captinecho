@@ -24,7 +24,17 @@ export default function AddStudentModal({
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [birthDate, setBirthDate] = useState('');
-  const [grade, setGrade] = useState('');
+  const [grade, setGrade] = useState('미취학');
+
+  const gradeOptions = [
+    '미취학',
+    '1학년',
+    '2학년',
+    '3학년',
+    '4학년',
+    '5학년',
+    '6학년'
+  ];
 
   const handleSubmit = () => {
     if (!name || !birthDate || !grade) {
@@ -111,13 +121,17 @@ export default function AddStudentModal({
               <label className="block text-gray-700 font-semibold mb-2">
                 학년
               </label>
-              <input
-                type="text"
+              <select
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none"
-                placeholder="예: 초등 3학년"
-              />
+                className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none bg-white"
+              >
+                {gradeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

@@ -1,54 +1,59 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
-import StudentSidebar from '../components/protector/StudentSidebar';
+import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import PINInputModal from '../components/protector/PINInputModal';
-import { getStudents } from '../api/protectorApi';
-import type { Student } from '../mocks/protectorData';
+import { getStudents, verifyPin, updatePin } from '../api/protectorApi';
+
+interface Student {
+  id: number;
+  name: string;
+  level: number;
+  streak: number;
+  isActive: boolean;
+  profileImage?: string;
+}
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [showNewPinModal, setShowNewPinModal] = useState(false);
   const [showConfirmPinModal, setShowConfirmPinModal] = useState(false);
+  const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
 
   // 학생 목록 조회
   const fetchStudents = async () => {
-    setIsLoadingStudents(true);
     try {
       const response = await getStudents();
       const studentList: Student[] = response.students.map(s => ({
         id: s.studentId,
-        lastName: s.name.charAt(0),
-        fullName: s.name,
+        name: s.name,
         level: s.level || 0,
         streak: 0,
-        profileImage: s.profileImage,
-        grade: s.grade || '미취학'
+        isActive: false,
+        profileImage: s.profileImage
       }));
       setStudents(studentList);
+
+      // 첫 번째 학생 자동 선택
+      if (studentList.length > 0 && !selectedStudentId) {
+        setSelectedStudentId(studentList[0].id);
+      }
     } catch (error: any) {
       console.error('❌ 학생 목록 로드 실패:', error);
-
-      // 401 인증 에러인 경우 로그인 페이지로 리다이렉트
       if (error.response?.status === 401) {
         alert('로그인이 필요합니다.');
         Cookies.remove('accessToken');
         navigate('/');
         return;
       }
-
-      // 학생이 없는 경우는 에러가 아니므로 빈 배열로 처리
       setStudents([]);
-    } finally {
-      setIsLoadingStudents(false);
     }
   };
 
-  // 컴포넌트 마운트 시 학생 목록 로드
   useEffect(() => {
     fetchStudents();
   }, []);
@@ -57,40 +62,80 @@ export default function SettingsPage() {
     setShowChangePinModal(true);
   };
 
-  const handleCurrentPinSubmit = (pin: string) => {
-    console.log('현재 PIN 입력:', pin);
-    // TODO: 현재 PIN 검증 API 호출
-    setShowChangePinModal(false);
-    setShowNewPinModal(true);
+  const handleCurrentPinSubmit = async (pin: string) => {
+    try {
+      const result = await verifyPin(pin);
+      if (result.success) {
+        setCurrentPin(pin); // 현재 PIN 저장
+        setShowChangePinModal(false);
+        setShowNewPinModal(true);
+      } else {
+        // PIN이 일치하지 않음 - 모달에서 시각적 피드백
+        throw new Error('PIN mismatch');
+      }
+    } catch (error: any) {
+      console.error('❌ PIN 검증 실패:', error);
+      if (error.response?.status === 401) {
+        alert('로그인이 필요합니다.');
+        Cookies.remove('accessToken');
+        navigate('/');
+      }
+      throw error; // 에러를 다시 throw해서 PINInputModal에서 catch
+    }
   };
 
   const handleNewPinSubmit = (pin: string) => {
-    console.log('새 PIN:', pin);
     setNewPin(pin);
     setShowNewPinModal(false);
     setShowConfirmPinModal(true);
   };
 
-  const handleConfirmPinSubmit = (pin: string) => {
-    console.log('PIN 확인:', pin);
-    if (pin === newPin) {
-      alert('PIN이 성공적으로 변경되었습니다!');
-      // TODO: 실제 PIN 변경 API 호출
-      setShowConfirmPinModal(false);
-      setNewPin('');
-    } else {
+  const handleConfirmPinSubmit = async (pin: string) => {
+    if (pin !== newPin) {
       alert('PIN이 일치하지 않습니다. 다시 입력해주세요.');
       setShowConfirmPinModal(false);
       setShowNewPinModal(true);
+      return;
+    }
+
+    try {
+      const result = await updatePin(currentPin, newPin);
+      if (result.success) {
+        alert('PIN이 성공적으로 변경되었습니다!');
+        setShowConfirmPinModal(false);
+        setCurrentPin('');
+        setNewPin('');
+      } else {
+        alert('PIN 변경에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (error: any) {
+      console.error('❌ PIN 변경 실패:', error);
+      if (error.response?.status === 401) {
+        alert('로그인이 필요합니다.');
+        Cookies.remove('accessToken');
+        navigate('/');
+      } else if (error.response?.status === 400) {
+        alert('현재 PIN이 일치하지 않습니다.');
+      } else {
+        alert('PIN 변경에 실패했습니다. 다시 시도해주세요.');
+      }
+      setShowConfirmPinModal(false);
+      setCurrentPin('');
+      setNewPin('');
     }
   };
 
-  const handleManageStudentsClick = () => {
-    navigate('/protector/manage-students');
+  const handleLogout = () => {
+    Cookies.remove('accessToken');
+    navigate('/');
+  };
+
+  const handleStudentSelect = (studentId: number) => {
+    setSelectedStudentId(studentId);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="flex min-h-screen bg-neutral-50 font-pretendard">
       {/* PIN 변경 모달들 */}
       {showChangePinModal && (
         <PINInputModal
@@ -120,58 +165,42 @@ export default function SettingsPage() {
         />
       )}
 
-      {/* 왼쪽 사이드바 */}
-      <StudentSidebar
+      {/* Sidebar */}
+      <DashboardSidebar
         students={students}
-        selectedStudent={null}
-        onSelectStudent={(student) => navigate('/protector', { state: { selectedStudent: student } })}
-        onSettings={() => {}}
-        onLogout={() => {
-          localStorage.removeItem('accessToken');
-          sessionStorage.removeItem('accessToken');
-          Cookies.remove('accessToken');
-          navigate('/');
-        }}
+        selectedStudentId={selectedStudentId || 0}
+        onStudentSelect={handleStudentSelect}
+        onLogout={handleLogout}
       />
 
-      {/* 메인 컨텐츠 영역 */}
-      <div className="flex-1 ml-24 bg-gray-50 min-h-screen p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* 제목 */}
-          <h1 className="text-4xl font-bold text-gray-800 mb-8">설정</h1>
-
+      {/* Main Content */}
+      <main className="flex-1 lg:ml-0 p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
           {/* 설정 카드 */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 space-y-12">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
+            {/* Header */}
+            <h1 className="text-2xl font-bold text-neutral-800 font-pretendard mb-6">
+              계정 설정
+            </h1>
+
             {/* 보호자 PIN 변경 */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              <h2 className="text-lg font-semibold text-neutral-700 font-pretendard mb-3">
                 보호자 PIN 변경
               </h2>
+              <p className="text-sm text-neutral-500 font-pretendard mb-4">
+                보호자 모드 접근을 위한 PIN 번호를 변경할 수 있습니다
+              </p>
               <button
                 onClick={handleChangePinClick}
-                className="px-6 py-3 bg-pink-200 hover:bg-pink-300 rounded-lg
-                         font-semibold text-gray-800 transition-colors"
+                className="px-6 py-3 bg-primary text-white rounded-lg font-semibold font-pretendard hover:bg-primary/90 transition-colors"
               >
-                변경하기
-              </button>
-            </div>
-
-            {/* 관리 학생 연결 */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                관리 학생 연결
-              </h2>
-              <button
-                onClick={handleManageStudentsClick}
-                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 border-2 border-gray-300
-                         rounded-lg font-semibold text-gray-800 transition-colors"
-              >
-                설정하기
+                PIN 변경하기
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

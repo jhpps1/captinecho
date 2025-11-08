@@ -37,6 +37,24 @@ export interface WeeklyGoalPercentResponse {
   weekGoalPercent: number;
 }
 
+export interface ProtectorGoalOption {
+  goal: string; // "FOCUS_ON_WEAKNESS", "BUILD_CONFIDENCE", "INCREASE_DIFFICULTY"
+  title: string; // 한글 제목
+  description: string; // 설명
+}
+
+export interface ProtectorGoalListResponse {
+  goals: ProtectorGoalOption[];
+}
+
+export interface SetProtectorGoalRequest {
+  protectorGoal: string; // "ACADEMIC_FOCUS", "WELLBEING_PRIORITY", "BALANCED", "MAINTAIN_CURRENT"
+}
+
+export interface SetProtectorGoalResponse {
+  success: boolean;
+}
+
 // ===== API 함수 =====
 
 /**
@@ -101,6 +119,32 @@ export const getDailyCompletedCount = async (studentId: number): Promise<DailyCo
 export const getWeeklyGoalPercent = async (studentId: number): Promise<WeeklyGoalPercentResponse> => {
   const response = await axiosInstance.get<WeeklyGoalPercentResponse>(
     `/student/${studentId}/dashboard/weekly/plan`
+  );
+  return response.data;
+};
+
+/**
+ * 보호자 학습 목표 선택지 조회
+ * GET /api/student/dashboard/protector/goal
+ */
+export const getProtectorGoalList = async (): Promise<ProtectorGoalListResponse> => {
+  const response = await axiosInstance.get<ProtectorGoalListResponse>(
+    `/student/dashboard/protector/goal`
+  );
+  return response.data;
+};
+
+/**
+ * 보호자 학습 목표 설정
+ * POST /api/student/{studentId}/dashboard/goal
+ */
+export const setProtectorGoal = async (
+  studentId: number,
+  protectorGoal: string
+): Promise<SetProtectorGoalResponse> => {
+  const response = await axiosInstance.post<SetProtectorGoalResponse>(
+    `/student/${studentId}/dashboard/goal`,
+    { protectorGoal }
   );
   return response.data;
 };
