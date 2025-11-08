@@ -116,6 +116,7 @@ public class ProtectorService {
                         .studentId(student.getStudentId())
                         .name(student.getName())
                         .gender(student.getGender() != null ? student.getGender().name() : null)
+                        .birth(student.getBirth() != null ? student.getBirth().toString() : null)
                         .profileImage(student.getProfileImage())
                         .grade(student.getGrade() != null ? student.getGrade().name() : null)
                         .level(student.getLevel() != null ? student.getLevel().intValue() : null)

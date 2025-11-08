@@ -28,12 +28,12 @@ export default function AddStudentModal({
 
   const gradeOptions = [
     '미취학',
-    '1학년',
-    '2학년',
-    '3학년',
-    '4학년',
-    '5학년',
-    '6학년'
+    '초등학교 1학년',
+    '초등학교 2학년',
+    '초등학교 3학년',
+    '초등학교 4학년',
+    '초등학교 5학년',
+    '초등학교 6학년'
   ];
 
   const handleSubmit = () => {

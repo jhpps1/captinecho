@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Settings, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import Cookies from 'js-cookie';
 import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import AddStudentModal from '../components/protector/modals/AddStudentModal';
@@ -10,7 +10,8 @@ import {
   mapGenderToBackend,
   mapGradeToBackend,
   formatDateToBackend,
-  mapGenderToFrontend
+  mapGenderToFrontend,
+  mapGradeToFrontend
 } from '../utils/studentMapper';
 
 interface Student {
@@ -25,6 +26,11 @@ interface Student {
   deleteTimer?: string;
 }
 
+// 성별 표시 변환 함수
+const displayGender = (gender: string): string => {
+  return gender === 'male' ? '남' : gender === 'female' ? '여' : gender;
+};
+
 export default function ManageStudentsPage() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
@@ -35,6 +41,7 @@ export default function ManageStudentsPage() {
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [studentCount, setStudentCount] = useState<{ total: number; remain: number } | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
 
   // 학생 수 조회
   const fetchStudentCount = async () => {
@@ -54,13 +61,14 @@ export default function ManageStudentsPage() {
     setIsLoadingStudents(true);
     try {
       const response = await getStudents();
+      console.log('📥 학생 목록 조회 응답:', response);
       const studentList: Student[] = response.students.map(s => ({
         id: s.studentId,
         name: s.name,
         level: s.level || 1,
-        birthDate: s.birth || '1996.01.03',
+        birthDate: s.birth || '생년월일 미등록',
         gender: s.gender ? mapGenderToFrontend(s.gender) : '남',
-        grade: s.grade || '미취학',
+        grade: s.grade ? mapGradeToFrontend(s.grade) : '미취학',
         interests: [],
         profileImage: s.profileImage
       }));
@@ -89,6 +97,24 @@ export default function ManageStudentsPage() {
     fetchStudentCount();
   }, []);
 
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (openDropdownId !== null && !target.closest('.dropdown-container')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    if (openDropdownId !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdownId]);
+
   const handleAddStudent = async (studentData: {
     name: string;
     gender: 'male' | 'female';
@@ -106,7 +132,9 @@ export default function ManageStudentsPage() {
         interests: selectedInterests.map(id => ({ interestId: id }))
       };
 
+      console.log('📤 학생 등록 요청 데이터:', requestData);
       const response = await registerStudent(requestData);
+      console.log('📥 학생 등록 응답:', response);
 
       if (response.success) {
         alert(`학생 "${studentData.name}"이(가) 추가되었습니다!`);
@@ -141,12 +169,30 @@ export default function ManageStudentsPage() {
     setSelectedStudentId(studentId);
   };
 
+  const handleDeleteStudent = async (studentId: number) => {
+    try {
+      await deleteStudent(studentId);
+      alert('학생이 삭제되었습니다.');
+      await fetchStudents();
+      await fetchStudentCount();
+    } catch (error: any) {
+      console.error('❌ 학생 삭제 실패:', error);
+      if (error.response?.status === 401) {
+        alert('로그인이 필요합니다.');
+        Cookies.remove('accessToken');
+        navigate('/');
+      } else {
+        alert('학생 삭제에 실패했습니다.');
+      }
+    }
+  };
+
   // DashboardSidebar용 학생 데이터 변환
   const sidebarStudents = students.map(s => ({
     id: s.id,
     name: s.name,
     level: s.level,
-    streak: 0, // TODO: API에서 streak 데이터 받아오기
+    streak: 0, // 백엔드 API 미지원 (향후 추가 예정)
     isActive: s.id === selectedStudentId
   }));
 
@@ -177,6 +223,7 @@ export default function ManageStudentsPage() {
 
       {/* 왼쪽 사이드바 */}
       <DashboardSidebar
+        title="학생 관리"
         students={sidebarStudents}
         selectedStudentId={selectedStudentId || 0}
         onStudentSelect={handleStudentSelect}
@@ -185,20 +232,6 @@ export default function ManageStudentsPage() {
 
       {/* 메인 컨텐츠 */}
       <main className="flex-1 overflow-y-auto">
-        {/* 헤더 */}
-        <header className="bg-white border-b border-neutral-200 p-4 sticky top-0 z-10">
-          <div className="flex items-center justify-end max-w-7xl mx-auto">
-            <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
-                <Bell size={20} className="text-neutral-600" />
-              </button>
-              <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
-                <Settings size={20} className="text-neutral-600" />
-              </button>
-            </div>
-          </div>
-        </header>
-
         {/* 컨텐츠 영역 */}
         <div className="max-w-7xl mx-auto p-6">
           {/* 학생 추가 버튼 */}
@@ -237,9 +270,40 @@ export default function ManageStudentsPage() {
                       <p className="text-sm text-neutral-500">Lv.{student.level}</p>
                     </div>
                   </div>
-                  <button className="p-2 hover:bg-neutral-100 rounded-lg">
-                    <span className="text-2xl text-neutral-400">⋯</span>
-                  </button>
+                  <div className="relative dropdown-container">
+                    <button
+                      onClick={() => setOpenDropdownId(openDropdownId === student.id ? null : student.id)}
+                      className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+                    >
+                      <span className="text-2xl text-neutral-400">⋯</span>
+                    </button>
+
+                    {/* 드롭다운 메뉴 */}
+                    {openDropdownId === student.id && (
+                      <div className="absolute right-0 top-12 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                        <button
+                          onClick={() => {
+                            alert('수정 기능은 준비 중입니다.');
+                            setOpenDropdownId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
+                        >
+                          ✏️ 수정하기
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`${student.name} 학생을 삭제하시겠습니까?`)) {
+                              await handleDeleteStudent(student.id);
+                            }
+                            setOpenDropdownId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-error hover:bg-error/5 transition-colors last:rounded-b-lg"
+                        >
+                          🗑️ 삭제하기
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2 text-sm">
@@ -249,10 +313,10 @@ export default function ManageStudentsPage() {
                   </div>
                   <div className="flex">
                     <span className="w-20 text-neutral-500">성별</span>
-                    <span className="text-neutral-800">{student.gender}</span>
+                    <span className="text-neutral-800">{displayGender(student.gender)}</span>
                   </div>
                   <div className="flex">
-                    <span className="w-20 text-neutral-500">구분</span>
+                    <span className="w-20 text-neutral-500">학년</span>
                     <span className="text-neutral-800">{student.grade}</span>
                   </div>
                   <div className="flex">

@@ -7,6 +7,7 @@ public record StudentDto(
         Integer studentId,
         String name,
         String gender,
+        String birth,
         String profileImage,
         String grade,
         Integer level,

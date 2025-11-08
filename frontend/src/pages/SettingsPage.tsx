@@ -92,10 +92,8 @@ export default function SettingsPage() {
 
   const handleConfirmPinSubmit = async (pin: string) => {
     if (pin !== newPin) {
-      alert('PIN이 일치하지 않습니다. 다시 입력해주세요.');
-      setShowConfirmPinModal(false);
-      setShowNewPinModal(true);
-      return;
+      // PIN 불일치 시 에러를 throw하여 모달의 떨림 애니메이션 트리거
+      throw new Error('PIN mismatch');
     }
 
     try {
@@ -167,6 +165,7 @@ export default function SettingsPage() {
 
       {/* Sidebar */}
       <DashboardSidebar
+        title="설정"
         students={students}
         selectedStudentId={selectedStudentId || 0}
         onStudentSelect={handleStudentSelect}

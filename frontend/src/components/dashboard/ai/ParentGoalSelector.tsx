@@ -1,5 +1,5 @@
 import { MessageSquare, Check } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getProtectorGoalList, type ProtectorGoalOption } from '../../../api/dashboardApi';
 
 // 아이콘 매핑 (백엔드에서 제공하지 않음)
@@ -22,6 +22,7 @@ export default function ParentGoalSelector({
   const [selectedGoal, setSelectedGoal] = useState(currentGoal || '');
   const [goals, setGoals] = useState<ProtectorGoalOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // API에서 목표 선택지 로드
   useEffect(() => {
@@ -58,6 +59,19 @@ export default function ParentGoalSelector({
     onChange(goal);
     setIsOpen(false);
   };
+
+  // 드롭다운 열림 시 자동 스크롤
+  useEffect(() => {
+    if (isOpen && dropdownRef.current) {
+      setTimeout(() => {
+        dropdownRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      }, 100);
+    }
+  }, [isOpen]);
 
   const currentOption = goals.find((g) => g.goal === selectedGoal);
 
@@ -121,7 +135,7 @@ export default function ParentGoalSelector({
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 overflow-hidden">
+          <div ref={dropdownRef} className="absolute top-full left-0 right-0 mt-2 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 overflow-hidden">
             {goals.map((goal) => (
               <button
                 key={goal.goal}
