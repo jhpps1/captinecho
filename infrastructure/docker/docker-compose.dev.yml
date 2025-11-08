@@ -44,12 +44,15 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-changeme}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8000}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ACCESS_TOKEN_EXPIRY=${JWT_ACCESS_TOKEN_EXPIRY:-3600000}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy

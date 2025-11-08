@@ -72,4 +72,8 @@ public class Protector {
     public void updateMaxStudentCount(Short count) {
         this.maxStudentCount = count;
     }
+
+    public void updateEmail(String email) {
+        this.email = email;
+    }
 }

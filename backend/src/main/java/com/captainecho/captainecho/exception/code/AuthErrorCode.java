@@ -16,7 +16,13 @@ public enum AuthErrorCode implements ErrorCode {
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AU40102", "만료된 토큰입니다"),
 
     // 403 FORBIDDEN
-    ACCESS_DENIED(HttpStatus.FORBIDDEN, "AU40301", "접근 권한이 없습니다");
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "AU40301", "접근 권한이 없습니다"),
+
+    // 404 NOT FOUND
+    PROTECTOR_NOT_FOUND(HttpStatus.NOT_FOUND, "AU40401", "보호자를 찾을 수 없습니다"),
+
+    // 400 BAD REQUEST
+    INVALID_RECOVERY_CODE(HttpStatus.BAD_REQUEST, "AU40002", "유효하지 않은 복구 코드입니다");
 
     private final HttpStatus httpStatus;
     private final String code;
