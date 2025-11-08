@@ -10,7 +10,8 @@ import {
   mapGenderToBackend,
   mapGradeToBackend,
   formatDateToBackend,
-  mapGenderToFrontend
+  mapGenderToFrontend,
+  mapGradeToFrontend
 } from '../utils/studentMapper';
 
 interface Student {
@@ -65,7 +66,7 @@ export default function ManageStudentsPage() {
         level: s.level || 1,
         birthDate: s.birth || '1996.01.03',
         gender: s.gender ? mapGenderToFrontend(s.gender) : '남',
-        grade: s.grade || '미취학',
+        grade: s.grade ? mapGradeToFrontend(s.grade) : '미취학',
         interests: [],
         profileImage: s.profileImage
       }));
