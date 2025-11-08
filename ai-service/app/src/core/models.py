@@ -57,10 +57,10 @@ class ErrorPattern(Base):
 
 class LearningSession(Base):
     __tablename__ = "learning_session"
-    learning_session_id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("student.student_id"))
-    started_at = Column(DateTime)
-    ended_at = Column(DateTime)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
     study_type = Column(String(20))
     # 기타 세션 관련 필드
 
@@ -97,7 +97,7 @@ class WeeklyPersonalReport(Base):
             ProtectorGoalType,
             values_callable=lambda x: [e.value for e in x]
         ),
-        nullable=True
+        
     )
     created_at = Column(DateTime)
 

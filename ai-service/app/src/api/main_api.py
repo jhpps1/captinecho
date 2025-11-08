@@ -1,6 +1,5 @@
 # app/src/api/main_api.py
 
-
 from datetime import datetime
 from fastapi import APIRouter, Depends, FastAPI
 from pydantic import BaseModel
@@ -10,10 +9,10 @@ from app.src.core.database import get_db
 from app.src.core.models import (
     Student, WeeklyPersonalReport, ErrorPattern,
     LearningSession, SessionDetail, LevelHistory, WeeklyJamoStat,
-    StudentInterest, SubInterest
+    StudentInterest, SubInterest, ProtectorGoalType
 )
-from app.src.tasks.statistics.statistics import fill_reset_and_make_weekly_report
-from app.src.service.question_service import generate_problems_for_one_week
+from app.src.core.batch_core import fill_reset_and_make_weekly_report
+from app.src.utils.problem_job import generate_problems_for_one_week
 from app.src.api.scheduler.batch_scheduler import start_scheduler
 
 start_scheduler()
@@ -35,7 +34,7 @@ def get_student_full(student_id: int, db: Session = Depends(get_db)):
     result['error_patterns'] = [to_dict(e) for e in db.query(ErrorPattern).filter_by(student_id=student_id).all()]
     result['learning_sessions'] = [to_dict(s) for s in db.query(LearningSession).filter_by(student_id=student_id).all()]
     result['session_details'] = [to_dict(sd) for sd in db.query(SessionDetail).join(
-        LearningSession, SessionDetail.session_id == LearningSession.learning_session_id
+        LearningSession, SessionDetail.session_id == LearningSession.session_id
     ).filter(LearningSession.student_id == student_id).all()]
     result['level_history'] = [to_dict(lh) for lh in db.query(LevelHistory).filter_by(student_id=student_id).all()]
     result['weekly_jamo_stats'] = [to_dict(wjs) for wjs in db.query(WeeklyJamoStat).order_by(WeeklyJamoStat.created_at.desc()).limit(3).all()]
@@ -52,7 +51,6 @@ def get_student_full(student_id: int, db: Session = Depends(get_db)):
         }
         for si, sub in student_interests
     ]
-
     return result
 
 # 2. CrewAI/외부 리포트 저장 및 갱신 API
@@ -62,23 +60,29 @@ class ReportRequest(BaseModel):
 
 @router.post("/save-report")
 def save_report(student_id: int, report: ReportRequest, db: Session = Depends(get_db)):
-    latest = db.query(WeeklyPersonalReport).filter_by(student_id=student_id).order_by(WeeklyPersonalReport.created_at.desc()).first()
+    latest = (
+        db.query(WeeklyPersonalReport)
+        .filter_by(student_id=student_id)
+        .order_by(WeeklyPersonalReport.created_at.desc())
+        .first()
+    )
     if not latest:
-        # 신규 생성
         latest = WeeklyPersonalReport(
             student_id=student_id,
             curriculum=report.curriculum,
             discussion_log=report.discussion_log,
+            total_time=getattr(report, "total_time", 0),
+            protector_goal=ProtectorGoalType.FOCUS_ON_WEAKNESS,
             created_at=datetime.utcnow()
         )
         db.add(latest)
         db.commit()
         db.refresh(latest)
         return {"status": "created", "report_id": latest.report_id}
-
-    # 갱신
     latest.curriculum = report.curriculum
     latest.discussion_log = report.discussion_log
+    if hasattr(report, "total_time"):
+        latest.total_time = report.total_time
     db.commit()
     db.refresh(latest)
     return {"status": "updated", "report_id": latest.report_id}

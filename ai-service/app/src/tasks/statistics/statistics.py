@@ -1,40 +1,80 @@
 # app/src/tasks/statistics/statistics.py
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from app.src.core.models import (
-    WeeklyJamoStat, 
-    JamoStat, 
-    WeeklyPersonalReport
-)
 from sqlalchemy.exc import SQLAlchemyError
+from app.src.core.models import (
+    WeeklyJamoStat,
+    JamoStat,
+    WeeklyPersonalReport,
+    ProtectorGoalType,
+    LearningSession  # 반드시 import!
+)
+
+def get_week_boundary(now=None):
+    """이번 주(월~월) 시작, 종료 반환"""
+    if not now:
+        now = datetime.now()
+    start = now - timedelta(days=now.weekday())  # 월요일 0시
+    end = start + timedelta(days=7)              # 다음주 월요일 0시
+    return start, end
+
+def calculate_weekly_total_time(db, student_id, week_start, week_end):
+    """이번 주 실제 학습 세션 전체 시간(초) 집계"""
+    sessions = db.query(LearningSession).filter(
+        LearningSession.student_id == student_id,
+        LearningSession.start_time < week_end,
+        LearningSession.end_time != None
+    ).all()
+    total_seconds = 0
+    for s in sessions:
+        session_start = max(s.start_time, week_start)
+        session_end = min(s.end_time, week_end)
+        if session_end > session_start:
+            duration = (session_end - session_start).total_seconds()
+            total_seconds += duration
+    return int(total_seconds)
 
 def make_weekly_report_values(student_id: int, db: Session):
-    """
-    주간 자모통계 데이터를 기반으로 리포트용 주요 지표 계산
-    - student_id: 학생 ID
-    - db: 세션
-    """
+    """리포트용 자모 누적 집계값 반환"""
     jamo_stats = db.query(WeeklyJamoStat).filter_by(student_id=student_id).all()
     total_attempts = sum(j.total_attempts for j in jamo_stats)
     total_fail = sum(j.fail_count for j in jamo_stats)
+    # 여기에 실제 커리큘럼/논의 정보 추출 로직을 추가해도 됨
+    curriculum = "이번 주 커리큘럼 자동 요약" if total_attempts else ""
+    discussion_log = "이번 주 논의 및 합의 요약" if total_fail else ""
+    return {
+        "total_attempts": total_attempts,
+        "total_fail": total_fail,
+        "curriculum": curriculum,
+        "discussion_log": discussion_log,
+    }
 
-
-def fill_reset_and_make_weekly_report(db: Session):
+def fill_reset_and_make_weekly_report(db):
+    """
+    전체 학생에 대해 한 주 리포트 생성 & 금주 자모통계 리셋
+    """
     try:
         now = datetime.now()
+        week_start, week_end = get_week_boundary(now)
+
         jamo_stats = db.query(JamoStat).all()
         student_ids = set(j.student_id for j in jamo_stats)
         weekly_stat_written = 0
         report_count = 0
 
         for student_id in student_ids:
-            stat_dict = make_weekly_report_values(student_id, db)
+            values = make_weekly_report_values(student_id, db)
+            total_time = calculate_weekly_total_time(db, student_id, week_start, week_end)
+            # protector_goal 결정 로직 필요시 반영 (여기서는 공통 고정 사용)
+            protector_goal = ProtectorGoalType.FOCUS_ON_WEAKNESS
+
             report = WeeklyPersonalReport(
                 student_id=student_id,
-                total_time=0,
-                curriculum="",      # 실제 데이터 있으면 여기에!
-                discussion_log="",  # 실제 데이터 있으면 여기에!
+                total_time=total_time,
+                curriculum=values["curriculum"],
+                discussion_log=values["discussion_log"],
+                protector_goal=protector_goal,
                 created_at=now
             )
             db.add(report)
@@ -42,6 +82,7 @@ def fill_reset_and_make_weekly_report(db: Session):
             db.refresh(report)
             report_count += 1
 
+            # 주간 자모통계 기록
             jamos = db.query(JamoStat).filter_by(student_id=student_id).all()
             for jamo in jamos:
                 weekly = WeeklyJamoStat(
