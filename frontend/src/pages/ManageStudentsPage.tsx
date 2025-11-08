@@ -25,6 +25,11 @@ interface Student {
   deleteTimer?: string;
 }
 
+// 성별 표시 변환 함수
+const displayGender = (gender: string): string => {
+  return gender === 'male' ? '남' : gender === 'female' ? '여' : gender;
+};
+
 export default function ManageStudentsPage() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
@@ -249,10 +254,10 @@ export default function ManageStudentsPage() {
                   </div>
                   <div className="flex">
                     <span className="w-20 text-neutral-500">성별</span>
-                    <span className="text-neutral-800">{student.gender}</span>
+                    <span className="text-neutral-800">{displayGender(student.gender)}</span>
                   </div>
                   <div className="flex">
-                    <span className="w-20 text-neutral-500">구분</span>
+                    <span className="w-20 text-neutral-500">학년</span>
                     <span className="text-neutral-800">{student.grade}</span>
                   </div>
                   <div className="flex">

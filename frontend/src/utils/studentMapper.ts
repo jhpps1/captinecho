@@ -23,18 +23,18 @@ export const mapGenderToBackend = (gender: 'male' | 'female'): BackendGender => 
 
 /**
  * 프론트엔드 학년을 백엔드 ENUM으로 변환
- * @param grade '유치원', '초등 1학년', '초등 2학년', ...
+ * @param grade '미취학', '초등학교 1학년', '초등학교 2학년', ...
  * @returns 'PRE_SCHOOL', 'GRADE_1', 'GRADE_2', ...
  */
 export const mapGradeToBackend = (grade: string): BackendGrade => {
   const gradeMap: Record<string, BackendGrade> = {
-    '유치원': 'PRE_SCHOOL',
-    '초등 1학년': 'GRADE_1',
-    '초등 2학년': 'GRADE_2',
-    '초등 3학년': 'GRADE_3',
-    '초등 4학년': 'GRADE_4',
-    '초등 5학년': 'GRADE_5',
-    '초등 6학년': 'GRADE_6',
+    '미취학': 'PRE_SCHOOL',
+    '초등학교 1학년': 'GRADE_1',
+    '초등학교 2학년': 'GRADE_2',
+    '초등학교 3학년': 'GRADE_3',
+    '초등학교 4학년': 'GRADE_4',
+    '초등학교 5학년': 'GRADE_5',
+    '초등학교 6학년': 'GRADE_6',
   };
 
   const mappedGrade = gradeMap[grade];
@@ -59,20 +59,20 @@ export const mapGenderToFrontend = (gender: BackendGender): 'male' | 'female' =>
 /**
  * 백엔드 학년을 프론트엔드 형식으로 변환
  * @param grade 'PRE_SCHOOL' | 'GRADE_1' | ...
- * @returns '유치원' | '초등 1학년' | ...
+ * @returns '미취학' | '초등학교 1학년' | ...
  */
 export const mapGradeToFrontend = (grade: BackendGrade): string => {
   const gradeMap: Record<BackendGrade, string> = {
-    PRE_SCHOOL: '유치원',
-    GRADE_1: '초등 1학년',
-    GRADE_2: '초등 2학년',
-    GRADE_3: '초등 3학년',
-    GRADE_4: '초등 4학년',
-    GRADE_5: '초등 5학년',
-    GRADE_6: '초등 6학년',
+    PRE_SCHOOL: '미취학',
+    GRADE_1: '초등학교 1학년',
+    GRADE_2: '초등학교 2학년',
+    GRADE_3: '초등학교 3학년',
+    GRADE_4: '초등학교 4학년',
+    GRADE_5: '초등학교 5학년',
+    GRADE_6: '초등학교 6학년',
   };
 
-  return gradeMap[grade] || '초등 1학년';
+  return gradeMap[grade] || '초등학교 1학년';
 };
 
 /**
