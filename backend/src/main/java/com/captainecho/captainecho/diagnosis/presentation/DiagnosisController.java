@@ -6,12 +6,14 @@ import com.captainecho.captainecho.diagnosis.application.command.EndInitialDiagn
 import com.captainecho.captainecho.diagnosis.application.command.StartInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.command.SubmitDiagnosisResultCommand;
 import com.captainecho.captainecho.diagnosis.application.result.EndInitialDiagnosisResult;
+import com.captainecho.captainecho.diagnosis.application.result.GetDiagnosisResultResult;
 import com.captainecho.captainecho.diagnosis.application.result.GetInitialDiagnosisProblemsResult;
 import com.captainecho.captainecho.diagnosis.application.result.StartInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.application.result.SubmitDiagnosisResultResult;
 import com.captainecho.captainecho.diagnosis.presentation.request.StartInitialDiagnosisRequest;
 import com.captainecho.captainecho.diagnosis.presentation.request.SubmitDiagnosisResultRequest;
 import com.captainecho.captainecho.diagnosis.presentation.response.EndInitialDiagnosisResponse;
+import com.captainecho.captainecho.diagnosis.presentation.response.GetDiagnosisResultResponse;
 import com.captainecho.captainecho.diagnosis.presentation.response.GetInitialDiagnosisProblemsResponse;
 import com.captainecho.captainecho.diagnosis.presentation.response.StartInitialDiagnosisResponse;
 import com.captainecho.captainecho.diagnosis.presentation.response.SubmitDiagnosisResultResponse;
@@ -125,6 +127,27 @@ public class DiagnosisController {
         SubmitDiagnosisResultCommand command = request.toCommand(studentId, protectorId);
         SubmitDiagnosisResultResult result = diagnosisService.submitDiagnosisResult(command);
         SubmitDiagnosisResultResponse response = SubmitDiagnosisResultResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 초기 진단 결과 조회
+     * GET /api/student/{student-id}/diagnosis/result
+     */
+    @GetMapping("/{studentId}/diagnosis/result")
+    public ResponseEntity<GetDiagnosisResultResponse> getDiagnosisResult(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetDiagnosisResultResult result = diagnosisService.getDiagnosisResult(studentId, protectorId);
+        GetDiagnosisResultResponse response = GetDiagnosisResultResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
