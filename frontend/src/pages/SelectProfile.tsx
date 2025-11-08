@@ -4,6 +4,7 @@ import Cookies from 'js-cookie'; // 2. js-cookie import
 import PINInputModal from '../components/protector/PINInputModal';
 import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
 import { getStudents, verifyPin } from '../api/protectorApi';
+import { sendRecoveryCode, verifyRecoveryCode } from '../api/dashboardApi';
 
 // 프로필 타입 정의
 interface Profile {
@@ -51,22 +52,56 @@ const SelectProfile = () => {
     }
   };
 
-  const handleForgotPin = () => {
-    setShowPinModal(false);
-    setShowRecoveryModal(true);
+  const handleForgotPin = async () => {
+    try {
+      // PIN 복구 코드 발송 API 호출
+      const result = await sendRecoveryCode();
+
+      if (result.success) {
+        setShowPinModal(false);
+        setShowRecoveryModal(true);
+        alert('등록된 이메일로 인증 번호가 발송되었습니다.');
+      } else {
+        alert('인증 번호 발송에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      console.error('PIN 복구 코드 발송 실패:', error);
+      alert('인증 번호 발송 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleVerificationSubmit = (code: string) => {
-    console.log('인증 코드:', code);
-    // TODO: 실제 인증 코드 검증 및 PIN 복구 API 호출
-    alert('PIN 복구 기능은 준비중입니다.');
-    setShowRecoveryModal(false);
-    setShowPinModal(true);
+  const handleVerificationSubmit = async (code: string) => {
+    try {
+      // 인증 코드 검증 API 호출
+      const result = await verifyRecoveryCode(code);
+
+      if (result.success) {
+        alert('PIN이 초기화되었습니다. 새로운 PIN은 "000000" 입니다.');
+        setShowRecoveryModal(false);
+        setShowPinModal(true);
+      } else {
+        alert('인증 번호가 올바르지 않습니다. 다시 확인해주세요.');
+      }
+    } catch (error) {
+      console.error('인증 코드 검증 실패:', error);
+      alert('인증 번호 확인 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleResendCode = () => {
-    alert('인증 번호가 재발송되었습니다.');
-    // TODO: 실제 인증 번호 재발송 API 호출
+  const handleResendCode = async () => {
+    try {
+      // 인증 번호 재발송 API 호출
+      const result = await sendRecoveryCode();
+
+      if (result.success) {
+        alert('인증 번호가 재발송되었습니다.');
+      } else {
+        alert('인증 번호 재발송에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('인증 번호 재발송 실패:', error);
+      alert('인증 번호 재발송 중 오류가 발생했습니다.');
+    }
   };
 
   const handleRecoveryCancel = () => {
