@@ -4,13 +4,17 @@ import com.captainecho.captainecho.auth.domain.ProtectorPrincipal;
 import com.captainecho.captainecho.diagnosis.application.DiagnosisService;
 import com.captainecho.captainecho.diagnosis.application.command.EndInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.command.StartInitialDiagnosisCommand;
+import com.captainecho.captainecho.diagnosis.application.command.SubmitDiagnosisResultCommand;
 import com.captainecho.captainecho.diagnosis.application.result.EndInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.application.result.GetInitialDiagnosisProblemsResult;
 import com.captainecho.captainecho.diagnosis.application.result.StartInitialDiagnosisResult;
+import com.captainecho.captainecho.diagnosis.application.result.SubmitDiagnosisResultResult;
 import com.captainecho.captainecho.diagnosis.presentation.request.StartInitialDiagnosisRequest;
+import com.captainecho.captainecho.diagnosis.presentation.request.SubmitDiagnosisResultRequest;
 import com.captainecho.captainecho.diagnosis.presentation.response.EndInitialDiagnosisResponse;
 import com.captainecho.captainecho.diagnosis.presentation.response.GetInitialDiagnosisProblemsResponse;
 import com.captainecho.captainecho.diagnosis.presentation.response.StartInitialDiagnosisResponse;
+import com.captainecho.captainecho.diagnosis.presentation.response.SubmitDiagnosisResultResponse;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -98,6 +102,29 @@ public class DiagnosisController {
 
         GetInitialDiagnosisProblemsResult result = diagnosisService.getInitialDiagnosisProblems(studentId, protectorId);
         GetInitialDiagnosisProblemsResponse response = GetInitialDiagnosisProblemsResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 초기 진단 답변 제출
+     * POST /api/student/{student-id}/diagnosis/result
+     */
+    @PostMapping("/{studentId}/diagnosis/result")
+    public ResponseEntity<SubmitDiagnosisResultResponse> submitDiagnosisResult(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId,
+            @Valid @RequestBody SubmitDiagnosisResultRequest request
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        SubmitDiagnosisResultCommand command = request.toCommand(studentId, protectorId);
+        SubmitDiagnosisResultResult result = diagnosisService.submitDiagnosisResult(command);
+        SubmitDiagnosisResultResponse response = SubmitDiagnosisResultResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
