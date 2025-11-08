@@ -4,10 +4,12 @@ import com.captainecho.captainecho.diagnosis.application.command.EndInitialDiagn
 import com.captainecho.captainecho.diagnosis.application.command.StartInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.command.SubmitDiagnosisResultCommand;
 import com.captainecho.captainecho.diagnosis.application.result.EndInitialDiagnosisResult;
+import com.captainecho.captainecho.diagnosis.application.result.GetDiagnosisResultResult;
 import com.captainecho.captainecho.diagnosis.application.result.GetInitialDiagnosisProblemsResult;
 import com.captainecho.captainecho.diagnosis.application.result.InitialDiagnosisProblemDto;
 import com.captainecho.captainecho.diagnosis.application.result.StartInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.application.result.SubmitDiagnosisResultResult;
+import com.captainecho.captainecho.diagnosis.domain.DiagnosisType;
 import com.captainecho.captainecho.diagnosis.domain.DiagnosisSession;
 import com.captainecho.captainecho.diagnosis.domain.InitialDiagnosisProblem;
 import com.captainecho.captainecho.diagnosis.domain.InitialDiagnosisResult;
@@ -25,7 +27,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
@@ -151,5 +156,82 @@ public class DiagnosisService {
         }
 
         return SubmitDiagnosisResultResult.from(true);
+    }
+
+    @Transactional(readOnly = true)
+    public GetDiagnosisResultResult getDiagnosisResult(Integer studentId, Integer protectorId) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(studentId)) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(studentId, protectorId)) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 학생의 모든 진단 결과 조회
+        List<InitialDiagnosisResult> allResults = initialDiagnosisResultRepository
+                .findAllByStudentIdWithProblem(studentId);
+
+        if (allResults.isEmpty()) {
+            throw new EchoException(DiagnosisErrorCode.DIAGNOSIS_SESSION_NOT_FOUND);
+        }
+
+        // 4. 전체 통계 계산
+        int totalCount = allResults.size();
+        int totalCorrectCount = (int) allResults.stream()
+                .filter(InitialDiagnosisResult::getIsCorrect)
+                .count();
+        int totalScore = totalCount > 0 ? (totalCorrectCount * 100 / totalCount) : 0;
+
+        // 5. 진단 타입별로 그룹화
+        Map<DiagnosisType, List<InitialDiagnosisResult>> groupedByType = allResults.stream()
+                .collect(Collectors.groupingBy(
+                        result -> result.getInitialDiagnosisProblem().getDiagnosisType()
+                ));
+
+        // 6. 진단 타입별 결과 생성
+        List<GetDiagnosisResultResult.DiagnosisTypeResult> diagnosisTypeResults = new ArrayList<>();
+
+        for (Map.Entry<DiagnosisType, List<InitialDiagnosisResult>> entry : groupedByType.entrySet()) {
+            DiagnosisType type = entry.getKey();
+            List<InitialDiagnosisResult> typeResults = entry.getValue();
+
+            int typeTotal = typeResults.size();
+            int typeCorrect = (int) typeResults.stream()
+                    .filter(InitialDiagnosisResult::getIsCorrect)
+                    .count();
+            int typeScore = typeTotal > 0 ? (typeCorrect * 100 / typeTotal) : 0;
+
+            // 상세 결과 생성
+            List<GetDiagnosisResultResult.DetailedResult> detailedResults = typeResults.stream()
+                    .map(result -> new GetDiagnosisResultResult.DetailedResult(
+                            result.getInitialDiagnosisResultId(),
+                            result.getInitialDiagnosisProblem().getInitialDiagnosisProblemId(),
+                            result.getInitialDiagnosisProblem().getDiagnosisType(),
+                            result.getInitialDiagnosisProblem().getProblem(),
+                            result.getStudentAnswer(),
+                            result.getInitialDiagnosisProblem().getCorrectAnswer(),
+                            result.getIsCorrect()
+                    ))
+                    .collect(Collectors.toList());
+
+            diagnosisTypeResults.add(new GetDiagnosisResultResult.DiagnosisTypeResult(
+                    type,
+                    typeTotal,
+                    typeCorrect,
+                    typeScore,
+                    detailedResults
+            ));
+        }
+
+        return GetDiagnosisResultResult.of(
+                studentId,
+                totalScore,
+                totalCount,
+                totalCorrectCount,
+                diagnosisTypeResults
+        );
     }
 }
