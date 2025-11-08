@@ -2,14 +2,18 @@ package com.captainecho.captainecho.diagnosis.application;
 
 import com.captainecho.captainecho.diagnosis.application.command.EndInitialDiagnosisCommand;
 import com.captainecho.captainecho.diagnosis.application.command.StartInitialDiagnosisCommand;
+import com.captainecho.captainecho.diagnosis.application.command.SubmitDiagnosisResultCommand;
 import com.captainecho.captainecho.diagnosis.application.result.EndInitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.application.result.GetInitialDiagnosisProblemsResult;
 import com.captainecho.captainecho.diagnosis.application.result.InitialDiagnosisProblemDto;
 import com.captainecho.captainecho.diagnosis.application.result.StartInitialDiagnosisResult;
+import com.captainecho.captainecho.diagnosis.application.result.SubmitDiagnosisResultResult;
 import com.captainecho.captainecho.diagnosis.domain.DiagnosisSession;
 import com.captainecho.captainecho.diagnosis.domain.InitialDiagnosisProblem;
+import com.captainecho.captainecho.diagnosis.domain.InitialDiagnosisResult;
 import com.captainecho.captainecho.diagnosis.persistence.DiagnosisSessionRepository;
 import com.captainecho.captainecho.diagnosis.persistence.InitialDiagnosisProblemRepository;
+import com.captainecho.captainecho.diagnosis.persistence.InitialDiagnosisResultRepository;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.DiagnosisErrorCode;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
@@ -30,6 +34,7 @@ public class DiagnosisService {
     private final StudentRepository studentRepository;
     private final DiagnosisSessionRepository diagnosisSessionRepository;
     private final InitialDiagnosisProblemRepository initialDiagnosisProblemRepository;
+    private final InitialDiagnosisResultRepository initialDiagnosisResultRepository;
 
     @Transactional
     public StartInitialDiagnosisResult startInitialDiagnosis(StartInitialDiagnosisCommand command) {
@@ -112,5 +117,39 @@ public class DiagnosisService {
                 .toList();
 
         return new GetInitialDiagnosisProblemsResult(dtos);
+    }
+
+    @Transactional
+    public SubmitDiagnosisResultResult submitDiagnosisResult(SubmitDiagnosisResultCommand command) {
+        // 1. 학생 존재 여부 확인
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 각 답변을 저장
+        for (SubmitDiagnosisResultCommand.DiagnosisAnswer answer : command.results()) {
+            // 3-1. 문제 존재 여부 확인
+            InitialDiagnosisProblem problem = initialDiagnosisProblemRepository.findById(answer.questionId())
+                    .orElseThrow(() -> new EchoException(DiagnosisErrorCode.DIAGNOSIS_PROBLEM_NOT_FOUND));
+
+            // 3-2. 정답 여부 확인
+            Boolean isCorrect = problem.getCorrectAnswer().equals(answer.answer());
+
+            // 3-3. 결과 저장
+            InitialDiagnosisResult result = InitialDiagnosisResult.builder()
+                    .initialDiagnosisProblem(problem)
+                    .student(student)
+                    .studentAnswer(answer.answer())
+                    .isCorrect(isCorrect)
+                    .build();
+
+            initialDiagnosisResultRepository.save(result);
+        }
+
+        return SubmitDiagnosisResultResult.from(true);
     }
 }
