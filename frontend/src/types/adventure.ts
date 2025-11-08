@@ -147,7 +147,10 @@ export function normalizeProblem(raw: ProblemRaw): Problem {
     blankPosition: raw.blankPosition ?? null,
     blankPhoneme: raw.blankPhoneme ?? null,
     choices: toArray(raw.choices),
-    correctAnswer: toArray(raw.correctAnswer),
+    // correctAnswer: 백엔드가 단일 문자열로 보내므로 배열로 변환
+    correctAnswer: Array.isArray(raw.correctAnswer)
+      ? raw.correctAnswer
+      : [raw.correctAnswer],
     isCompleted: raw.isCompleted,
   };
 }
