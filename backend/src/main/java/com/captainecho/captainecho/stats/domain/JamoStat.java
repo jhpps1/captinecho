@@ -61,4 +61,36 @@ public class JamoStat {
         this.weeklyAccuracyRate = weeklyAccuracyRate;
         this.updatedAt = updatedAt;
     }
+
+    /**
+     * 정답 기록 (총 시도 횟수만 증가)
+     */
+    public void recordCorrectAnswer() {
+        this.totalAttempts++;
+        updateRates();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 오답 기록 (총 시도 횟수 + 실패 횟수 증가)
+     */
+    public void recordIncorrectAnswer() {
+        this.totalAttempts++;
+        this.failCount++;
+        updateRates();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 주간 실패율과 정확도 계산
+     */
+    private void updateRates() {
+        if (this.totalAttempts > 0) {
+            this.weeklyFailRate = (double) this.failCount / this.totalAttempts * 100;
+            this.weeklyAccuracyRate = 100.0 - this.weeklyFailRate;
+        } else {
+            this.weeklyFailRate = 0.0;
+            this.weeklyAccuracyRate = 100.0;
+        }
+    }
 }
