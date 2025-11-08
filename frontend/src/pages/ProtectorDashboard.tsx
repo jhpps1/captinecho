@@ -1,57 +1,80 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User } from 'lucide-react';
 import Cookies from 'js-cookie';
-import PINInputModal from '../components/protector/PINInputModal';
-import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
-import StudentSidebar from '../components/protector/StudentSidebar';
-import StudentCard from '../components/protector/StudentCard';
-import StreakCalendar from '../components/protector/StreakCalendar';
-import StudyGoalsCard from '../components/protector/StudyGoalsCard';
-import WeeklyLearningSection from '../components/protector/WeeklyLearningSection';
-import WeeklyComparisonChart from '../components/protector/WeeklyComparisonChart';
-import AIAgentSection from '../components/protector/AIAgentSection';
-import type { Student, WeeklyActivity, StudyGoal } from '../mocks/protectorData';
-import {
-  mockStudyGoals,
-  mockJamoStats
-} from '../mocks/protectorData';
+import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
+import StudentProfile from '../components/dashboard/profile/StudentProfile';
+import LearningGoals from '../components/dashboard/goals/LearningGoals';
+import WeeklyTimeChart from '../components/dashboard/charts/WeeklyTimeChart';
+import ImprovementCard from '../components/dashboard/charts/ImprovementCard';
+import WeaknessAlert from '../components/dashboard/charts/WeaknessAlert';
+import CurriculumCard from '../components/dashboard/ai/CurriculumCard';
+import { getStudents } from '../api/protectorApi';
 import {
   getCurriculum,
-  getDiscussion,
   getLearningTime,
   getDailyGoalCount,
   getDailyCompletedCount,
-  getWeeklyGoalPercent
+  getWeeklyGoalPercent,
+  setProtectorGoal as setProtectorGoalApi,
+  type LearningTimeResponse,
 } from '../api/dashboardApi';
-import type { LearningTimeResponse } from '../api/dashboardApi';
-import { getStudents, type StudentResponse } from '../api/protectorApi';
+
+interface Student {
+  id: number;
+  name: string;
+  level: number;
+  streak: number;
+  isActive: boolean;
+  profileImage?: string;
+}
+
+// Mock Data (백엔드 미구현 - 나중에 API로 교체)
+const MOCK_JAMO_DATA = [
+  { jamo: 'ㄱ', accuracy: 92, count: 45 },
+  { jamo: 'ㄴ', accuracy: 65, count: 38 },
+  { jamo: 'ㄷ', accuracy: 88, count: 52 },
+  { jamo: 'ㄹ', accuracy: 73, count: 41 },
+  { jamo: 'ㅁ', accuracy: 95, count: 49 },
+  { jamo: 'ㅂ', accuracy: 78, count: 36 },
+  { jamo: 'ㅅ', accuracy: 70, count: 44 },
+  { jamo: 'ㅇ', accuracy: 85, count: 50 },
+];
+
+const MOCK_IMPROVEMENT_DATA = {
+  overall: {
+    previous: 78,
+    current: 85,
+  },
+  jamo: [
+    { jamo: 'ㄱ', previousAccuracy: 65, currentAccuracy: 92, improvement: 27 },
+    { jamo: 'ㄴ', previousAccuracy: 63, currentAccuracy: 65, improvement: 2 },
+    { jamo: 'ㄷ', previousAccuracy: 70, currentAccuracy: 88, improvement: 18 },
+    { jamo: 'ㄹ', previousAccuracy: 68, currentAccuracy: 73, improvement: 5 },
+    { jamo: 'ㅁ', previousAccuracy: 90, currentAccuracy: 95, improvement: 5 },
+    { jamo: 'ㅂ', previousAccuracy: 72, currentAccuracy: 78, improvement: 6 },
+    { jamo: 'ㅅ', previousAccuracy: 65, currentAccuracy: 70, improvement: 5 },
+    { jamo: 'ㅇ', previousAccuracy: 80, currentAccuracy: 85, improvement: 5 },
+  ],
+};
 
 /**
  * 이번 주 연속 학습일 계산
- * 가장 최근 학습한 날부터 역순으로 연속된 학습일을 카운트
  */
-const calculateWeeklyStreak = (activities: WeeklyActivity[]): number => {
-  if (!activities || activities.length === 0) return 0;
-
-  // 오늘 날짜 찾기
-  const today = new Date().toISOString().split('T')[0];
-  const todayIndex = activities.findIndex(a => a.date === today);
+const calculateWeeklyStreak = (learningTime: LearningTimeResponse): number => {
+  const dailyData = learningTime.thisWeekLearningTime.daily;
+  const today = new Date().getDay(); // 0=일요일, 1=월요일, ...
 
   let streak = 0;
-  let startCounting = false;
-
   // 오늘부터 역순으로 순회
-  const startIndex = todayIndex >= 0 ? todayIndex : activities.length - 1;
-
-  for (let i = startIndex; i >= 0; i--) {
-    if (activities[i].completed) {
-      startCounting = true;
+  for (let i = today; i >= 0; i--) {
+    // 월요일=1, 화요일=2, ... 일요일=0
+    const dayIndex = i === 0 ? 6 : i - 1; // API 데이터는 월요일부터 시작
+    if (dailyData[dayIndex]?.learningMinutes > 0) {
       streak++;
-    } else if (startCounting) {
-      // 학습일을 세다가 안 한 날을 만나면 중단
-      break;
+    } else {
+      break; // 학습하지 않은 날을 만나면 중단
     }
-    // startCounting이 false면 아직 학습 시작 안 한 날들이므로 계속 스킵
   }
 
   return streak;
@@ -59,382 +82,253 @@ const calculateWeeklyStreak = (activities: WeeklyActivity[]): number => {
 
 export default function ProtectorDashboard() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [showPinModal, setShowPinModal] = useState(false); // 임시로 false로 변경
-  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
-  const [showNewPinModal, setShowNewPinModal] = useState(false);
-  const [showConfirmPinModal, setShowConfirmPinModal] = useState(false);
-  const [newPin, setNewPin] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // 임시로 true로 변경
-
-  // 학생 목록 상태
   const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const lastLocationKey = useRef<string | undefined>(undefined);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [parentGoal, setParentGoal] = useState<string>('BALANCED');
+  const [isLoading, setIsLoading] = useState(false);
 
   // API 데이터 상태
   const [curriculum, setCurriculum] = useState<string>('');
-  const [discussion, setDiscussion] = useState<string>('');
-  const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivity[]>([]);
-  const [studyGoals, setStudyGoals] = useState<StudyGoal[]>(mockStudyGoals); // 일일/주간 목표
-  const [learningTime, setLearningTime] = useState<LearningTimeResponse | null>(null); // 주간 학습 시간
-  const [isLoading, setIsLoading] = useState(false);
+  const [learningTime, setLearningTime] = useState<LearningTimeResponse | null>(null);
+  const [dailyGoalCount, setDailyGoalCount] = useState(50);
+  const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
+  const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
 
-  const handlePinSubmit = (pin: string) => {
-    console.log('PIN 입력:', pin);
-    // TODO: 실제 PIN 인증 API 호출
-    // 임시로 아무 PIN이나 허용
-    setIsAuthenticated(true);
-    setShowPinModal(false);
-    alert(`PIN 인증 성공: ${pin}`);
-  };
+  const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
-  const handleForgotPin = () => {
-    setShowPinModal(false);
-    setShowRecoveryModal(true);
-  };
-
-  const handleVerificationSubmit = (code: string) => {
-    console.log('인증 코드:', code);
-    // TODO: 실제 인증 코드 검증 API 호출
-    setShowRecoveryModal(false);
-    setShowNewPinModal(true);
-  };
-
-  const handleNewPinSubmit = (pin: string) => {
-    console.log('새 PIN:', pin);
-    setNewPin(pin);
-    setShowNewPinModal(false);
-    setShowConfirmPinModal(true);
-  };
-
-  const handleConfirmPinSubmit = (pin: string) => {
-    console.log('PIN 확인:', pin);
-    if (pin === newPin) {
-      alert('PIN이 성공적으로 변경되었습니다!');
-      // TODO: 실제 PIN 변경 API 호출
-      setShowConfirmPinModal(false);
-      setShowPinModal(true);
-      setNewPin('');
-    } else {
-      alert('PIN이 일치하지 않습니다. 다시 입력해주세요.');
-      setShowConfirmPinModal(false);
-      setShowNewPinModal(true);
-    }
-  };
-
-  const handleResendCode = () => {
-    alert('인증 번호가 재발송되었습니다.');
-    // TODO: 실제 인증 번호 재발송 API 호출
-  };
-
-  const handleRecoveryCancel = () => {
-    setShowRecoveryModal(false);
-    setShowPinModal(true);
-  };
-
-  const handleClose = () => {
-    setShowPinModal(false);
-    alert('PIN 입력이 취소되었습니다.');
-    // TODO: 이전 페이지로 이동 또는 로그인 페이지로 리다이렉트
-  };
-
-  // 컴포넌트 마운트 시 학생 목록 로드
+  // 학생 목록 로드
   useEffect(() => {
     const fetchStudents = async () => {
-      setIsLoadingStudents(true);
       try {
         const response = await getStudents();
-
-        // StudentResponse를 Student 타입으로 변환
-        const studentList: Student[] = response.students.map(s => ({
+        const studentList: Student[] = response.students.map((s) => ({
           id: s.studentId,
-          lastName: s.name.charAt(0), // 이름의 첫 글자를 성으로 사용
-          fullName: s.name,
+          name: s.name,
           level: s.level || 0,
-          streak: 0, // TODO: 연속 학습 일수는 나중에 API에서 받아오기
+          streak: 0, // 초기값, 학습 시간 데이터 로드 후 업데이트
+          isActive: false,
           profileImage: s.profileImage,
-          grade: s.grade || '미취학'
         }));
 
         setStudents(studentList);
-        console.log('✅ 학생 목록 로드 완료:', studentList);
+        if (studentList.length > 0 && !selectedStudentId) {
+          setSelectedStudentId(studentList[0].id);
+        }
       } catch (error: any) {
-        console.error('❌ 학생 목록 로드 실패:', error);
-
-        // 401 인증 에러인 경우 로그인 페이지로 리다이렉트
+        console.error('학생 목록 로드 실패:', error);
         if (error.response?.status === 401) {
           alert('로그인이 필요합니다.');
           Cookies.remove('accessToken');
           navigate('/');
-          return;
         }
-
-        // 학생이 없는 경우는 에러가 아니므로 빈 배열로 처리
-        setStudents([]);
-      } finally {
-        setIsLoadingStudents(false);
       }
     };
 
     fetchStudents();
   }, []);
 
-  // location.state에서 전달된 학생이 있으면 선택, 없으면 첫 번째 학생 선택
-  // location.key가 변경되었을 때만 실행 (페이지 새로 로드 or 다른 페이지에서 navigate)
+  // 선택된 학생의 대시보드 데이터 로드
   useEffect(() => {
-    if (students.length === 0) return;
-
-    // location.key가 동일하면 이미 처리했으므로 skip
-    if (lastLocationKey.current === location.key) return;
-
-    lastLocationKey.current = location.key;
-
-    const stateStudent = (location.state as { selectedStudent?: Student })?.selectedStudent;
-    if (stateStudent) {
-      // 전달된 학생 ID로 목록에서 찾기
-      const foundStudent = students.find(s => s.id === stateStudent.id);
-      if (foundStudent) {
-        setSelectedStudent(foundStudent);
-      } else {
-        setSelectedStudent(students[0]);
-      }
-    } else if (!selectedStudent) {
-      // selectedStudent가 없으면 첫 번째 학생 선택
-      setSelectedStudent(students[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [students, location.key]);
-
-  // 학생 선택 시 대시보드 데이터 로드
-  useEffect(() => {
-    if (!selectedStudent) return;
+    if (!selectedStudentId) return;
 
     const fetchDashboardData = async () => {
       setIsLoading(true);
-      let calculatedStreak = 0;
       try {
         // 6개 API 병렬 호출
         const [
           curriculumData,
-          discussionData,
           learningTimeData,
           dailyGoalData,
           dailyCompletedData,
-          weeklyPercentData
+          weeklyPercentData,
         ] = await Promise.all([
-          getCurriculum(selectedStudent.id),
-          getDiscussion(selectedStudent.id),
-          getLearningTime(selectedStudent.id),
-          getDailyGoalCount(selectedStudent.id),
-          getDailyCompletedCount(selectedStudent.id),
-          getWeeklyGoalPercent(selectedStudent.id)
+          getCurriculum(selectedStudentId),
+          getLearningTime(selectedStudentId),
+          getDailyGoalCount(selectedStudentId),
+          getDailyCompletedCount(selectedStudentId),
+          getWeeklyGoalPercent(selectedStudentId),
         ]);
 
-        // 커리큘럼 설정
+        // 데이터 설정
         setCurriculum(curriculumData.curriculam || '커리큘럼 데이터가 없습니다.');
-
-        // 협의 로그 설정
-        setDiscussion(discussionData.discussion || '협의 로그가 없습니다.');
-
-        // 학습 시간 데이터 저장 (차트용)
         setLearningTime(learningTimeData);
+        setDailyGoalCount(dailyGoalData.todayGoalCount);
+        setDailyCompletedCount(dailyCompletedData.completedCount);
+        setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
 
-        // 학습 시간 데이터를 WeeklyActivity 형식으로 변환
-        const activityData = convertToWeeklyActivity(learningTimeData);
-        calculatedStreak = calculateWeeklyStreak(activityData);
-        setWeeklyActivity(activityData);
-
-        // students 배열에서 현재 학생의 streak 업데이트
-        setStudents(prevStudents =>
-          prevStudents.map(student =>
-            student.id === selectedStudent.id
-              ? { ...student, streak: calculatedStreak }
-              : student
+        // Streak 계산 및 업데이트
+        const streak = calculateWeeklyStreak(learningTimeData);
+        setStudents((prev) =>
+          prev.map((student) =>
+            student.id === selectedStudentId
+              ? { ...student, streak, isActive: true }
+              : { ...student, isActive: false }
           )
         );
 
-        // 학습 목표 데이터 설정
-        const goalsData: StudyGoal[] = [
-          {
-            type: 'daily',
-            target: dailyGoalData.todayGoalCount,
-            current: dailyCompletedData.completedCount,
-            unit: '개' // 문제 개수
-          },
-          {
-            type: 'daily',
-            target: 30, // 일일 학습 시간 목표 (30분 고정)
-            current: learningTimeData.thisWeekLearningTime.daily[new Date().getDay()]?.learningMinutes || 0,
-            unit: '분' // 학습 시간
-          },
-          {
-            type: 'weekly',
-            target: 100, // TODO: 주간 목표는 백분율이므로 100 고정
-            current: weeklyPercentData.weekGoalPercent,
-            unit: '%'
-          }
-        ];
-        setStudyGoals(goalsData);
-
-        console.log('✅ 대시보드 데이터 로드 완료:', {
-          curriculum: curriculumData,
-          discussion: discussionData,
-          learningTime: learningTimeData,
-          dailyGoal: dailyGoalData,
-          dailyCompleted: dailyCompletedData,
-          weeklyPercent: weeklyPercentData
-        });
+        console.log('✅ 대시보드 데이터 로드 완료');
       } catch (error) {
         console.error('❌ 대시보드 데이터 로드 실패:', error);
-        // 에러 발생 시 빈 데이터 설정
+        // 에러 발생 시 기본값 설정
         setCurriculum('데이터를 불러올 수 없습니다.');
-        setDiscussion('데이터를 불러올 수 없습니다.');
-        setWeeklyActivity([]);
-        setStudyGoals(mockStudyGoals); // 에러 시 mock 데이터 사용
+        setLearningTime(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [selectedStudent]);
+  }, [selectedStudentId]);
 
-  // 학습 시간 API 데이터를 WeeklyActivity 형식으로 변환
-  const convertToWeeklyActivity = (data: LearningTimeResponse): WeeklyActivity[] => {
-    const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-    const today = new Date();
-    const currentDay = today.getDay(); // 0=일요일, 1=월요일, ...
+  // 학습 시간 데이터를 차트 형식으로 변환
+  const weeklyTimeData = learningTime
+    ? ['월', '화', '수', '목', '금', '토', '일'].map((day, index) => ({
+        day,
+        thisWeek: learningTime.thisWeekLearningTime.daily[index]?.learningMinutes || 0,
+        lastWeek: learningTime.lastWeekLearningTime.daily[index]?.learningMinutes || 0,
+      }))
+    : [];
 
-    // 이번 주 월요일 찾기
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((currentDay + 6) % 7));
+  // 출석 데이터 (월~금, 이번 주)
+  const weeklyAttendance = learningTime
+    ? learningTime.thisWeekLearningTime.daily
+        .slice(0, 5) // 월~금만
+        .map((d) => d.learningMinutes > 0)
+    : [false, false, false, false, false];
 
-    return data.thisWeekLearningTime.daily.map((day, index) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + index);
-
-      return {
-        date: date.toISOString().split('T')[0], // YYYY-MM-DD 형식
-        studyTime: day.learningMinutes,
-        completed: day.learningMinutes > 0
-      };
-    });
+  // 일일 목표 데이터
+  const dailyGoals = {
+    problems: { current: dailyCompletedCount, target: dailyGoalCount },
+    time: {
+      current: learningTime?.thisWeekLearningTime.daily[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.learningMinutes || 0,
+      target: 30, // 고정값 (백엔드에서 제공하지 않음)
+    },
+    accuracy: { current: 83 }, // Mock (백엔드 미구현)
   };
 
+  // 주간 목표 데이터
+  const weeklyGoals = {
+    problems: { current: weeklyGoalPercent, target: 100 },
+    time: {
+      current: learningTime?.thisWeekLearningTime.totalMinutes || 0,
+      target: 400, // 고정값
+    },
+    accuracy: { current: 85 }, // Mock (백엔드 미구현)
+  };
+
+  // 커리큘럼 객체 생성
+  const curriculumObject = {
+    title: curriculum.split('\n')[0] || '이번 주 학습 계획',
+    description: curriculum,
+    goals: curriculum.split('\n').filter((line) => line.trim().startsWith('-')),
+    createdAt: new Date().toISOString(),
+  };
+
+  const handleLogout = () => {
+    Cookies.remove('accessToken');
+    navigate('/');
+  };
+
+  const handleGoalChange = async (goal: string) => {
+    if (!selectedStudentId) return;
+
+    try {
+      await setProtectorGoalApi(selectedStudentId, goal);
+      setParentGoal(goal);
+      console.log('보호자 목표 변경 완료:', goal);
+    } catch (error) {
+      console.error('보호자 목표 변경 실패:', error);
+      alert('목표 변경에 실패했습니다.');
+    }
+  };
+
+  const handleViewAgentLog = () => {
+    if (!selectedStudent) return;
+    navigate('/protector/ai-agent-log', { state: { selectedStudent } });
+  };
+
+  if (isLoading && !selectedStudent) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-50">
+        <div className="text-lg text-neutral-600 font-pretendard">로딩 중...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* PIN 입력 모달 */}
-      {showPinModal && (
-        <PINInputModal
-          onSubmit={handlePinSubmit}
-          onForgotPin={handleForgotPin}
-          onClose={handleClose}
-        />
-      )}
+    <div className="flex min-h-screen bg-neutral-50 font-pretendard">
+      {/* Sidebar */}
+      <DashboardSidebar
+        students={students}
+        selectedStudentId={selectedStudentId || 0}
+        onStudentSelect={setSelectedStudentId}
+        onLogout={handleLogout}
+      />
 
-      {/* PIN 복구 모달 */}
-      {showRecoveryModal && (
-        <PINRecoveryModal
-          onSubmit={handleVerificationSubmit}
-          onResend={handleResendCode}
-          onCancel={handleRecoveryCancel}
-        />
-      )}
+      {/* Main Content */}
+      <main className="flex-1 lg:ml-0 p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {selectedStudent ? (
+            <>
+              {/* Student Profile */}
+              <StudentProfile student={selectedStudent} weeklyAttendance={weeklyAttendance} />
 
-      {/* 새 PIN 설정 모달 (Wireframe 3) */}
-      {showNewPinModal && (
-        <PINInputModal
-          title="설정"
-          subtitle="보호자 PIN 번호"
-          description="새 비밀번호를 입력해주세요"
-          onSubmit={handleNewPinSubmit}
-        />
-      )}
+              {/* Learning Goals */}
+              <LearningGoals dailyGoals={dailyGoals} weeklyGoals={weeklyGoals} />
 
-      {/* PIN 확인 모달 (Wireframe 4) */}
-      {showConfirmPinModal && (
-        <PINInputModal
-          title="설정"
-          subtitle="보호자 PIN 번호"
-          description="변경된 비밀번호를 한번 더 입력해주세요"
-          onSubmit={handleConfirmPinSubmit}
-        />
-      )}
+              {/* Charts Section - Asymmetric Grid Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column - 2 stacked cards */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Weekly Time Chart */}
+                  <WeeklyTimeChart data={weeklyTimeData} />
 
-      {/* 메인 대시보드 (인증 후 표시) */}
-      {isAuthenticated && (
-        <div className="flex">
-          {/* 왼쪽 사이드바 */}
-          <StudentSidebar
-            students={students}
-            selectedStudent={selectedStudent}
-            onSelectStudent={setSelectedStudent}
-            onSettings={() => navigate('/protector/settings')}
-            onLogout={() => {
-              // 액세스 토큰 삭제
-              Cookies.remove('accessToken');
-
-              // 홈 화면으로 리다이렉트
-              navigate('/');
-            }}
-          />
-
-          {/* 메인 컨텐츠 영역 */}
-          <div className="flex-1 ml-24 bg-gray-50 min-h-screen p-8">
-            {/* 학생 정보 카드 */}
-            <StudentCard
-              student={selectedStudent}
-              onSettingsClick={() => alert('학생 설정 (준비 중)')}
-            />
-
-            {/* 메인 콘텐츠 */}
-            {selectedStudent && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 왼쪽 컬럼 */}
-                <div className="space-y-6">
-                  {/* 연속 학습 캘린더 */}
-                  <StreakCalendar
-                    weeklyActivity={weeklyActivity.length > 0 ? weeklyActivity : []}
-                    streak={selectedStudent.streak}
-                  />
-
-                  {/* 학습 목표 카드 */}
-                  <StudyGoalsCard goals={studyGoals} />
-
-                  {/* 주간 학습 시간 비교 차트 */}
-                  {learningTime && (
-                    <WeeklyComparisonChart
-                      lastWeek={learningTime.lastWeekLearningTime.daily.map(d => d.learningMinutes)}
-                      thisWeek={learningTime.thisWeekLearningTime.daily.map(d => d.learningMinutes)}
-                      days={['월', '화', '수', '목', '금', '토', '일']}
-                    />
-                  )}
-
-                  {/* 지난주 학습 분석 */}
-                  <WeeklyLearningSection
-                    averageAccuracy={83}
-                    difficultJamos={mockJamoStats}
-                    onDetailClick={() => navigate('/protector/learning-analysis', { state: { selectedStudent } })}
-                  />
+                  {/* Weakness Alert with Expandable Chart */}
+                  <WeaknessAlert allJamoData={MOCK_JAMO_DATA} />
                 </div>
 
-                {/* 오른쪽 컬럼 */}
-                <div className="space-y-6">
-                  {/* AI Agent 섹션 */}
-                  <AIAgentSection
-                    curriculum={curriculum}
-                    discussion={discussion}
-                    isLoading={isLoading}
-                    onLogClick={() => navigate('/protector/ai-agent-log', { state: { selectedStudent } })}
+                {/* Right Column - Improvement Card (full height) */}
+                <div className="lg:col-span-1">
+                  <ImprovementCard
+                    overallImprovement={MOCK_IMPROVEMENT_DATA.overall}
+                    jamoImprovements={MOCK_IMPROVEMENT_DATA.jamo}
                   />
                 </div>
               </div>
-            )}
-          </div>
+
+              {/* AI Curriculum */}
+              <CurriculumCard
+                curriculum={curriculumObject}
+                currentGoal={parentGoal}
+                onGoalChange={handleGoalChange}
+                onViewAgentLog={handleViewAgentLog}
+              />
+            </>
+          ) : (
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
+              <div className="flex flex-col items-center justify-center py-8 gap-4">
+                <div className="w-20 h-20 rounded-full bg-neutral-100 flex items-center justify-center">
+                  <User size={40} className="text-neutral-400" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-neutral-700 font-pretendard mb-2">
+                    등록된 학생이 없습니다
+                  </h3>
+                  <p className="text-sm text-neutral-500 font-pretendard mb-4">
+                    학습을 시작하려면 학생을 등록해주세요
+                  </p>
+                  <button
+                    onClick={() => navigate('/protector/manage-students')}
+                    className="px-6 py-3 bg-primary text-white rounded-lg font-semibold font-pretendard hover:bg-primary/90 transition-colors"
+                  >
+                    학생 등록하기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </main>
     </div>
   );
 }

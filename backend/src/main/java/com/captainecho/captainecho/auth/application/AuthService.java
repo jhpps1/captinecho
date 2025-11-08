@@ -43,7 +43,7 @@ public class AuthService {
 
     private Protector createNewProtector(Provider provider, String socialId) {
         Protector newProtector = Protector.builder()
-                .protectorPin(null)
+                .protectorPin("000000")
                 .provider(provider)
                 .socialId(socialId)
                 .build();

@@ -1,13 +1,41 @@
 # src/core/models.py
 
-from sqlalchemy import Column, Integer, String, Date, DateTime, Text, ForeignKey, JSON, Float, Enum, SmallInteger, TIMESTAMP
-import enum
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Date, DateTime, Text, ForeignKey, Float, Boolean, Enum, SmallInteger
 from .database import Base
+import enum
 
 class Gender(enum.Enum):
     남 = "남"
     여 = "여"
+
+
+
+class DayProblem(Base):
+    __tablename__ = 'day_problem'
+
+    day_problem_id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    student_id = Column(Integer, ForeignKey('student.student_id'), nullable=False)
+    adventure_type_id = Column(Integer, nullable=False)
+    assigned_date = Column(Date, nullable=False)
+    seq_no = Column(Integer, nullable=False)
+    level = Column(Integer, nullable=False)
+    question_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    is_completed = Column(Boolean, nullable=False, default=False)
+    
+    # 나머지 컬럼들은 필요에 따라 추가(아래는 전부 nullable=True이므로 꼭 안 써도 됨!)
+    interest_id = Column(Integer)
+    hint = Column(Text)
+    image_url = Column(Text)
+    sound_url = Column(Text)
+    question_phonemes = Column(Text)
+    blank_position = Column(Text)
+    # blank_phoneme = Column(Text)
+    choices = Column(Text)  # JSON string or list
+    # correct_answer = Column(Text)
+    correct_answer = Column(String(100), nullable=True) # 5 -> 100 수정 필수
+    blank_phoneme = Column(String(50), nullable=True)   # 5 -> 50 수정 필수
+
 
 class Student(Base):
     __tablename__ = "student"

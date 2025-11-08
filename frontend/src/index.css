@@ -1,10 +1,58 @@
 @import "tailwindcss";
+@import "@fontsource/pretendard/index.css";
 
 @font-face {
     font-family: 'PeachMarket';
     src: url('./fonts/PeachMarket-Regular.ttf');
 }
 
+/* Shake animation for PIN error */
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-10px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(10px);
+    }
+}
+
 @theme inline {
+    /* Fonts */
     --font-peach: 'PeachMarket', 'sans-serif';
+    --font-pretendard: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+
+    /* Educational Platform Color Palette */
+    --color-primary: #3B82F6;        /* Blue - 신뢰, 안정감 */
+    --color-primary-light: #60A5FA;
+    --color-primary-dark: #2563EB;
+
+    --color-secondary: #8B5CF6;      /* Purple - 학습, 창의성 */
+    --color-secondary-light: #A78BFA;
+    --color-secondary-dark: #7C3AED;
+
+    --color-success: #10B981;        /* Green - 성취, 완료 */
+    --color-success-light: #34D399;
+    --color-success-dark: #059669;
+
+    --color-warning: #F59E0B;        /* Orange - 주의, streak */
+    --color-warning-light: #FBBF24;
+    --color-warning-dark: #D97706;
+
+    --color-error: #EF4444;          /* Red - 오류, 취약점 */
+    --color-error-light: #F87171;
+    --color-error-dark: #DC2626;
+
+    --color-neutral-50: #F9FAFB;
+    --color-neutral-100: #F3F4F6;
+    --color-neutral-200: #E5E7EB;
+    --color-neutral-300: #D1D5DB;
+    --color-neutral-400: #9CA3AF;
+    --color-neutral-500: #6B7280;
+    --color-neutral-600: #4B5563;
+    --color-neutral-700: #374151;
+    --color-neutral-800: #1F2937;
+    --color-neutral-900: #111827;
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'; // 1. useNavigate 훅 import
 import Cookies from 'js-cookie'; // 2. js-cookie import
 import PINInputModal from '../components/protector/PINInputModal';
 import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
-import { getStudents } from '../api/protectorApi';
+import { getStudents, verifyPin } from '../api/protectorApi';
 
 // 프로필 타입 정의
 interface Profile {
@@ -23,17 +23,32 @@ const SelectProfile = () => {
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
-  const [showNewPinModal, setShowNewPinModal] = useState(false);
-  const [showConfirmPinModal, setShowConfirmPinModal] = useState(false);
-  const [newPin, setNewPin] = useState('');
 
-  const handlePinSubmit = (pin: string) => {
-    console.log('PIN 입력:', pin);
-    // TODO: 실제 PIN 인증 API 호출
-    // 임시로 아무 PIN이나 허용
-    alert(`PIN 인증 성공: ${pin}`);
-    setShowPinModal(false);
-    navigate('/protector'); // 인증 성공 시 보호자 대시보드로 이동
+  const handlePinSubmit = async (pin: string) => {
+    try {
+      // PIN 검증 API 호출
+      const result = await verifyPin(pin);
+
+      if (result.success) {
+        // PIN 검증 성공 → 보호자 대시보드로 이동
+        console.log('✅ PIN 인증 성공');
+        setShowPinModal(false);
+        navigate('/protector');
+      } else {
+        // PIN이 일치하지 않음 - 모달에서 시각적 피드백
+        throw new Error('PIN mismatch');
+      }
+    } catch (error: any) {
+      console.error('❌ PIN 검증 실패:', error);
+
+      if (error.response?.status === 401) {
+        // 인증 오류 (로그인 필요)
+        alert('로그인이 필요합니다.');
+        Cookies.remove('accessToken', { path: '/' });
+        navigate('/');
+      }
+      throw error; // 에러를 다시 throw해서 PINInputModal에서 catch
+    }
   };
 
   const handleForgotPin = () => {
@@ -43,31 +58,10 @@ const SelectProfile = () => {
 
   const handleVerificationSubmit = (code: string) => {
     console.log('인증 코드:', code);
-    // TODO: 실제 인증 코드 검증 API 호출
+    // TODO: 실제 인증 코드 검증 및 PIN 복구 API 호출
+    alert('PIN 복구 기능은 준비중입니다.');
     setShowRecoveryModal(false);
-    setShowNewPinModal(true);
-  };
-
-  const handleNewPinSubmit = (pin: string) => {
-    console.log('새 PIN:', pin);
-    setNewPin(pin);
-    setShowNewPinModal(false);
-    setShowConfirmPinModal(true);
-  };
-
-  const handleConfirmPinSubmit = (pin: string) => {
-    console.log('PIN 확인:', pin);
-    if (pin === newPin) {
-      alert('PIN이 성공적으로 변경되었습니다!');
-      // TODO: 실제 PIN 변경 API 호출
-      setShowConfirmPinModal(false);
-      setShowPinModal(true);
-      setNewPin('');
-    } else {
-      alert('PIN이 일치하지 않습니다. 다시 입력해주세요.');
-      setShowConfirmPinModal(false);
-      setShowNewPinModal(true);
-    }
+    setShowPinModal(true);
   };
 
   const handleResendCode = () => {
@@ -280,11 +274,14 @@ const SelectProfile = () => {
         )}
       </main>
 
-      {(showPinModal || showRecoveryModal || showNewPinModal || showConfirmPinModal) && (
+      {(showPinModal || showRecoveryModal) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           {/* PIN 입력 모달 */}
           {showPinModal && (
             <PINInputModal
+              title="인증"
+              subtitle="보호자 PIN 번호"
+              description="기본 비밀번호는 '000000' 입니다. 계정 설정에서 변경할 수 있습니다."
               onSubmit={handlePinSubmit}
               onForgotPin={handleForgotPin}
               onClose={handleClose}
@@ -297,26 +294,6 @@ const SelectProfile = () => {
               onSubmit={handleVerificationSubmit}
               onResend={handleResendCode}
               onCancel={handleRecoveryCancel}
-            />
-          )}
-
-          {/* 새 PIN 설정 모달 (Wireframe 3) */}
-          {showNewPinModal && (
-            <PINInputModal
-              title="설정"
-              subtitle="보호자 PIN 번호"
-              description="새 비밀번호을 입력해주세요"
-              onSubmit={handleNewPinSubmit}
-            />
-          )}
-
-          {/* PIN 확인 모달 (Wireframe 4) */}
-          {showConfirmPinModal && (
-            <PINInputModal
-              title="설정"
-              subtitle="보호자 PIN 번호"
-              description="변경된 비밀번호를 한번 더 입력해주세요"
-              onSubmit={handleConfirmPinSubmit}
             />
           )}
         </div>
