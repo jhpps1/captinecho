@@ -1,3 +1,5 @@
+# app/src/tasks/enqueue_task.py
+
 from rq import Queue
 import redis
 import os
@@ -7,6 +9,7 @@ from app.src.crew import build_conversation_flow
 from app.src.core.database import SessionLocal
 from app.src.core.models import Student
 from app.src.utils.problem_job import generate_problems_for_one_week
+
 
 load_dotenv(dotenv_path="/S13P31D101/.env")
 
@@ -19,7 +22,27 @@ redis_conn = redis.Redis(
 )
 q = Queue(connection=redis_conn)
 
-def process_student_batch(student_id):
+# === 문제 생성 병렬처리 ===
+
+def run_generate_problems_for_one_week(student_id):
+    db = SessionLocal()
+    try:
+        return generate_problems_for_one_week(db, student_id)
+    finally:
+        db.close()
+
+def batch_generate_problems_parallel():
+    db = SessionLocal()
+    try:
+        student_ids = [row[0] for row in db.query(Student.student_id).all()]
+        for sid in student_ids:
+            q.enqueue(run_generate_problems_for_one_week, sid)
+    finally:
+        db.close()
+
+# === CrewAI 리포트 병렬처리 ===
+
+def run_crewai_student_batch(student_id):
     student_data = get_student_data(student_id)
     if not student_data:
         return None
@@ -36,29 +59,11 @@ def process_student_batch(student_id):
             break
     return flow.state.history
 
-def process_problem_generation(student_id):
-    db = SessionLocal()
-    try:
-        res = generate_problems_for_one_week(db, student_id)
-        print(f"학생 {student_id} 문제생성 결과:", res)
-        return res
-    finally:
-        db.close()
-
 def batch_generate_crewai_reports_parallel():
     db = SessionLocal()
     try:
         student_ids = [row[0] for row in db.query(Student.student_id).all()]
         for sid in student_ids:
-            q.enqueue(process_student_batch, sid)
-    finally:
-        db.close()
-
-def batch_generate_problems_parallel():
-    db = SessionLocal()
-    try:
-        student_ids = [row[0] for row in db.query(Student.student_id).all()]
-        for sid in student_ids:
-            q.enqueue(process_problem_generation, sid)
+            q.enqueue(run_crewai_student_batch, sid)
     finally:
         db.close()

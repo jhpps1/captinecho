@@ -29,7 +29,6 @@ interface DailyCountResponse {
   completedCount: number;
 }
 
-// [추가된 타입]
 // 주간 스트릭 API 응답 (boolean 배열)
 type DailyStreakResponse = boolean[];
 
@@ -44,8 +43,6 @@ const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
   </svg>
 );
-// --- (여기까지 기존 코드) ---
-
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -60,18 +57,14 @@ export default function StudentDashboard() {
 
   const [solvedProblemCount, setSolvedProblemCount] = useState(0);
   
-  // --- [새로 추가된 state] ---
   // 주간 스트릭 데이터 (API로부터 받은 boolean 배열)
   const [weeklyStreak, setWeeklyStreak] = useState<boolean[]>([]);
-  // --- [추가된 state 끝] ---
-
-  // --- [수정된 부분] ---
-  // useEffect에서 세 개의 API를 병렬로 호출하도록 수정
+ 
   useEffect(() => {
     const studentIdFromSession = sessionStorage.getItem('studentId');
 
     if (!studentIdFromSession) {
-      alert('학생을 먼저 선택해주세요.'); // Please select a student first.
+      alert('학생을 먼저 선택해주세요.');
       navigate('/select-profile');
       return;
     }
@@ -81,7 +74,7 @@ export default function StudentDashboard() {
       try {
         const accessToken = Cookies.get('accessToken');
         if (!accessToken) {
-          alert('로그인 정보가 없습니다. 다시 로그인해주세요.'); // No login information. Please log in again.
+          alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
           navigate('/');
           return;
         }
@@ -93,7 +86,6 @@ export default function StudentDashboard() {
   
         const countPromise = fetch(`/api/student/${id}/dashboard/daily/count`, { headers });
   
-        // [새로 추가된 API 요청]
         const streakPromise = fetch(`/api/student/${id}/dashboard/daily-streak`, { headers });
 
         // --- Promise.all로 세 요청을 동시에 실행 ---
@@ -249,7 +241,7 @@ export default function StudentDashboard() {
 
         {/* --- 왼쪽 상단 앵무새 버튼 (수정 없음) --- */}
         <button
-          onClick={() => { /* 앵무새 버튼 클릭 시 동작 */ }}
+          onClick={() => { navigate('/parrot-store') }}
           className="absolute top-5 left-5 w-20 h-20 z-20 hover:scale-105 active:scale-95 transition-transform"
         >
           <img 
