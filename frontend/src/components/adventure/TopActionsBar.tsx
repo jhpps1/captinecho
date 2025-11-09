@@ -47,7 +47,7 @@ export const TopActionsBar = ({
       <header className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2 sm:gap-3 z-50">
         {/* 튜토리얼 버튼 */}
         <button
-          className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-14 h-14 sm:w-18 sm:h-18 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
           onClick={onTutorialClick}
           aria-label="튜토리얼 보기"
         >
@@ -57,7 +57,7 @@ export const TopActionsBar = ({
         {/* 나가기 */}
         <button
           onClick={handleExitClick}
-          className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-14 h-14 sm:w-18 sm:h-18 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
           aria-label="나가기"
         >
           <DoorOpen className="text-gray-700" size={24} />
