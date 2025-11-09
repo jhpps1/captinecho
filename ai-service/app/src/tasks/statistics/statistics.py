@@ -22,9 +22,10 @@ def get_week_boundary(now=None):
 def calculate_weekly_total_time(db, student_id, week_start, week_end):
     """이번 주 실제 학습 세션 전체 시간(분) 집계"""
     sessions = db.query(LearningSession).filter(
-        LearningSession.student_id == student_id,
-        LearningSession.start_time < week_end,
-        LearningSession.end_time != None
+    LearningSession.student_id == student_id,
+    LearningSession.start_time >= week_start,     # <-- 추가!
+    LearningSession.start_time < week_end,
+    LearningSession.end_time != None
     ).all()
     total_seconds = 0
     for s in sessions:
@@ -37,6 +38,7 @@ def calculate_weekly_total_time(db, student_id, week_start, week_end):
     # 분 단위로 변환하여 반환 (소수점 버림)
     total_minutes = int(total_seconds // 60)
     return total_minutes
+
 
 def make_weekly_report_values(student_id: int, db: Session):
     """리포트용 자모 누적 집계값 반환"""
@@ -52,6 +54,7 @@ def make_weekly_report_values(student_id: int, db: Session):
         "curriculum": curriculum,
         "discussion_log": discussion_log,
     }
+
 
 def fill_reset_and_make_weekly_report(db):
     """
