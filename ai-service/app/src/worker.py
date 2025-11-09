@@ -1,3 +1,5 @@
+# app/src/worker.py
+
 from rq import Worker, Queue, Connection
 import redis
 import os
