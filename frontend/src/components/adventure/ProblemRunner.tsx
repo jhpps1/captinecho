@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { ComponentType } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Problem, AnswerResult } from '../../types/adventure';
-import { submitSingleProblemResult } from '../../api/adventureApi';
+import { submitSingleProblemResult, submitSessionCorrect } from '../../api/adventureApi';
 
 // Adventure 컴포넌트 Props 인터페이스
 export interface AdventureViewProps {
@@ -97,6 +97,66 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
   const handleSubmit = async (answer: unknown, attempts: number) => {
     console.log(`문제 ${currentProblem.dayProblemId} 제출:`, { answer, attempts });
 
+    // ========================================
+    // 1. 학습 데이터 수집 (/session/correct API)
+    // ========================================
+    // Adventure 타입에 따라 학습 데이터 추출
+    const adventureTypeId = currentProblem.adventureTypeId;
+    const correctAnswer = currentProblem.correctAnswer[0]; // 정답
+    const isCorrect = true; // Adventure 컴포넌트에서 정답 검증 후 onSubmit 호출됨
+
+    try {
+      // Adventure 타입별 데이터 추출 및 API 호출
+      if (adventureTypeId === 1 || adventureTypeId === 2) {
+        // Adventure1 (음소 분해) 또는 Adventure2 (빈칸 채우기)
+        // - answer: 사용자가 선택한 자모 (예: "ㄱ")
+        // - correctAnswer: 정답 자모 (예: "ㄱ")
+        // - blankPosition: 음소 위치 (INITIAL/MEDIAL/FINAL)
+
+        await submitSessionCorrect(studentId, {
+          isCorrect: isCorrect,
+          realJamo: correctAnswer,                    // 정답 자모
+          confusionJamo: null,                        // 정답이므로 혼동 자모 없음
+          phonemePosition: currentProblem.blankPosition, // 음소 위치
+        });
+        console.log(`✅ 학습 데이터 수집 완료 (Adventure${adventureTypeId}): 자모=${correctAnswer}, 위치=${currentProblem.blankPosition}`);
+
+      } else if (adventureTypeId === 3) {
+        // Adventure3 (단어 선택)
+        // - answer: 사용자가 선택한 단어 (예: "사과")
+        // - correctAnswer: 정답 단어 (예: "사과")
+        // - phonemePosition: null (단어 문제는 음소 위치 없음)
+
+        await submitSessionCorrect(studentId, {
+          isCorrect: isCorrect,
+          realJamo: correctAnswer,    // 정답 단어
+          confusionJamo: null,        // 정답이므로 혼동 없음
+          phonemePosition: null,      // 단어 문제는 음소 위치 없음
+        });
+        console.log(`✅ 학습 데이터 수집 완료 (Adventure3): 단어=${correctAnswer}`);
+
+      } else if (adventureTypeId === 4) {
+        // Adventure4 (말하기)
+        // - answer: 'voice-answer' (고정값)
+        // - questionText: 정답 단어
+        // - phonemePosition: null
+
+        await submitSessionCorrect(studentId, {
+          isCorrect: isCorrect,
+          realJamo: currentProblem.questionText, // 정답 단어
+          confusionJamo: null,                   // 말하기는 혼동 자모 없음
+          phonemePosition: null,                 // 말하기 문제는 음소 위치 없음
+        });
+        console.log(`✅ 학습 데이터 수집 완료 (Adventure4): 단어=${currentProblem.questionText}`);
+      }
+    } catch (error) {
+      console.error('❌ 학습 데이터 수집 실패:', error);
+      // 학습 데이터 수집 실패해도 문제 진행은 계속
+    }
+
+    // ========================================
+    // 2. 문제 완료 처리 (/adventure/result API)
+    // ========================================
     // 결과 데이터 생성
     const result: AnswerResult = {
       dayProblemId: currentProblem.dayProblemId,
@@ -175,15 +235,10 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
   };
   // ==================================================
   
-  // 완료 화면 - DailyRunner에서 관리하므로 여기서는 제거
-  // 완료 시 onComplete() 콜백이 호출되어 DailyRunner의 isCompleted가 true로 설정됨
+  // 완료 화면 - 부모 컴포넌트(DailyRunner/SuppleRunner)에서 관리
+  // 완료 시 onComplete() 콜백이 호출되면 부모에서 완료 UI 처리
   if (isAllCompleted) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
-        <p className="text-xl text-gray-600">완료 처리 중...</p>
-      </div>
-    );
+    return null; // 부모 컴포넌트로 제어권 넘김
   }
 
   // 문제가 없는 경우

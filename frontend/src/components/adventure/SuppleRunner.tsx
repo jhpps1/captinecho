@@ -4,6 +4,7 @@ import { getSuppleProblems, startAdventure, endAdventure } from '../../api/adven
 import type { Problem, SessionState } from '../../types/adventure';
 import { ProblemRunner } from './ProblemRunner';
 import { AdventureLayout } from './AdventureLayout';
+import { CompletionModal } from './modals/CompletionModal';
 
 /**
  * SuppleRunner - 추가학습 문제 관리 컴포넌트
@@ -33,6 +34,7 @@ export const SuppleRunner = () => {
   });
 
   const [isStarting, setIsStarting] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false); // 완료 여부 추가
   // studentId, typeId 검증
   const parsedStudentId = studentId ? parseInt(studentId, 10) : null;
   const parsedTypeId = typeId ? parseInt(typeId, 10) : null;
@@ -94,7 +96,7 @@ export const SuppleRunner = () => {
     }
   };
 
-  // 세션 종료 핸들러
+  // 세션 종료 핸들러 (완료 시 호출)
   const handleEndAdventure = async () => {
     if (!parsedStudentId || !session.isActive) return;
 
@@ -110,10 +112,16 @@ export const SuppleRunner = () => {
           isActive: false,
           startedAt: null,
         });
+        setIsCompleted(true); // 완료 상태 설정 → 모달 표시
       }
     } catch (err) {
       console.error('❌ 세션 종료 실패:', err);
     }
+  };
+
+  // 완료 모달 확인 버튼 클릭 시 학생 대시보드로 이동
+  const handleCompletionConfirm = () => {
+    navigate(`/student`);
   };
  // 시작 대기 화면 (세션이 활성화되지 않았을 때)
   if (!session.isActive && !isLoading && !error) {
@@ -162,6 +170,16 @@ export const SuppleRunner = () => {
     );
   }
 
+  // 완료 화면 - CompletionModal만 표시
+  if (isCompleted) {
+    return (
+      <CompletionModal
+        isOpen={true}
+        onConfirm={handleCompletionConfirm}
+      />
+    );
+  }
+
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   // 추가학습은 모든 문제가 같은 타입이므로 parsedTypeId를 직접 사용
   return (
@@ -172,7 +190,7 @@ export const SuppleRunner = () => {
           mode="supple"
           studentId={parsedStudentId!}
           isTutorialMode={isTutorialMode}
-          onComplete={handleEndAdventure} 
+          onComplete={handleEndAdventure}
         />
       )}
     </AdventureLayout>

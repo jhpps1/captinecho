@@ -4,6 +4,7 @@ import { WordCard } from './WordCard';
 import { MicrophoneButton } from './MicrophoneButton';
 import { FeedbackCharacter } from './FeedbackCharacter';
 import { TutorialBubble } from './TutorialBubble';
+import { submitSessionCorrect } from '../../api/adventureApi';
 
 interface Adventure4Props {
   problem: Problem;
@@ -60,6 +61,22 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode }: Adventure4Prop
       // 오답
       setShowFeedback(true);
       setIsCorrectAnswer(false);
+
+      // 오답 학습 데이터 수집 (말하기 문제)
+      const payload = {
+        isCorrect: false,
+        realJamo: problem.questionText,  // 정답 단어
+        confusionJamo: null,             // 말하기는 혼동 자모 없음
+        phonemePosition: null,           // 음소 위치 없음
+      };
+      console.log('🔍 Adventure4 오답 API 전송 데이터:', payload);
+      console.log('🔍 problem 객체:', problem);
+
+      submitSessionCorrect(problem.studentId, payload).catch(error => {
+        console.error('❌ 오답 학습 데이터 수집 실패:', error);
+        console.error('❌ 에러 응답:', error.response?.data);
+        // 에러 발생해도 문제 진행은 계속
+      });
 
       setAttemptCount(prev => {
         const newCount = prev + 1;

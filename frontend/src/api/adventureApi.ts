@@ -161,3 +161,82 @@ export const endAdventure = async (
 
   return response.data.success;
 };
+
+/**
+ * 학습 데이터 수집 (정답/오답 패턴 기록)
+ * POST /api/student/{studentId}/session/correct
+ *
+ * @param studentId - 학생 ID
+ * @param data - 학습 데이터
+ * @param data.isCorrect - 정답 여부
+ * @param data.realJamo - 실제 정답 자모/단어
+ * @param data.confusionJamo - 사용자가 선택한 오답 (오답인 경우만)
+ * @param data.phonemePosition - 음소 위치 ('INITIAL' | 'MEDIAL' | 'FINAL' | null)
+ *
+ * @description
+ * - 학생의 정답/오답 패턴을 수집하여 학습 분석 데이터 축적
+ * - 오답 시: 어떤 자모를 헷갈려 하는지 기록 (error_pattern 테이블)
+ * - 정답/오답 모두: 자모별 정확도 통계 업데이트 (jamo_stat 테이블)
+ * - Adventure1, 2 (음소 문제): phonemePosition 필수
+ * - Adventure3, 4 (단어/말하기): phonemePosition은 null
+ *
+ * @example
+ * // Adventure1, 2 - 음소 문제 (정답)
+ * await submitSessionCorrect(123, {
+ *   isCorrect: true,
+ *   realJamo: 'ㄱ',
+ *   confusionJamo: null,
+ *   phonemePosition: 'INITIAL'
+ * });
+ *
+ * @example
+ * // Adventure1, 2 - 음소 문제 (오답)
+ * await submitSessionCorrect(123, {
+ *   isCorrect: false,
+ *   realJamo: 'ㄱ',          // 정답
+ *   confusionJamo: 'ㄲ',     // 사용자가 선택한 오답
+ *   phonemePosition: 'INITIAL'
+ * });
+ *
+ * @example
+ * // Adventure3 - 단어 선택 (정답)
+ * await submitSessionCorrect(123, {
+ *   isCorrect: true,
+ *   realJamo: '사과',
+ *   confusionJamo: null,
+ *   phonemePosition: null
+ * });
+ *
+ * @example
+ * // Adventure4 - 말하기 (항상 정답 처리)
+ * await submitSessionCorrect(123, {
+ *   isCorrect: true,
+ *   realJamo: '바나나',
+ *   confusionJamo: null,
+ *   phonemePosition: null
+ * });
+ */
+export const submitSessionCorrect = async (
+  studentId: number,
+  data: {
+    isCorrect: boolean;
+    realJamo: string;
+    confusionJamo?: string | null;
+    phonemePosition?: string | null;
+  }
+): Promise<void> => {
+  // 백엔드 API 형식에 맞게 요청 데이터 구성
+  const requestBody = {
+    isCorrect: data.isCorrect,
+    realJamo: data.realJamo ?? null,           // undefined → null 변환
+    confusionJamo: data.confusionJamo ?? null,
+    phonemePosition: data.phonemePosition ?? null,
+  };
+
+  console.log('📤 /session/correct 요청:', {
+    studentId,
+    requestBody
+  });
+
+  await axiosInstance.post(`/student/${studentId}/session/correct`, requestBody);
+};

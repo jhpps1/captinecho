@@ -8,6 +8,7 @@ import { SingleSyllableCard } from './SingleSyllableCard';
 import { OptionsList } from './OptionsList';
 import { FeedbackCharacter } from './FeedbackCharacter';
 import { TutorialBubble } from './TutorialBubble';
+import { submitSessionCorrect } from '../../api/adventureApi';
 
 // Adventure1 전용 문제 데이터 타입 (기존 ProblemData 사용)
 import type { ProblemData } from '../../types/problem';
@@ -89,6 +90,23 @@ export const Adventure1 = ({ problem, onSubmit, isTutorialMode }: Adventure1Prop
       // 오답
       setIsAnimating(true);
       setWrongAnswers((prev) => [...prev, option]);
+
+      // 오답 학습 데이터 수집
+      const payload = {
+        isCorrect: false,
+        realJamo: correctAnswer,
+        confusionJamo: option,  // 사용자가 선택한 오답 자모
+        phonemePosition: problem.blankPosition || null,  // falsy → null 명시적 변환
+      };
+      console.log('🔍 Adventure1 오답 API 전송 데이터:', payload);
+      console.log('🔍 problem 객체:', problem);
+
+      submitSessionCorrect(problem.studentId, payload).catch(error => {
+        console.error('❌ 오답 학습 데이터 수집 실패:', error);
+        console.error('❌ 에러 응답:', error.response?.data);
+        // 에러 발생해도 문제 진행은 계속
+      });
+
       setAttemptCount((prev) => prev + 1);
 
       setTimeout(() => {

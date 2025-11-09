@@ -4,6 +4,7 @@ import { ImageProblemCard } from './ImageProblemCard';
 import { OptionsList } from './OptionsList';
 import { FeedbackCharacter } from './FeedbackCharacter';
 import { TutorialBubble } from './TutorialBubble';
+import { submitSessionCorrect } from '../../api/adventureApi';
 
 interface Adventure3Props {
   problem: Problem;
@@ -47,6 +48,23 @@ export const Adventure3 = ({ problem, onSubmit, isTutorialMode }: Adventure3Prop
       // 오답
       setIsAnimating(true);
       setWrongAnswers((prev) => [...prev, option]);
+
+      // 오답 학습 데이터 수집 (단어 문제)
+      const payload = {
+        isCorrect: false,
+        realJamo: correctAnswer,
+        confusionJamo: option,  // 사용자가 선택한 오답 단어
+        phonemePosition: null,  // 단어 문제는 음소 위치 없음
+      };
+      console.log('🔍 Adventure3 오답 API 전송 데이터:', payload);
+      console.log('🔍 problem 객체:', problem);
+
+      submitSessionCorrect(problem.studentId, payload).catch(error => {
+        console.error('❌ 오답 학습 데이터 수집 실패:', error);
+        console.error('❌ 에러 응답:', error.response?.data);
+        // 에러 발생해도 문제 진행은 계속
+      });
+
       setAttemptCount((prev) => prev + 1);
 
       setTimeout(() => {
