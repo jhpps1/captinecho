@@ -1,61 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
-import StudentModal from '../components/StudentModal';
 
-// 오른쪽 나무 버튼 데이터 (기존과 동일)
+// 오른쪽 나무 버튼 데이터 (내용 동일)
 const woodenButtons = [
   { id: 1, label: '자모맞추기', path: '/adventure/1' },
-  { id: 2, label: '빈칸맞추기', path: '/adventure/2' },
-  { id: 3, label: '단어맞추기', path: '/adventure/3' },
+  { id: 2, label: '글자합치기', path: '/adventure/2' },
+  { id: 3, label: '그림맞추기', path: '/adventure/3' },
   { id: 4, label: '단어읽기', path: '/adventure/4' },
 ];
 
-// 학생 프로필 데이터 타입을 정의합니다. (기존과 동일)
+// 학생 프로필 데이터 타입 (내용 동일)
 interface StudentProfile {
   name: string;
   imageUrl: string;
 }
 
-// --- 1. API 응답에 맞춘 타입 정의 (이미지 기반) ---
-// API 응답의 개별 학생 객체 타입
+// API 응답 타입 (내용 동일)
 interface ApiStudent {
   studentId: number;
   name: string;
-  gender: string;
-  profileImage: string; // API 필드명은 profileImage 입니다.
-  grade: string;
-  level: number;
-  coin: number;
+  profileImage: string;
+  // ... (다른 필드들)
 }
 
-// API 응답의 최상위 객체 타입
 interface ApiResponse {
   students: ApiStudent[];
 }
-// --- 여기까지 ---
 
-// 설정 아이콘 컴포넌트 (기존과 동일)
-const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-8 h-8 text-gray-700 cursor-pointer hover:rotate-45 transition-transform"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-    />
+// 왼쪽 하단 나가기 아이콘 (내용 동일)
+const ExitIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m-3-6-3 3m0 0 3 3m-3-3h12.75" />
+  </svg>
+);
+
+// 오른쪽 메뉴 토글 화살표 (내용 동일)
+const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
   </svg>
 );
 
@@ -64,113 +47,81 @@ export default function StudentDashboard() {
 
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
+  
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isStartingGame, setIsStartingGame] = useState(false);
 
   useEffect(() => {
-    
     const studentIdFromSession = sessionStorage.getItem('studentId');
 
     if (!studentIdFromSession) {
-      alert('학생을 먼저 선택해주세요.');
+      alert('학생을 먼저 선택해주세요.'); // Please select a student first.
       navigate('/select-profile');
       return;
     }
 
-    // --- 2. fetchStudentData 함수를 실제 API 호출 로직으로 수정 ---
+    // --- (기존 API 호출 로직 - 수정 없음) ---
     const fetchStudentData = async (id: string) => {
-      // 세션 스토리지의 ID는 문자열이므로, 비교를 위해 숫자로 변환합니다.
       const targetStudentId = parseInt(id, 10);
-      console.log(`학생 ID (${targetStudentId})의 데이터를 API로 요청합니다.`);
-
       try {
-        // --- 2. 'accessToken'을 쿠키에서 직접 읽어오기 ---
         const accessToken = Cookies.get('accessToken');
-
         if (!accessToken) {
-          // 토큰이 아예 없으면 로그인 페이지로 보냅니다.
-          alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
-          navigate('/'); // (로그인 페이지 경로)
+          alert('로그인 정보가 없습니다. 다시 로그인해주세요.'); // No login information. Please log in again.
+          navigate('/');
           return;
         }
 
-        // --- 3. fetch 요청 수정 ---
         const response = await fetch('/api/protector/students', {
-          // 'credentials: 'include'' 옵션 제거!
-          
-          // 대신 'Authorization' 헤더를 수동으로 추가합니다.
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            // (필요한 경우 다른 헤더도 추가, 예: 'Content-Type')
-          },
+          headers: { 'Authorization': `Bearer ${accessToken}` },
         });
-        // --- 여기까지 ---
 
         if (!response.ok) {
-          // 401 에러가 발생하면, 토큰이 만료되었을 가능성이 높습니다.
           if (response.status === 401) {
-            alert('인증 정보가 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.');
-            // 로그아웃 처리 후 로그인 페이지로 보냅니다.
+            alert('인증 정보가 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.'); // Authentication expired or invalid. Please log in again.
             Cookies.remove('accessToken', { path: '/' });
             sessionStorage.removeItem('studentId');
-            navigate('/'); // (로그인 페이지 경로)
-            return; // 추가 실행 중단
+            navigate('/');
+            return;
           }
-          // 그 외 에러
           throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
 
-        // JSON 파싱 (ApiResponse 타입 적용)
         const data: ApiResponse = await response.json();
-
-        // API가 반환한 { students: [...] } 배열에서
-        // 세션 스토리지 ID와 일치하는 학생을 찾습니다.
         const foundStudent = data.students.find(
           (student) => student.studentId === targetStudentId
         );
 
         if (foundStudent) {
-          // 학생을 찾았으면, 'profile' 상태를 업데이트합니다.
-          // (주의: API의 profileImage 필드를 앱의 imageUrl 필드로 매핑)
           setProfile({
             name: foundStudent.name,
             imageUrl: foundStudent.profileImage,
           });
         } else {
-          // API 호출은 성공했으나, 리스트에 해당 ID의 학생이 없는 경우
-          console.error(`학생 ID (${targetStudentId})를 찾을 수 없습니다.`);
-          alert('학생 정보를 찾는 데 실패했습니다. 다시 선택해주세요.');
+          alert('학생 정보를 찾는 데 실패했습니다. 다시 선택해주세요.'); // Failed to find student info. Please select again.
           navigate('/select-profile');
         }
-
       } catch (error) {
-        console.error('학생 정보 로드 실패:', error);
-        alert('학생 정보를 불러오는 데 실패했습니다.');
-        navigate('/select-profile'); // 실패 시에도 돌려보내기
+        console.error('학생 정보 로드 실패:', error); // Failed to load student info
+        alert('학생 정보를 불러오는 데 실패했습니다.'); // Failed to load student info
+        navigate('/select-profile');
       } finally {
-        setIsLoading(false); // 로딩 완료 (성공/실패 무관)
+        setIsLoading(false);
       }
     };
-    // --- 여기까지 ---
+    // --- (API 로직 끝) ---
 
-    fetchStudentData(studentIdFromSession); // 함수 실행
-  }, [navigate]); // navigate 함수를 의존성 배열에 추가
+    fetchStudentData(studentIdFromSession);
+  }, [navigate]);
 
-  // 계정 변경 핸들러 (기존과 동일)
-  const handleChangeAccount = () => {
-    navigate('/select-profile');
+  // 게임 시작 애니메이션 핸들러 (내용 동일)
+  const handleStartGame = () => {
+    setIsStartingGame(true); 
+    setTimeout(() => {
+      navigate('/today-game');
+    }, 2500); // 애니메이션 시간(2.5초) 후 이동
   };
 
-  // 로그아웃 핸들러 (기존과 동일)
-  const handleLogout = () => {
-    Cookies.remove('accessToken', { path: '/' });
-    sessionStorage.removeItem('studentId'); // 'selectedStudentId' -> 'studentId' 통일
-    navigate('/');
-  };
-
-  // 로딩 중일 때 표시할 화면 (기존과 동일)
+  // 로딩 중 화면 (내용 동일)
   if (isLoading || !profile) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center bg-gray-100 font-sans">
@@ -181,101 +132,126 @@ export default function StudentDashboard() {
     );
   }
 
-  // 로딩 완료 후 실제 대시보드 화면 (profile 사용 부분만 확인)
+  // --- UI 렌더링 ---
   return (
     <>
       <div
-        className="w-full min-h-screen py-8 bg-cover bg-center flex items-end justify-center font-sans"
-        style={{ backgroundImage: `url('/studentboard/background.png')` }}
+        className="w-full min-h-screen bg-black overflow-hidden relative font-sans" // bg-cover bg-center 제거, bg-black 추가 (비디오 로드 전 배경)
+        // style={{ backgroundImage: `url('/studentboard/background.png')` }} // style 속성 제거
       >
-        <div className="w-full max-w-[1400px] h-[70vh] rounded-3xl shadow-2xl p-8 flex gap-6">
-          <div className="flex-1 flex flex-col gap-6 h-full">
-            <header className="flex items-center justify-between w-full bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-4">
-                <img
-                  src={profile.imageUrl} // 3. 상태(profile)에서 이미지 URL 사용
-                  alt="프로필"
-                  className="w-16 h-16 rounded-full border-4 border-white object-cover shadow-md"
-                />
-                <span className="text-3xl font-bold text-gray-800">
-                  {profile.name} {/* 3. 상태(profile)에서 이름 사용 */}
-                </span>
+        {/* --- 0. 배경 비디오 (추가됨) --- */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline // iOS에서 자동 재생을 위해 추가
+          className="absolute z-0 w-auto h-auto min-w-full min-h-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" // 이 부분으로 변경
+        >
+          <source src="/studentboard/background.mp4" type="video/mp4" />
+          브라우저가 비디오 태그를 지원하지 않습니다.
+        </video>
 
-                <SettingsIcon onClick={openModal} />
-              </div>
-
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleChangeAccount}
-                  className="bg-white/80 text-gray-800 font-semibold px-6 py-2 rounded-xl shadow-md hover:bg-white transition"
-                >
-                  계정 변경
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="bg-white/80 text-gray-800 font-semibold px-6 py-2 rounded-xl shadow-md hover:bg-white transition"
-                >
-                  로그아웃
-                </button>
-              </div>
-            </header>
-
-            {/* ... (메인 카드 그리드) ... (기존과 동일) */}
-            <main className="flex-1 grid grid-cols-3 gap-6">
-              <div className="bg-white/90 rounded-2xl p-6 shadow-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">목표</h2>
-              </div>
-              <div className="col-span-1 flex flex-col gap-6">
-                <div className="bg-white/90 rounded-2xl p-6 shadow-md flex-1 flex flex-col items-center justify-center text-center">
-                  <h2 className="text-xl font-bold text-gray-800 mb-2">
-                    계속 탐험하기
-                  </h2>
-                  <span className="text-3xl font-semibold text-gray-700">
-                    (준비중)
-                  </span>
-                </div>
-                <div className="bg-white/90 rounded-2xl p-6 shadow-md flex-1 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">앵무새와</h2>
-                    <h2 className="text-xl font-bold text-gray-800">메아리</h2>
-                    <h2 className="text-xl font-bold text-gray-800">(준비중)</h2>
-                  </div>
-                  <img
-                    src="/studentboard/parrot.png"
-                    alt="앵무새"
-                    className="w-24 h-24 object-contain"
-                  />
-                </div>
-              </div>
-              <div className="bg-white/90 rounded-2xl p-6 shadow-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">준비중</h2>
-              </div>
-            </main>
+        {/* --- 1. 오른쪽 하단 프로필 바 (수정됨) --- */}
+        <header
+          className="absolute bottom-5 right-5 w-[400px] h-[80px] bg-contain bg-no-repeat z-30" 
+          style={{ backgroundImage: `url('/studentboard/profilebar.png')` }}
+        >
+          <div className="flex items-center h-full pl-2">
+            <img
+              src={profile.imageUrl}
+              alt="프로필"
+              className="w-[64px] h-[64px] rounded-full object-cover border-2 border-yellow-300/50"
+            />
+            <span 
+              className="ml-4 text-3xl font-bold text-white"
+              style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }} 
+            >
+              {profile.name}
+            </span>
           </div>
+        </header>
 
-          {/* ... (오른쪽 나무 버튼 사이드바) ... (기존과 동일) */}
-          <aside className="w-52 flex flex-col justify-center items-center gap-5">
+        {/* --- 2. 오른쪽 상단 나가기 버튼 (수정됨) --- */}
+        <button
+          onClick={() => navigate('/select-profile')}
+          className="absolute top-5 right-5 w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center z-30 hover:bg-gray-100 transition-all active:scale-95" 
+        >
+          <ExitIcon className="w-12 h-12 text-gray-700" />
+        </button>
+
+        {/* --- 3. 중앙 배 & 시작 버튼 (수정 없음) --- */}
+        <div
+          className={`absolute bottom-[-20px] left-1/2 w-[450px] h-[525px]
+                      transition-transform duration-[2000ms] ease-in-out z-20`
+                    }
+          style={{ 
+            transform: isStartingGame 
+              ? 'translate(-50%, -110vh)' 
+              : 'translate(-50%, 0)' 
+          }} 
+        >
+          <img
+            src="/studentboard/ship.png"
+            alt="배와 캐릭터"
+            className="absolute bottom-0 left-0 w-full z-0"
+          />
+          
+          {/* --- 여기가 수정된 부분입니다 --- */}
+          <button
+            onClick={handleStartGame}
+            disabled={isStartingGame}
+            className={`absolute bottom-[30px] left-1/2 -translate-x-1/2 w-42 h-42 z-20
+                      transition-all duration-500 ease-out
+                      hover:scale-110 active:scale-100
+                      ${isStartingGame ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
+          >
+            <img src="/studentboard/playbutton.png" alt="시작하기" />
+          </button>
+        </div>
+
+        {/* --- 4. 왼쪽 사이드 메뉴 (수정된 로직) --- */}
+        <aside 
+          className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
+                      transition-transform duration-500 ease-in-out
+                      ${isMenuOpen ? 'translate-x-0' : '-translate-x-64'}`} // w-64 (256px) 만큼 왼쪽으로 이동
+        >
+          {/* 메뉴 버튼 컨테이너 (순서 변경) */}
+          <div
+            className="w-64 h-full flex flex-col justify-around items-center py-5"
+          >
             {woodenButtons.map((button) => (
               <button
                 key={button.id}
                 onClick={() => navigate(button.path)}
-                className="w-full h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white shadow-md hover:scale-105 transition-transform"
+                className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white shadow-md hover:scale-105 transition-transform"
                 style={{
                   backgroundImage: `url('/studentboard/button.png')`,
+                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
                 }}
               >
                 {button.label}
               </button>
             ))}
-          </aside>
-        </div>
+          </div>
+
+          {/* 메뉴 토글 버튼 (순서 변경, 스타일 수정) */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="w-12 h-24 bg-white/80 rounded-r-2xl shadow-lg flex items-center justify-center z-10 hover:bg-white active:scale-95"
+          >
+            <ChevronLeftIcon
+              className={`w-8 h-8 text-gray-800 transition-transform duration-300 ${
+                isMenuOpen ? 'rotate-0' : 'rotate-180' // 회전 로직 반대로
+              }`}
+            />
+          </button>
+        </aside>
       </div>
 
-      {/* 12. 모달 컴포넌트 렌더링 */}
-      <StudentModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        currentImageUrl={profile.imageUrl} // 3. 상태(profile)에서 이미지 URL 사용
+      {/* --- 5. 게임 시작 시 페이드 아웃 오버레이 (수정 없음) --- */}
+      <div
+        className={`absolute inset-0 bg-sky-600 transition-opacity duration-1500 z-40
+                  ${isStartingGame ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       />
     </>
   );
