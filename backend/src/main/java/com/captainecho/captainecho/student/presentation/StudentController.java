@@ -8,15 +8,18 @@ import com.captainecho.captainecho.student.application.command.AddStudentInteres
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.presentation.request.AddStudentInterestRequest;
 import com.captainecho.captainecho.student.presentation.request.RegisterStudentRequest;
 import com.captainecho.captainecho.student.presentation.response.AddStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.DeleteStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
+import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -130,6 +133,26 @@ public class StudentController {
         DeleteStudentInterestResult result = studentService.deleteStudentInterest(command);
 
         DeleteStudentInterestResponse response = DeleteStudentInterestResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/weekly/jamo/stat")
+    @Operation(summary = "지난주 학습 분석 조회", description = "특정 아동의 지난주 학습 분석(자모별 정답률)을 조회합니다")
+    public ResponseEntity<GetWeeklyJamoStatResponse> getWeeklyJamoStat(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetWeeklyJamoStatCommand command = new GetWeeklyJamoStatCommand(studentId, protectorId);
+        GetWeeklyJamoStatResult result = studentService.getWeeklyJamoStat(command);
+
+        GetWeeklyJamoStatResponse response = GetWeeklyJamoStatResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
