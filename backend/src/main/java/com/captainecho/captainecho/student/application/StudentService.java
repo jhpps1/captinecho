@@ -8,12 +8,15 @@ import com.captainecho.captainecho.interest.domain.SubInterest;
 import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
+import com.captainecho.captainecho.stats.domain.JamoStat;
+import com.captainecho.captainecho.stats.persistence.JamoStatRepository;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
@@ -21,6 +24,7 @@ import com.captainecho.captainecho.student.application.result.DeleteStudentInter
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
@@ -48,6 +52,7 @@ public class StudentService {
     private final ProtectorRepository protectorRepository;
     private final SubInterestRepository subInterestRepository;
     private final DayProblemRepository dayProblemRepository;
+    private final JamoStatRepository jamoStatRepository;
 
     @Transactional
     public RegisterStudentResult registerStudent(RegisterStudentCommand command) {
@@ -318,5 +323,32 @@ public class StudentService {
 
         // 6. 성공 결과 반환
         return new DeleteStudentInterestResult(true);
+    }
+
+    @Transactional(readOnly = true)
+    public GetWeeklyJamoStatResult getWeeklyJamoStat(GetWeeklyJamoStatCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 학생의 모든 자모 통계 조회
+        List<JamoStat> jamoStats = jamoStatRepository.findAllByStudent_StudentId(command.studentId());
+
+        // 4. AccuracyRate 리스트로 변환 및 자모 순서대로 정렬 (정답률은 weeklyAccuracyRate를 정수로 변환)
+        List<GetWeeklyJamoStatResult.AccuracyRate> accuracyRates = jamoStats.stream()
+                .map(stat -> new GetWeeklyJamoStatResult.AccuracyRate(
+                        stat.getJamo(),
+                        stat.getWeeklyAccuracyRate().intValue()
+                ))
+                .sorted((a, b) -> a.jamo().compareTo(b.jamo()))
+                .collect(Collectors.toList());
+
+        return GetWeeklyJamoStatResult.of(accuracyRates);
     }
 }
