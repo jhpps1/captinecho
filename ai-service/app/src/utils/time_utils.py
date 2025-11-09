@@ -24,16 +24,16 @@ def calc_weekly_total_study_time(db, student_id, week_start, week_end):
     from app.src.core.models import LearningSession
     sessions = db.query(LearningSession).filter(
         LearningSession.student_id == student_id,
-        LearningSession.started_at < week_end,
-        LearningSession.ended_at != None,
-        LearningSession.ended_at > week_start
+        LearningSession.start_time < week_end,
+        LearningSession.end_time != None,
+        LearningSession.end_time > week_start
     ).all()
     
     total_seconds = 0
     for s in sessions:
         # 주 경계 보정
-        real_start = max(s.started_at, week_start)
-        real_end = min(s.ended_at, week_end)
+        real_start = max(s.start_time, week_start)
+        real_end = min(s.end_time, week_end)
         elapsed = (real_end - real_start).total_seconds()
         if elapsed > 0:
             total_seconds += elapsed

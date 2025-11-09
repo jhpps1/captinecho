@@ -1,9 +1,9 @@
-#src/crew.py
-
-from crewai import Crew, Agent, Process
+from crewai import Crew, Process
 from crewai.flow.flow import Flow, start, listen
-from app.src.agents import build_academic_agent, build_wellbeing_agent, build_parent_agent
-from app.src.tasks import build_debate_round1
+from app.src.agents import (
+    build_academic_agent, build_wellbeing_agent, build_parent_agent, build_manager_agent
+)
+from app.src.tasks import build_debate_round1, build_manager_task
 from pydantic import BaseModel
 
 class ConvState(BaseModel):
@@ -38,16 +38,30 @@ class DyslexiaConversationFlow(Flow[ConvState]):
             protector_goal=self.student_data.get("protector_goal"),
             small_interest_name=self.student_data.get("small_interest_name")
         )
-        # Task 하나만 사용하는 구조
-        t1 = build_debate_round1(agent=academic_agent, student_data=self.student_data)
+        manager_agent = build_manager_agent()
+
+        # 1) 하위 에이전트 개별 진단 Tasks (병렬 실행)
+        t_academic = build_debate_round1(agent=academic_agent, student_data=self.student_data)
+        t_wellbeing = build_debate_round1(agent=wellbeing_agent, student_data=self.student_data)
+        t_parent = build_debate_round1(agent=parent_agent, student_data=self.student_data)
+        # 2) 매니저 통합 Task(포맷 완전 고정)
+        t_manager = build_manager_task(
+            agent=manager_agent,
+            student_data=self.student_data,
+            context=[t_academic, t_wellbeing, t_parent]
+        )
+
         crew = Crew(
             agents=[academic_agent, wellbeing_agent, parent_agent],
-            tasks=[t1],
-            process=Process.sequential,
+            tasks=[t_academic, t_wellbeing, t_parent, t_manager],
+            manager_agent=manager_agent,
+            process=Process.hierarchical,  # ★ 계층형 병렬 구조로 변경!!
             memory=True,
             verbose=1
         )
         result = crew.kickoff(inputs={"user_input": self.state.user_input})
+
+        # 매니저 Task의 output(=포맷 고정 결과)만 리턴/저장
         output = str(getattr(result, "raw", result))
         self.state.last_output = output
         self.state.history.append(f"USER: {self.state.user_input}")

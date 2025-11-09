@@ -8,18 +8,39 @@ import tempfile # PIL 객체 변환 실패 시 임시 파일 사용을 위해 �
 from google import genai
 from google.genai.errors import APIError
 from PIL import Image
+import unicodedata
+
 
 # 로컬에 이미지 파일을 저장할 기본 디렉토리
 IMAGE_OUTPUT_DIR = "static/problems/images"
 # 디렉토리가 없으면 생성합니다.
 os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
 
-def generate_image_with_gemini_flash(prompt: str, api_key: str) -> str:
+
+def is_hangul_jamo(word: str) -> bool:
+    """
+    입력이 한글 자모(초성/중성/종성)만으로 되어 있으면 True를 반환
+    """
+    word = word.strip()
+    if not word:
+        return False
+    for char in word:
+        name = unicodedata.name(char, '')
+        # 한글 CHOSEONG(초성), JUNGSEONG(중성), JONGSEONG(종성)이 포함되면 자모임
+        if not ('HANGUL' in name and (
+            'CHOSEONG' in name or 'JUNGSEONG' in name or 'JONGSEONG' in name
+        )):
+            return False
+    return True
+
+
+
+def generate_image_with_gemini_flash(problem_text: str, api_key: str) -> str:
     """
     Google GenAI SDK (Imagen 모델)을 사용하여 이미지를 생성하고 로컬 파일 경로를 반환합니다.
     
     Args:
-        prompt (str): 이미지 생성 프롬프트 (correct_answer 텍스트).
+        problem_text (str): 이미지 생성 프롬프트 (correct_answer 텍스트).
         api_key (str): Gemini API Key.
         
     Returns:
@@ -41,12 +62,12 @@ def generate_image_with_gemini_flash(prompt: str, api_key: str) -> str:
     
     # 상세 스타일을 반영한 프롬프트 템플릿
     full_prompt_template = (
-"A **simple and clear object** of a **{prompt}**, highly suitable for a children's educational app. "
-    "Style: **Vibrant, flat color sticker**, crisp vector illustration, with minimal shading. "
-    "**ABSOLUTELY NO BACKGROUND, the background must be transparent.**"
-)
+        f"Subject: {problem_text}\n"
+        "style : simple background, bright colors "
+    )
+    # print(f"✨ Gemini 이미지 생성 요청 프롬프트: '{full_prompt}'")
 
-    full_prompt = full_prompt_template.format(prompt=prompt) 
+    full_prompt = full_prompt_template.format(problem_text=problem_text) 
     
     print(f"✨ Gemini 이미지 생성 요청 프롬프트: '{full_prompt}'") 
     
@@ -93,8 +114,8 @@ def generate_image_with_gemini_flash(prompt: str, api_key: str) -> str:
 
         # 4-3. 파일명 생성 및 경로 설정
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
-        safe_prompt = re.sub(r'[^\w\s-]', '', prompt, flags=re.UNICODE)[:15].strip()
-        filename = f"{safe_prompt}_{timestamp}.png"
+        safe_problem_text = re.sub(r'[^\w\s-]', '', problem_text, flags=re.UNICODE)[:15].strip()
+        filename = f"{safe_problem_text}_{timestamp}.png"
         local_path = os.path.join(IMAGE_OUTPUT_DIR, filename)
         
         # 4-4. 바이트 데이터 저장
