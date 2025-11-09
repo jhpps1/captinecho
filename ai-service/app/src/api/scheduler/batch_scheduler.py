@@ -102,9 +102,9 @@ def total_weekly_batch():
 scheduler.add_job(
     total_weekly_batch,
     'cron',
-    day_of_week='sun',
-    hour=20,
-    minute=58,
+    day_of_week='mon',
+    hour=00,
+    minute=39,
     id="total_weekly_batch",
     timezone=timezone('Asia/Seoul')
 )

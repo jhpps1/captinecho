@@ -1,7 +1,5 @@
 # app/src/utils/problem_job.py
 
-#app/src/service/question_service.py
-
 import re
 import json
 import datetime
@@ -15,7 +13,8 @@ from app.src.utils.s3 import upload_to_local # 로컬 개발용
 from app.src.api.tts_api import generate_tts_and_upload
 from app.src.api.gemini_api import generate_image_with_gemini_flash # <--- import 경로 수정!
 from dotenv import load_dotenv
-
+# from app.src.tasks.enqueue_task import batch_generate_problems_parallel
+from app.src.core.database import SessionLocal
 
 
 load_dotenv()
@@ -135,26 +134,6 @@ def process_day_problem_items(session, student_id, llm_result):
         img_data = item.get("image_data")
         snd_data = item.get("sound_data")
         
-        # # 2. 이미지 처리
-        # if img_data and not is_likely_placeholder(img_data):
-        #     try:
-        #         item["image_url"] = upload_to_local(img_data, key_prefix='problems/')
-        #     except Exception as e:
-        #         print(f"⚠️ Image Base64 Upload Failed for item: {e}")
-        #         item["image_url"] = "" 
-        # else:
-        #     item["image_url"] = ""
-            
-        # # 3. 사운드 처리
-        # if snd_data and not is_likely_placeholder(snd_data):
-        #     try:
-        #         item["sound_url"] = upload_to_local(snd_data, key_prefix='problems/')
-        #     except Exception as e:
-        #         print(f"⚠️ Sound Base64 Upload Failed for item: {e}")
-        #         item["sound_url"] = "problems/default_tts.mp3"
-        # else:
-        #     item["sound_url"] = "problems/default_tts.mp3"
-
 
         generated_sound_path = ""
         blank_position  = None
@@ -297,6 +276,24 @@ def get_interest_id_for_student(session, student_id):
     )
     row = result.first()
     return row[0] if row else 0
+
+
+# enqueue_task.py
+def run_generate_problems_for_one_week(student_id):
+    db = SessionLocal()
+    try:
+        return generate_problems_for_one_week(db, student_id)
+    finally:
+        db.close()
+
+def batch_generate_problems_parallel():
+    db = SessionLocal()
+    try:
+        student_ids = [row[0] for row in db.query(Student.student_id).all()]
+        for sid in student_ids:
+            q.enqueue(run_generate_problems_for_one_week, sid)  # 병렬화!
+    finally:
+        db.close()
 
 
         
@@ -454,6 +451,7 @@ def generate_problems_for_one_week(session, student_id):
         # ====================================================================
         - **날짜 배정:** 모든 문제의 "assigned_date" 필드는 **"{assigned_date}"**로 설정해야 합니다.
         - 이 학생의 관심사 interest_id는 {interest_id} 입니다. 모든 문제의 interest_id도 반드시 {interest_id}로 지정하세요.
+        - 이 학생의 관심사 {small_interest_name}에 맞춘 문제를 출제하세요.
          
         - **구조 준수:** 각 문제는 아래 필드를 반드시 포함하고, 주석 없이 순수 JSON으로 반환하세요.
             "adventure_type_id":1~4, "seq_no": 1~10, "assigned_date": "YYYY-MM-DD", "level": 1~6,

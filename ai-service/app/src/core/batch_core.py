@@ -74,13 +74,11 @@ def fill_reset_and_make_weekly_report(db: Session):
             # 최신 리포트 row 찾기
             report = db.query(WeeklyPersonalReport).filter_by(student_id=student_id).order_by(WeeklyPersonalReport.created_at.desc()).first()
             if report:
-                # 무조건 현재 집계값으로 업데이트
                 report.total_time = total_time
                 report.curriculum = values["curriculum"]
                 report.discussion_log = values["discussion_log"]
                 db.commit()
             else:
-                # 없으면 새로 생성
                 report = WeeklyPersonalReport(
                     student_id=student_id,
                     total_time=total_time,
@@ -91,7 +89,23 @@ def fill_reset_and_make_weekly_report(db: Session):
                 )
                 db.add(report)
                 db.commit()
-
+            # ★★★ 여기서부터 weekly_jamo_stat 적재 (들여쓰기 맞게 for문 밖에서!) ★★★
+            jamos = db.query(JamoStat).filter_by(student_id=student_id).all()
+            for jamo in jamos:
+                print(f"[DEBUG] Weekly 적재: student_id={jamo.student_id}, jamo={jamo.jamo}, total_attempts={jamo.total_attempts}, fail_count={jamo.fail_count}, weekly_fail_rate={jamo.weekly_fail_rate}, weekly_accuracy_rate={jamo.weekly_accuracy_rate}")
+                weekly = WeeklyJamoStat(
+                    student_id=jamo.student_id,
+                    report_id=report.report_id,
+                    jamo=jamo.jamo,
+                    total_attempts=jamo.total_attempts,
+                    fail_count=jamo.fail_count,
+                    weekly_fail_rate=jamo.weekly_fail_rate,
+                    weekly_accuracy_rate=jamo.weekly_accuracy_rate,
+                    created_at=now
+                )
+                db.add(weekly)
+                weekly_stat_written += 1
+            db.commit()
 
         for jamo in jamo_stats:
             jamo.total_attempts = 0

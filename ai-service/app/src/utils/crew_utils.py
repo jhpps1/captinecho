@@ -4,7 +4,19 @@ import os, re, json
 from datetime import datetime
 from app.src.core.models import Student, WeeklyPersonalReport
 
+from app.src.redis_conn import redis_conn
+
+
+CACHE_EXPIRE_SECONDS = 300  # 5분
+# 학생 정보를 Redis 캐시에 저장했다가, 일정 시간(여기서는 5분, 300초) 동안 재사용"
+
+
 def get_student_data(student_id):
+    cache_key = f"student_data:{student_id}"
+    cached = redis_conn.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
     from app.src.core.database import SessionLocal
     db = SessionLocal()
     try:
@@ -14,13 +26,17 @@ def get_student_data(student_id):
             .order_by(WeeklyPersonalReport.created_at.desc()).first()
         if not student:
             return None
-        return {
+        data = {
             "student_id": student.student_id,
             "name": student.name,
             "level": getattr(student, "level", None),
-            "protector_goal": weekly_report.protector_goal if weekly_report else None,
+            "protector_goal": str(weekly_report.protector_goal) if weekly_report and weekly_report.protector_goal is not None else None,  # str 변환!
             "small_interest_name": getattr(student, "small_interest_name", None)
         }
+        # 🚩 캐시 저장은 return 전에 반드시 실행!
+        redis_conn.setex(cache_key, CACHE_EXPIRE_SECONDS, json.dumps(data, ensure_ascii=False))
+        return data
+    
     finally:
         db.close()
 
