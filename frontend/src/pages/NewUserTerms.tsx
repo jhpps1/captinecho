@@ -1,5 +1,7 @@
 import React, { useState, type UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import Cookies from 'js-cookie';
 
 // 스크롤을 생성하기 위한 임시 Lorem Ipsum 텍스트
 const loremIpsum = (
@@ -72,9 +74,36 @@ const GuardianConsent: React.FC = () => {
   };
 
   // '확인' 버튼 클릭 시
-  const handleConfirm = () => {
-    if (isConfirmButtonEnabled) {
+  const handleConfirm = async () => {
+    if (!isConfirmButtonEnabled) {
+      return;
+    }
+
+    try {
+      // 백엔드 API 호출 (약관 동의 상태 업데이트)
+      const accessToken = Cookies.get('accessToken');
+
+      if (!accessToken) {
+        console.error('❌ AccessToken이 없습니다. 로그인이 필요합니다.');
+        navigate('/login');
+        return;
+      }
+
+      await axios.patch(
+        '/api/protector/terms',
+        { termsAgreed: true },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      console.log('✅ 약관 동의 완료');
       navigate('/select-profile');
+    } catch (error) {
+      console.error('❌ 약관 동의 처리 실패:', error);
+      alert('약관 동의 처리에 실패했습니다. 다시 시도해주세요.');
     }
   };
 

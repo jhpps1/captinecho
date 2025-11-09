@@ -36,7 +36,11 @@ public class AuthService {
             throw new EchoException(AuthErrorCode.INVALID_PROVIDER);
         }
 
-        Protector protector = protectorRepository.findByProviderAndSocialId(provider, tokenInfo.socialId())
+        // 신규 회원 여부 판단
+        var existingProtector = protectorRepository.findByProviderAndSocialId(provider, tokenInfo.socialId());
+        boolean isNewUser = existingProtector.isEmpty();
+
+        Protector protector = existingProtector
                 .orElseGet(() -> createNewProtector(provider, tokenInfo.socialId(), tokenInfo.email()));
 
         // 기존 사용자이지만 이메일이 없는 경우 자동 업데이트
@@ -48,7 +52,7 @@ public class AuthService {
 
         String accessToken = jwtUtil.generateAccessToken(protector.getProtectorId());
 
-        return new LoginResult(protector.getProtectorId(), accessToken);
+        return new LoginResult(protector.getProtectorId(), accessToken, isNewUser);
     }
 
     private Protector createNewProtector(Provider provider, String socialId, String email) {
