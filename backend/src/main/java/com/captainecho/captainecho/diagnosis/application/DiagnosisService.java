@@ -52,21 +52,26 @@ public class DiagnosisService {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 이미 진행 중인 진단 세션이 있는지 확인
-        if (diagnosisSessionRepository.existsByStudentStudentIdAndEndTimeIsNull(command.studentId())) {
-            throw new EchoException(DiagnosisErrorCode.DIAGNOSIS_SESSION_ALREADY_IN_PROGRESS);
+        // 3. 기존 세션이 있는지 확인
+        DiagnosisSession session = diagnosisSessionRepository.findById(command.studentId())
+                .orElse(null);
+
+        if (session != null) {
+            // 3-1. 기존 세션이 있으면 start_time 업데이트 (이어하기 불가)
+            session.resetStartTime();
+            diagnosisSessionRepository.save(session);
+            return new StartInitialDiagnosisResult(session.getStudentId());
+        } else {
+            // 3-2. 기존 세션이 없으면 새로 생성
+            DiagnosisSession newSession = DiagnosisSession.builder()
+                    .student(student)
+                    .startTime(LocalDateTime.now())
+                    .endTime(null)
+                    .build();
+
+            DiagnosisSession savedSession = diagnosisSessionRepository.save(newSession);
+            return new StartInitialDiagnosisResult(savedSession.getStudentId());
         }
-
-        // 4. DiagnosisSession 생성 및 저장 (startTime만 설정, endTime은 null)
-        DiagnosisSession session = DiagnosisSession.builder()
-                .student(student)
-                .startTime(LocalDateTime.now())
-                .endTime(null)
-                .build();
-
-        DiagnosisSession savedSession = diagnosisSessionRepository.save(session);
-
-        return new StartInitialDiagnosisResult(savedSession.getStudentId());
     }
 
     @Transactional

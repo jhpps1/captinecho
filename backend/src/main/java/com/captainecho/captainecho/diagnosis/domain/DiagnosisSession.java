@@ -40,4 +40,9 @@ public class DiagnosisSession {
     public void completeSession() {
         this.endTime = LocalDateTime.now();
     }
+
+    public void resetStartTime() {
+        this.startTime = LocalDateTime.now();
+        this.endTime = null;
+    }
 }
