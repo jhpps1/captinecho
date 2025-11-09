@@ -17,6 +17,8 @@ interface Adventure1Props {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
   isTutorialMode: boolean;
+  mode: 'daily' | 'supple';
+  studentId: number;
 }
 
 /**
@@ -30,7 +32,7 @@ interface Adventure1Props {
  * @param problem - API에서 받은 문제 데이터
  * @param onSubmit - 정답 제출 콜백
  */
-export const Adventure1 = ({ problem, onSubmit, isTutorialMode }: Adventure1Props) => {
+export const Adventure1 = ({ problem, onSubmit, isTutorialMode, mode, studentId }: Adventure1Props) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -97,11 +99,13 @@ export const Adventure1 = ({ problem, onSubmit, isTutorialMode }: Adventure1Prop
         realJamo: correctAnswer,
         confusionJamo: option,  // 사용자가 선택한 오답 자모
         phonemePosition: problem.blankPosition || null,  // falsy → null 명시적 변환
+        studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
+        dayProblemId: problem.dayProblemId,  // 문제 ID
       };
       console.log('🔍 Adventure1 오답 API 전송 데이터:', payload);
       console.log('🔍 problem 객체:', problem);
 
-      submitSessionCorrect(problem.studentId, payload).catch(error => {
+      submitSessionCorrect(studentId, payload).catch(error => {
         console.error('❌ 오답 학습 데이터 수집 실패:', error);
         console.error('❌ 에러 응답:', error.response?.data);
         // 에러 발생해도 문제 진행은 계속

@@ -9,6 +9,8 @@ export interface AdventureViewProps {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
   isTutorialMode: boolean;
+  mode: 'daily' | 'supple';
+  studentId: number;
 }
 
 // ProblemRunner Props
@@ -118,6 +120,8 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
           realJamo: correctAnswer,                    // 정답 자모
           confusionJamo: null,                        // 정답이므로 혼동 자모 없음
           phonemePosition: currentProblem.blankPosition, // 음소 위치
+          studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
+          dayProblemId: currentProblem.dayProblemId,  // 문제 ID
         });
         console.log(`✅ 학습 데이터 수집 완료 (Adventure${adventureTypeId}): 자모=${correctAnswer}, 위치=${currentProblem.blankPosition}`);
 
@@ -129,11 +133,13 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
 
         await submitSessionCorrect(studentId, {
           isCorrect: isCorrect,
-          realJamo: correctAnswer,    // 정답 단어
+          realJamo: null,    // 정답 단어
           confusionJamo: null,        // 정답이므로 혼동 없음
           phonemePosition: null,      // 단어 문제는 음소 위치 없음
+          studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
+          dayProblemId: currentProblem.dayProblemId,  // 문제 ID
         });
-        console.log(`✅ 학습 데이터 수집 완료 (Adventure3): 단어=${correctAnswer}`);
+        console.log(`✅ 학습 데이터 수집 완료 (Adventure3): is_completed만 처리, jamo_stat 건너뜀`);
 
       } else if (adventureTypeId === 4) {
         // Adventure4 (말하기)
@@ -146,6 +152,8 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
           realJamo: currentProblem.questionText, // 정답 단어
           confusionJamo: null,                   // 말하기는 혼동 자모 없음
           phonemePosition: null,                 // 말하기 문제는 음소 위치 없음
+          studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
+          dayProblemId: currentProblem.dayProblemId,  // 문제 ID
         });
         console.log(`✅ 학습 데이터 수집 완료 (Adventure4): 단어=${currentProblem.questionText}`);
       }
@@ -155,36 +163,11 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
     }
 
     // ========================================
-    // 2. 문제 완료 처리 (/adventure/result API)
+    // 2. 문제 완료 처리
     // ========================================
-    // 결과 데이터 생성
-    const result: AnswerResult = {
-      dayProblemId: currentProblem.dayProblemId,
-      studentId: currentProblem.studentId,
-      isCorrect: true, // 프론트엔드에서 검증 완료 후 호출되므로 true
-      attemptCount: attempts,
-      submittedAt: new Date().toISOString(),
-    };
-
-    // TODO: API 개발되면 수정 예정
-    // 현재: POST /api/student/{studentId}/adventure/result 엔드포인트 미구현 (404 에러)
-    // 추후: 백엔드 API 구현 후 isCompleted 필드 업데이트 처리
-    // ✅ 매 문제마다 즉시 백엔드에 제출 시도
-    try {
-      await submitSingleProblemResult(studentId, result);
-      console.log(`✅ 문제 ${currentProblem.dayProblemId} 결과 제출 완료`);
-
-      // 제출 성공 후 로컬 상태에도 기록
-      setCompletedResults((prev) => [...prev, result]);
-    } catch (error) {
-      console.error(`❌ 문제 ${currentProblem.dayProblemId} 결과 제출 실패:`, error);
-      // TODO: 에러 처리 (재시도, 사용자 알림 등)
-      // 일단 로컬에는 저장하고 계속 진행
-      setCompletedResults((prev) => [...prev, result]);
-    }
-
-    // TODO: API 개발되면 수정 예정
-    // 임시: 현재 문제를 완료 상태로 표시하고 부모에게 알림 (localStorage 업데이트용)
+    // /session/correct API에서 is_completed를 이미 처리하므로
+    // 별도의 result API 호출은 불필요
+    // 로컬 상태 업데이트
     currentProblem.isCompleted = true;
     if (onProblemComplete) {
       onProblemComplete(currentProblem.dayProblemId);
@@ -279,6 +262,8 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         problem={currentProblem}
         onSubmit={(answer) => handleSubmit(answer, attemptCount)}
         isTutorialMode={isTutorialMode}
+        mode={mode}
+        studentId={studentId}
       />
 
       {/* 개발용: 오답 버튼 (실제로는 각 Adventure 컴포넌트 내부에서 처리) */}

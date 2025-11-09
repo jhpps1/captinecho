@@ -101,6 +101,36 @@ export const DailyRunner = () => {
   // studentId 검증
   const parsedStudentId = studentId ? parseInt(studentId, 10) : null;
 
+  // 페이지 이탈 시 세션 종료
+  useEffect(() => {
+    if (!parsedStudentId || !session.isActive) return;
+
+    // 컴포넌트 언마운트 시 세션 종료 (다른 페이지로 이동)
+    const cleanup = async () => {
+      try {
+        console.log('🚪 페이지 이탈 감지, 세션 종료 중...');
+        await endAdventure(parsedStudentId);
+      } catch (err) {
+        console.error('❌ 페이지 이탈 시 세션 종료 실패:', err);
+      }
+    };
+
+    // 브라우저 닫기/새로고침 감지
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (session.isActive) {
+        // 세션이 활성화되어 있으면 동기적으로 종료 시도
+        navigator.sendBeacon(`/api/student/${parsedStudentId}/adventure/end`);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanup(); // 언마운트 시 세션 종료
+    };
+  }, [session.isActive, parsedStudentId]);
+
 // studentId 검증 및 세션 복원
   useEffect(() => {
     if (!parsedStudentId || isNaN(parsedStudentId)) {
@@ -230,10 +260,10 @@ export const DailyRunner = () => {
           <p className="text-xl text-gray-600 mb-2">오늘의 탐험을 성공적으로 마쳤어요!</p>
           <p className="text-sm text-gray-500 mb-8">내일 또 만나요! ✨</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/student')}
             className="px-8 py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600 transition-colors"
           >
-            메인으로 돌아가기
+            돌아가기
           </button>
         </div>
       </div>
@@ -288,7 +318,10 @@ export const DailyRunner = () => {
 
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   return (
-    <AdventureLayout adventureTypeId={currentAdventureTypeId}>
+    <AdventureLayout
+      adventureTypeId={currentAdventureTypeId}
+      onExitConfirm={handleEndAdventure}
+    >
       {(isTutorialMode) => (
         <ProblemRunner
           problems={problems}

@@ -10,6 +10,8 @@ interface Adventure3Props {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
   isTutorialMode: boolean;
+  mode: 'daily' | 'supple';
+  studentId: number;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Adventure3Props {
  * @param problem - API에서 받은 문제 데이터
  * @param onSubmit - 정답 제출 콜백
  */
-export const Adventure3 = ({ problem, onSubmit, isTutorialMode }: Adventure3Props) => {
+export const Adventure3 = ({ problem, onSubmit, isTutorialMode, mode, studentId }: Adventure3Props) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [wrongAnswers, setWrongAnswers] = useState<string[]>([]);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -49,21 +51,8 @@ export const Adventure3 = ({ problem, onSubmit, isTutorialMode }: Adventure3Prop
       setIsAnimating(true);
       setWrongAnswers((prev) => [...prev, option]);
 
-      // 오답 학습 데이터 수집 (단어 문제)
-      const payload = {
-        isCorrect: false,
-        realJamo: correctAnswer,
-        confusionJamo: option,  // 사용자가 선택한 오답 단어
-        phonemePosition: null,  // 단어 문제는 음소 위치 없음
-      };
-      console.log('🔍 Adventure3 오답 API 전송 데이터:', payload);
-      console.log('🔍 problem 객체:', problem);
-
-      submitSessionCorrect(problem.studentId, payload).catch(error => {
-        console.error('❌ 오답 학습 데이터 수집 실패:', error);
-        console.error('❌ 에러 응답:', error.response?.data);
-        // 에러 발생해도 문제 진행은 계속
-      });
+      // Adventure3(단어 선택)은 오답 패턴을 수집하지 않음
+      // is_completed만 ProblemRunner에서 처리됨
 
       setAttemptCount((prev) => prev + 1);
 

@@ -39,6 +39,36 @@ export const SuppleRunner = () => {
   const parsedStudentId = studentId ? parseInt(studentId, 10) : null;
   const parsedTypeId = typeId ? parseInt(typeId, 10) : null;
 
+  // 페이지 이탈 시 세션 종료
+  useEffect(() => {
+    if (!parsedStudentId || !session.isActive) return;
+
+    // 컴포넌트 언마운트 시 세션 종료 (다른 페이지로 이동)
+    const cleanup = async () => {
+      try {
+        console.log('🚪 페이지 이탈 감지, 세션 종료 중...');
+        await endAdventure(parsedStudentId);
+      } catch (err) {
+        console.error('❌ 페이지 이탈 시 세션 종료 실패:', err);
+      }
+    };
+
+    // 브라우저 닫기/새로고침 감지
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (session.isActive) {
+        // 세션이 활성화되어 있으면 동기적으로 종료 시도
+        navigator.sendBeacon(`/api/student/${parsedStudentId}/adventure/end`);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanup(); // 언마운트 시 세션 종료
+    };
+  }, [session.isActive, parsedStudentId]);
+
   // studentId, typeId 검증만 수행 (자동 로드 제거)
   useEffect(() => {
     if (!parsedStudentId || isNaN(parsedStudentId)) {
@@ -123,19 +153,28 @@ export const SuppleRunner = () => {
   const handleCompletionConfirm = () => {
     navigate(`/student`);
   };
- // 시작 대기 화면 (세션이 활성화되지 않았을 때)
+
+  // 완료 화면 - CompletionModal만 표시 (최우선)
+  if (isCompleted) {
+    return (
+      <CompletionModal
+        isOpen={true}
+        onConfirm={handleCompletionConfirm}
+      />
+    );
+  }
+
+  // 시작 대기 화면 (세션이 활성화되지 않았을 때)
   if (!session.isActive && !isLoading && !error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50
-  to-green-100">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
         <div className="text-center bg-white p-10 rounded-2xl shadow-xl">
           <h1 className="text-4xl font-bold text-green-600 mb-4">📚 추가학습</h1>
           <p className="text-xl text-gray-600 mb-8">선택한 유형의 학습을 시작할 준비가 되셨나요?</p>
           <button
             onClick={handleStartAdventure}
             disabled={isStarting}
-            className="px-8 py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600
-  disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="px-8 py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             {isStarting ? '시작 중...' : '학습 시작하기'}
           </button>
@@ -143,6 +182,7 @@ export const SuppleRunner = () => {
       </div>
     );
   }
+
   // 로딩 화면
   if (isLoading) {
     return (
@@ -170,20 +210,13 @@ export const SuppleRunner = () => {
     );
   }
 
-  // 완료 화면 - CompletionModal만 표시
-  if (isCompleted) {
-    return (
-      <CompletionModal
-        isOpen={true}
-        onConfirm={handleCompletionConfirm}
-      />
-    );
-  }
-
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   // 추가학습은 모든 문제가 같은 타입이므로 parsedTypeId를 직접 사용
   return (
-    <AdventureLayout adventureTypeId={parsedTypeId as 1 | 2 | 3 | 4}>
+    <AdventureLayout
+      adventureTypeId={parsedTypeId as 1 | 2 | 3 | 4}
+      onExitConfirm={handleEndAdventure}
+    >
       {(isTutorialMode) => (
         <ProblemRunner
           problems={problems}

@@ -220,9 +220,11 @@ export const submitSessionCorrect = async (
   studentId: number,
   data: {
     isCorrect: boolean;
-    realJamo: string;
+    realJamo: string | null;
     confusionJamo?: string | null;
     phonemePosition?: string | null;
+    studyType: 'DAILY' | 'SUPPLE';
+    dayProblemId: number;
   }
 ): Promise<void> => {
   // 백엔드 API 형식에 맞게 요청 데이터 구성
@@ -231,6 +233,8 @@ export const submitSessionCorrect = async (
     realJamo: data.realJamo ?? null,           // undefined → null 변환
     confusionJamo: data.confusionJamo ?? null,
     phonemePosition: data.phonemePosition ?? null,
+    studyType: data.studyType,
+    dayProblemId: data.dayProblemId,
   };
 
   console.log('📤 /session/correct 요청:', {

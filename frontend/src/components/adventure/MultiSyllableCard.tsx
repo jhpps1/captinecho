@@ -45,9 +45,9 @@ export const MultiSyllableCard = ({
 
     const isTarget = isTargetInitial || isTargetFinal || isTargetMedial;
 
-    // 정답 맞추기 전이면 회색, 맞춘 뒤면 검정
+    // 정답 맞추기 전이면 검은 테두리 사각형, 맞춘 뒤면 검정
     if (isTarget && !isAnswered) {
-      return 'text-gray-300';
+      return 'text-white border-4 border-black bg-white px-2 py-1 rounded';
     }
     return 'text-gray-800';
   };

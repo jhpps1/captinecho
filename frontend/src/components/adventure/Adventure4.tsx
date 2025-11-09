@@ -10,6 +10,8 @@ interface Adventure4Props {
   problem: Problem;
   onSubmit: (answer: unknown, attemptCount: number) => void;
   isTutorialMode: boolean;
+  mode: 'daily' | 'supple';
+  studentId: number;
 }
 
 /**
@@ -23,7 +25,7 @@ interface Adventure4Props {
  * @param problem - API에서 받은 문제 데이터
  * @param onSubmit - 정답 제출 콜백
  */
-export const Adventure4 = ({ problem, onSubmit, isTutorialMode }: Adventure4Props) => {
+export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId }: Adventure4Props) => {
   const [isRecording, setIsRecording] = useState(false);
   const [attemptCount, setAttemptCount] = useState(1);
   const [showSpeakerButton, setShowSpeakerButton] = useState(false);
@@ -62,21 +64,8 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode }: Adventure4Prop
       setShowFeedback(true);
       setIsCorrectAnswer(false);
 
-      // 오답 학습 데이터 수집 (말하기 문제)
-      const payload = {
-        isCorrect: false,
-        realJamo: problem.questionText,  // 정답 단어
-        confusionJamo: null,             // 말하기는 혼동 자모 없음
-        phonemePosition: null,           // 음소 위치 없음
-      };
-      console.log('🔍 Adventure4 오답 API 전송 데이터:', payload);
-      console.log('🔍 problem 객체:', problem);
-
-      submitSessionCorrect(problem.studentId, payload).catch(error => {
-        console.error('❌ 오답 학습 데이터 수집 실패:', error);
-        console.error('❌ 에러 응답:', error.response?.data);
-        // 에러 발생해도 문제 진행은 계속
-      });
+      // Adventure4(말하기)는 오답 패턴을 수집하지 않음
+      // is_completed만 ProblemRunner에서 처리됨
 
       setAttemptCount(prev => {
         const newCount = prev + 1;

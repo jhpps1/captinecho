@@ -8,6 +8,7 @@ import { useTutorialVoice } from '../../hooks/useTutorialVoice';
 interface AdventureLayoutProps {
   children: (isTutorialMode: boolean) => ReactNode;
   adventureTypeId?: 1 | 2 | 3 | 4; // 탐험 유형 (배경 변경용)
+  onExitConfirm?: () => void | Promise<void>; // 나가기 확인 시 호출되는 콜백
 }
 
 /**
@@ -21,7 +22,7 @@ interface AdventureLayoutProps {
  *
  * @param children - DailyRunner 또는 SuppleRunner
  */
-export const AdventureLayout = ({ children, adventureTypeId }: AdventureLayoutProps) => {
+export const AdventureLayout = ({ children, adventureTypeId, onExitConfirm }: AdventureLayoutProps) => {
   const navigate = useNavigate();
   const [isTutorialMode, setIsTutorialMode] = useState(false);
   const { playVoice, stopVoice } = useTutorialVoice();
@@ -104,7 +105,11 @@ export const AdventureLayout = ({ children, adventureTypeId }: AdventureLayoutPr
       <TutorialOverlay active={isTutorialMode} />
 
       {/* 상단 액션 바 (튜토리얼/나가기) */}
-      <TopActionsBar onTutorialClick={handleTutorialClick} isCompleted={false} />
+      <TopActionsBar
+        onTutorialClick={handleTutorialClick}
+        onExitConfirm={onExitConfirm}
+        isCompleted={false}
+      />
 
       {/* Runner 컴포넌트 렌더링 */}
       <div className="relative z-10 flex-1 flex items-center justify-center">

@@ -7,6 +7,7 @@ import { CompletionModal } from './modals/CompletionModal';
 
 type TopActionsBarProps = {
   onTutorialClick: () => void;
+  onExitConfirm?: () => void | Promise<void>;
   isCompleted?: boolean;
 };
 
