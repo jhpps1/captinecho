@@ -1,6 +1,8 @@
 package com.captainecho.captainecho.student.application;
 
 import com.captainecho.captainecho.adventure.persistence.DayProblemRepository;
+import com.captainecho.captainecho.common.domain.PhonemeFeature;
+import com.captainecho.captainecho.common.persistence.PhonemeFeatureRepository;
 import com.captainecho.captainecho.common.storage.FileStorageService;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
@@ -55,6 +57,7 @@ public class StudentService {
     private final ProtectorRepository protectorRepository;
     private final SubInterestRepository subInterestRepository;
     private final DayProblemRepository dayProblemRepository;
+    private final PhonemeFeatureRepository phonemeFeatureRepository;
     private final JamoStatRepository jamoStatRepository;
     private final FileStorageService fileStorageService;
 
@@ -112,7 +115,23 @@ public class StudentService {
 
         studentInterestRepository.saveAll(studentInterests);
 
-        // 7. 결과 반환
+        // 7. phoneme_feature 테이블의 모든 자모로 JamoStat 초기화
+        List<PhonemeFeature> allPhonemes = phonemeFeatureRepository.findAll();
+        List<JamoStat> initialJamoStats = allPhonemes.stream()
+                .map(phoneme -> JamoStat.builder()
+                        .student(savedStudent)
+                        .jamo(String.valueOf(phoneme.getPhoneme()))
+                        .totalAttempts((short) 0)
+                        .failCount((short) 0)
+                        .weeklyFailRate(0.0)
+                        .weeklyAccuracyRate(100.0)
+                        .updatedAt(java.time.LocalDateTime.now())
+                        .build())
+                .toList();
+
+        jamoStatRepository.saveAll(initialJamoStats);
+
+        // 8. 결과 반환
         return new RegisterStudentResult(true);
     }
 
