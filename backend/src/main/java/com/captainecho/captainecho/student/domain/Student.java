@@ -73,4 +73,13 @@ public class Student {
         this.grade = grade;
         this.level = level;
     }
+
+    /**
+     * 프로필 이미지를 업데이트합니다.
+     *
+     * @param imageUrl 새로운 프로필 이미지 URL
+     */
+    public void updateProfileImage(String imageUrl) {
+        this.profileImage = imageUrl;
+    }
 }

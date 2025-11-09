@@ -2,6 +2,14 @@ spring:
   application:
     name: captainecho
 
+  # 파일 업로드 설정
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 5MB
+      file-size-threshold: 2KB
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
@@ -96,3 +104,14 @@ management:
   endpoint:
     health:
       show-details: always
+
+# 파일 저장 설정
+file:
+  storage:
+    type: ${FILE_STORAGE_TYPE:local}  # local 또는 s3
+    location: ${FILE_STORAGE_LOCATION:uploads}  # 로컬 저장 경로
+  upload:
+    profile-images:
+      path: ${FILE_UPLOAD_PROFILE_PATH:profiles}
+      max-size: 5242880  # 5MB in bytes
+      allowed-extensions: jpg,jpeg,png,webp

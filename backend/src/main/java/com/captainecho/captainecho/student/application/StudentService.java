@@ -1,6 +1,7 @@
 package com.captainecho.captainecho.student.application;
 
 import com.captainecho.captainecho.adventure.persistence.DayProblemRepository;
+import com.captainecho.captainecho.common.storage.FileStorageService;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
@@ -19,6 +20,7 @@ import com.captainecho.captainecho.student.application.command.GetStudentInteres
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
+import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
@@ -26,6 +28,7 @@ import com.captainecho.captainecho.student.application.result.GetDailyGoalCountR
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
+import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
 import com.captainecho.captainecho.student.persistence.StudentInterestRepository;
@@ -53,6 +56,7 @@ public class StudentService {
     private final SubInterestRepository subInterestRepository;
     private final DayProblemRepository dayProblemRepository;
     private final JamoStatRepository jamoStatRepository;
+    private final FileStorageService fileStorageService;
 
     @Transactional
     public RegisterStudentResult registerStudent(RegisterStudentCommand command) {
@@ -350,5 +354,44 @@ public class StudentService {
                 .collect(Collectors.toList());
 
         return GetWeeklyJamoStatResult.of(accuracyRates);
+    }
+
+    /**
+     * 학생 프로필 이미지를 업데이트합니다.
+     *
+     * @param command 프로필 이미지 업데이트 명령 (protectorId, studentId, file)
+     * @return 업데이트 결과 (success, imageUrl)
+     * @throws EchoException 학생을 찾을 수 없거나, 접근 권한이 없거나, 파일이 유효하지 않은 경우
+     */
+    @Transactional
+    public UpdateProfileImageResult updateProfileImage(UpdateProfileImageCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인 (접근 권한)
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 학생 엔티티 조회
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+
+        // 4. 기존 프로필 이미지가 있으면 삭제
+        if (student.getProfileImage() != null && !student.getProfileImage().isEmpty()) {
+            fileStorageService.delete(student.getProfileImage());
+        }
+
+        // 5. 새로운 프로필 이미지 저장 (prefix: "profiles")
+        String storedFilePath = fileStorageService.store(command.file(), "profiles");
+
+        // 6. 학생 엔티티의 프로필 이미지 업데이트
+        student.updateProfileImage(storedFilePath);
+
+        // 7. URL 생성 및 결과 반환
+        String imageUrl = fileStorageService.getFileUrl(storedFilePath);
+        return new UpdateProfileImageResult(true, imageUrl);
     }
 }
