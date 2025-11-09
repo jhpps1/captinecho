@@ -9,11 +9,11 @@ import org.springframework.web.multipart.MultipartFile;
 public interface FileStorageService {
 
     /**
-     * 파일을 저장하고 저장된 파일의 URL 또는 경로를 반환합니다.
+     * 파일을 저장하고 저장된 파일 경로를 반환합니다.
      *
      * @param file 저장할 파일
      * @param prefix 파일 저장 경로의 접두사 (예: "profiles", "avatars")
-     * @return 저장된 파일의 URL 또는 경로
+     * @return 저장된 파일의 상대 경로
      */
     String store(MultipartFile file, String prefix);
 
