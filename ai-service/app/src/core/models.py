@@ -5,8 +5,8 @@ from .database import Base
 import enum
 
 class Gender(enum.Enum):
-    남 = "남"
-    여 = "여"
+    MALE = "MALE"
+    FEMALE = "FEMALE"
 
 
 
@@ -19,7 +19,7 @@ class DayProblem(Base):
     assigned_date = Column(Date, nullable=False)
     seq_no = Column(Integer, nullable=False)
     level = Column(Integer, nullable=False)
-    question_text = Column(Text, nullable=False)
+    problem_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False)
     is_completed = Column(Boolean, nullable=False, default=False)
     
@@ -28,7 +28,7 @@ class DayProblem(Base):
     hint = Column(Text)
     image_url = Column(Text)
     sound_url = Column(Text)
-    question_phonemes = Column(Text)
+    problem_phonemes = Column(Text)
     blank_position = Column(Text)
     # blank_phoneme = Column(Text)
     choices = Column(Text)  # JSON string or list
@@ -57,10 +57,10 @@ class ErrorPattern(Base):
 
 class LearningSession(Base):
     __tablename__ = "learning_session"
-    learning_session_id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("student.student_id"))
-    started_at = Column(DateTime)
-    ended_at = Column(DateTime)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
     study_type = Column(String(20))
     # 기타 세션 관련 필드
 
@@ -80,10 +80,9 @@ class LevelHistory(Base):
     new_level = Column(String(10))
 
 class ProtectorGoalType(enum.Enum):
-    자모학습 = "자모 학습"
-    받침학습 = "받침학습"
-    단어연습 = "단어 연습"
-    취약점위주 = "취약점 위주"
+    FOCUS_ON_WEAKNESS = "FOCUS_ON_WEAKNESS"
+    INCREASE_DIFFICULTY = "INCREASE_DIFFICULTY"
+    BUILD_CONFIDENCE = "BUILD_CONFIDENCE"
 
 # 3. WEEKLY_PERSONAL_REPORT (네가 이미 쓰던 리포트)
 class WeeklyPersonalReport(Base):
@@ -98,7 +97,7 @@ class WeeklyPersonalReport(Base):
             ProtectorGoalType,
             values_callable=lambda x: [e.value for e in x]
         ),
-        nullable=True
+        
     )
     created_at = Column(DateTime)
 
@@ -127,4 +126,18 @@ class JamoStat(Base):
     weekly_fail_rate = Column(Float, default=0.0)
     weekly_accuracy_rate = Column(Float, default=0.0)
     updated_at = Column(DateTime)
+
+
+class StudentInterest(Base):
+    __tablename__ = "student_interest"
+    student_interest_id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("student.student_id"))
+    interest_id = Column(SmallInteger)  # FK이어도 되고 단순 코드여도 됨
+    created_at = Column(DateTime)
+
+class SubInterest(Base):
+    __tablename__ = "sub_interest"
+    sub_interest_id = Column(Integer, primary_key=True, autoincrement=True)
+    small_interest_name = Column(String, nullable=False)  # 예: '공룡 그림 읽기' 등
+    # 필요하다면 다른 컬럼도 추가 가능
 

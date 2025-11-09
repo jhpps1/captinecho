@@ -2,6 +2,7 @@
 
 from crewai import Task
 
+
 # expected_output 구역을 반드시 구분! (파싱/저장에 중요)
 def build(agent, student_data, context):
     """
