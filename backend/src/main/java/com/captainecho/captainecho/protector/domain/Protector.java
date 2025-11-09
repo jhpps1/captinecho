@@ -42,6 +42,10 @@ public class Protector {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "terms_agreed", nullable = false)
+    @ColumnDefault("false")
+    private Boolean termsAgreed = false;
+
     @Column(name = "is_deleted", nullable = false)
     @ColumnDefault("false")
     private Boolean isDeleted = false;
@@ -56,6 +60,7 @@ public class Protector {
         this.socialId = socialId;
         this.email = email;
         this.maxStudentCount = maxStudentCount != null ? maxStudentCount : 2;
+        this.termsAgreed = false;
         this.isDeleted = false;
     }
 
@@ -75,5 +80,9 @@ public class Protector {
 
     public void updateEmail(String email) {
         this.email = email;
+    }
+
+    public void updateTermsAgreed(Boolean termsAgreed) {
+        this.termsAgreed = termsAgreed;
     }
 }
