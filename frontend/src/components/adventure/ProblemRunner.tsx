@@ -268,16 +268,6 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         studentId={studentId}
       />
 
-      {/* 개발용: 오답 버튼 (실제로는 각 Adventure 컴포넌트 내부에서 처리) */}
-      <div className="fixed bottom-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
-        <button
-          onClick={handleWrongAnswer}
-          className="text-sm text-red-500 hover:text-red-700"
-        >
-          오답 처리 (시도: {attemptCount})
-        </button>
-      </div>
-
       {/* 개발용: 문제 네비게이션 버튼 */}
       <div className="fixed bottom-4 right-4 flex gap-2 z-50">
         <button
