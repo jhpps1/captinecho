@@ -26,13 +26,27 @@ def get_student_data(student_id):
 
 def extract_final_results(history):
     full_text = "\n".join(history)
-    curriculum_match = re.search(
-        r'\[월~금 커리큘럼\](.*?)(?=\n논의 및 합의 요약:)', full_text, re.DOTALL)
-    curriculum = curriculum_match.group(1).strip() if curriculum_match else ""
-    discussion_match = re.search(
-        r'\n논의 및 합의 요약:(.*?)(?=\n\[월~금 커리큘럼\]|$)', full_text, re.DOTALL)
-    discussion_log = discussion_match.group(1).strip() if discussion_match else ""
+    # 1) 맨 마지막 [월~금 커리큘럼] 위치
+    last_cur = full_text.rfind('[월~금 커리큘럼]')
+    if last_cur == -1:
+        return "", ""
+    after_cur = full_text[last_cur:]
+    # 2) 논의 및 합의 요약: 구간 찾기
+    summary_pos = after_cur.find('논의 및 합의 요약:')
+    if summary_pos == -1:
+        curriculum = after_cur[len('[월~금 커리큘럼]'):].strip()
+        discussion_log = ""
+    else:
+        curriculum = after_cur[len('[월~금 커리큘럼]'):summary_pos].strip()
+        rest_txt = after_cur[summary_pos+len('논의 및 합의 요약:'):]
+        # 다음 [월~금 커리큘럼] 나오기 전까지 or 끝까지
+        next_cur = rest_txt.find('[월~금 커리큘럼]')
+        if next_cur == -1:
+            discussion_log = rest_txt.strip()
+        else:
+            discussion_log = rest_txt[:next_cur].strip()
     return curriculum, discussion_log
+
 
 def save_report_via_api(student_id, curriculum, discussion_log):
     import requests

@@ -64,7 +64,6 @@ def generate_image_with_gemini_flash(problem_text: str, api_key: str) -> str:
     full_prompt_template = (
         f"Subject: {problem_text}\n"
         "style : simple background, bright colors "
-
     )
     # print(f"✨ Gemini 이미지 생성 요청 프롬프트: '{full_prompt}'")
 

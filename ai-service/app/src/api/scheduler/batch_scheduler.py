@@ -8,6 +8,19 @@ from app.src.utils.problem_job import generate_problems_for_one_week
 import logging
 from pytz import timezone
 
+
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("output.log", encoding="utf-8"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+
 logger = logging.getLogger("scheduler")
 scheduler = BackgroundScheduler()
 
@@ -90,8 +103,8 @@ scheduler.add_job(
     total_weekly_batch,
     'cron',
     day_of_week='sun',
-    hour=3,
-    minute=21,
+    hour=15,
+    minute=2,
     id="total_weekly_batch",
     timezone=timezone('Asia/Seoul')
 )
