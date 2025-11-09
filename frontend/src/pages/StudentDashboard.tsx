@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 
 // 오른쪽 나무 버튼 데이터 (내용 동일)
-const woodenButtons = [
-  { id: 1, label: '자모맞추기', path: '/adventure/1' },
-  { id: 2, label: '글자합치기', path: '/adventure/2' },
-  { id: 3, label: '그림맞추기', path: '/adventure/3' },
-  { id: 4, label: '단어읽기', path: '/adventure/4' },
-];
+  const woodenButtons = [
+    { id: 1, label: '자모맞추기', typeId: 1 },
+    { id: 2, label: '글자합치기', typeId: 2 },
+    { id: 3, label: '그림맞추기', typeId: 3 },
+    { id: 4, label: '단어읽기', typeId: 4 },
+  ];
 
 // 학생 프로필 데이터 타입 (내용 동일)
 interface StudentProfile {
@@ -117,7 +117,8 @@ export default function StudentDashboard() {
   const handleStartGame = () => {
     setIsStartingGame(true); 
     setTimeout(() => {
-      navigate('/today-game');
+      const studentId = sessionStorage.getItem('studentId');
+      navigate(`/daily/${studentId}`);  // ✅ 올바른 경로
     }, 2500); // 애니메이션 시간(2.5초) 후 이동
   };
 
@@ -222,7 +223,9 @@ export default function StudentDashboard() {
             {woodenButtons.map((button) => (
               <button
                 key={button.id}
-                onClick={() => navigate(button.path)}
+                onClick={() =>  {const studentId = sessionStorage.getItem('studentId');
+        navigate(`/adventure/${studentId}/${button.typeId}`);  // ✅ 올바른 경로
+      }}
                 className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white shadow-md hover:scale-105 transition-transform"
                 style={{
                   backgroundImage: `url('/studentboard/button.png')`,
