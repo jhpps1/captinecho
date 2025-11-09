@@ -23,7 +23,9 @@ public enum StudentErrorCode implements ErrorCode {
     // 404 NOT FOUND
     STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40401", "학생을 찾을 수 없습니다"),
     NO_ONGOING_SESSION(HttpStatus.NOT_FOUND, "ST40402", "진행 중인 학습 세션이 없습니다"),
-    STUDENT_INTEREST_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40403", "학생 관심사를 찾을 수 없습니다");
+    STUDENT_INTEREST_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40403", "학생 관심사를 찾을 수 없습니다"),
+    PROBLEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40404", "문제를 찾을 수 없습니다"),
+    PROBLEM_NOT_ASSIGNED(HttpStatus.FORBIDDEN, "ST40302", "해당 문제는 학생에게 할당되지 않았습니다");
 
     private final HttpStatus httpStatus;
     private final String code;
