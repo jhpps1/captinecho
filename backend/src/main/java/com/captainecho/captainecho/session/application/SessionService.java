@@ -1,5 +1,7 @@
 package com.captainecho.captainecho.session.application;
 
+import com.captainecho.captainecho.adventure.domain.DayProblem;
+import com.captainecho.captainecho.adventure.persistence.DayProblemRepository;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
 import com.captainecho.captainecho.session.domain.ErrorPattern;
@@ -30,6 +32,7 @@ public class SessionService {
     private final LearningSessionRepository learningSessionRepository;
     private final ErrorPatternRepository errorPatternRepository;
     private final JamoStatRepository jamoStatRepository;
+    private final DayProblemRepository dayProblemRepository;
 
     @Transactional
     public RecordAnswerResult recordAnswer(RecordAnswerCommand command) {
@@ -99,6 +102,28 @@ public class SessionService {
 
             // 변경사항 저장 (더티 체킹으로 자동 저장되지만 명시적으로 호출)
             jamoStatRepository.save(jamoStat);
+        }
+
+        // 6. DAILY 학습이면서 정답인 경우, 해당 문제를 완료 처리
+        if ("DAILY".equalsIgnoreCase(command.studyType()) &&
+            command.isCorrect() &&
+            command.dayProblemId() != null) {
+
+            DayProblem dayProblem = dayProblemRepository.findById(command.dayProblemId())
+                    .orElseThrow(() -> new EchoException(StudentErrorCode.PROBLEM_NOT_FOUND));
+
+            // 학생에게 할당된 문제인지 확인
+            if (!dayProblem.getStudent().getStudentId().equals(command.studentId())) {
+                log.error("DayProblem not assigned to student - dayProblemId: {}, studentId: {}",
+                        command.dayProblemId(), command.studentId());
+                throw new EchoException(StudentErrorCode.PROBLEM_NOT_ASSIGNED);
+            }
+
+            if (!dayProblem.getIsCompleted()) {
+                dayProblem.complete();
+                dayProblemRepository.save(dayProblem);
+                log.info("DayProblem completed - dayProblemId: {}", command.dayProblemId());
+            }
         }
 
         return RecordAnswerResult.from(true);

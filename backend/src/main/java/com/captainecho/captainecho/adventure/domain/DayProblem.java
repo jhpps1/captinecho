@@ -104,4 +104,11 @@ public class DayProblem {
         this.correctAnswer = correctAnswer;
         this.isCompleted = false;
     }
+
+    /**
+     * 문제 완료 처리
+     */
+    public void complete() {
+        this.isCompleted = true;
+    }
 }
