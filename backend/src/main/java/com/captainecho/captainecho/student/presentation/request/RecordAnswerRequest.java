@@ -7,7 +7,9 @@ public record RecordAnswerRequest(
         @NotNull Boolean isCorrect,
         String realJamo,
         String confusionJamo,
-        String phonemePosition
+        String phonemePosition,
+        @NotNull String studyType,
+        Integer dayProblemId
 ) {
     public RecordAnswerCommand toCommand(Integer studentId, Integer protectorId) {
         return new RecordAnswerCommand(
@@ -16,7 +18,9 @@ public record RecordAnswerRequest(
                 isCorrect,
                 realJamo,
                 confusionJamo,
-                phonemePosition
+                phonemePosition,
+                studyType,
+                dayProblemId
         );
     }
 }
