@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 
-// --- (기존 코드: woodenButtons, StudentProfile, ApiStudent, ApiResponse, ExitIcon, ChevronLeftIcon) ---
-const woodenButtons = [
-  { id: 1, label: '자모맞추기', path: '/adventure/1' },
-  { id: 2, label: '글자합치기', path: '/adventure/2' },
-  { id: 3, label: '그림맞추기', path: '/adventure/3' },
-  { id: 4, label: '단어읽기', path: '/adventure/4' },
-];
+// 오른쪽 나무 버튼 데이터 (내용 동일)
+  const woodenButtons = [
+    { id: 1, label: '자모맞추기', typeId: 1 },
+    { id: 2, label: '글자합치기', typeId: 2 },
+    { id: 3, label: '그림맞추기', typeId: 3 },
+    { id: 4, label: '단어읽기', typeId: 4 },
+  ];
 
 interface StudentProfile {
   name: string;
@@ -166,13 +166,14 @@ export default function StudentDashboard() {
   }, [navigate]);
   // --- [수정된 부분 끝] ---
 
-  // 게임 시작 애니메이션 핸들러
-  const handleStartGame = () => {
-    setIsStartingGame(true); 
-    setTimeout(() => {
-      navigate('/today-game');
-    }, 2500); 
-  };
+  // 게임 시작 애니메이션 핸들러
+  const handleStartGame = () => {
+    setIsStartingGame(true); 
+    setTimeout(() => {
+      const studentId = sessionStorage.getItem('studentId');
+      navigate(`/daily/${studentId}`);  // ✅ 올바른 경로
+    }, 2500); // 애니메이션 시간(2.5초) 후 이동
+  };
 
   // 배(캐릭터) 클릭 시 말풍선 표시
   const handleShipClick = () => {
@@ -308,30 +309,32 @@ export default function StudentDashboard() {
           </button>
         </div>
 
-        {/* --- 4. 왼쪽 사이드 메뉴 (수정 없음) --- */}
-        <aside 
-          className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
-                      transition-transform duration-500 ease-in-out
-                      ${isMenuOpen ? 'translate-x-0' : '-translate-x-64'}`} 
-        >
-          {/* 메뉴 버튼 컨테이너 */}
-          <div
-            className="w-64 h-full flex flex-col justify-around items-center py-5"
-          >
-            {woodenButtons.map((button) => (
-              <button
-                key={button.id}
-                onClick={() => navigate(button.path)}
-                className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white shadow-md hover:scale-105 transition-transform"
-                 style={{
-                  backgroundImage: `url('/studentboard/button.png')`,
-                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
-                }}
-              >
-                {button.label}
-              </button>
-            ))}
-          </div>
+        {/* --- 4. 왼쪽 사이드 메뉴 --- */}
+        <aside 
+          className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
+                      transition-transform duration-500 ease-in-out
+                      ${isMenuOpen ? 'translate-x-0' : '-translate-x-64'}`} 
+        >
+          {/* 메뉴 버튼 컨테이너 */}
+          <div
+            className="w-64 h-full flex flex-col justify-around items-center py-5"
+          >
+            {woodenButtons.map((button) => (
+              <button
+                key={button.id}
+                onClick={() =>  {const studentId = sessionStorage.getItem('studentId');
+        navigate(`/adventure/${studentId}/${button.typeId}`);  // ✅ 올바른 경로
+      }}
+                className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white shadow-md hover:scale-105 transition-transform"
+                style={{
+                  backgroundImage: `url('/studentboard/button.png')`,
+                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                {button.label}
+              </button>
+            ))}
+          </div>
 
           {/* 메뉴 토글 버튼 */}
           <button

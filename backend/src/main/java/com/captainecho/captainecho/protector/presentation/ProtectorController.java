@@ -14,6 +14,7 @@ import com.captainecho.captainecho.protector.presentation.dto.VerifyPinRequest;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinResponse;
 import com.captainecho.captainecho.protector.presentation.request.CreatePinRequest;
 import com.captainecho.captainecho.protector.presentation.request.UpdatePinRequest;
+import com.captainecho.captainecho.protector.presentation.request.UpdateTermsRequest;
 import com.captainecho.captainecho.protector.presentation.request.VerifyRecoveryCodeRequest;
 import com.captainecho.captainecho.protector.presentation.response.CreatePinResponse;
 import com.captainecho.captainecho.protector.presentation.response.GetStudentCountResponse;
@@ -169,5 +170,25 @@ public class ProtectorController {
         protectorService.verifyRecoveryCodeAndResetPin(protectorId, request.code());
 
         return ResponseEntity.ok(RecoveryCodeResponse.of(true));
+    }
+
+    /**
+     * 약관 동의 업데이트
+     * PATCH /api/protector/terms
+     */
+    @PatchMapping("/terms")
+    public ResponseEntity<Void> updateTermsAgreed(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @Valid @RequestBody UpdateTermsRequest request
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        protectorService.updateTermsAgreed(protectorId, request.termsAgreed());
+
+        return ResponseEntity.ok().build();
     }
 }

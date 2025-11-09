@@ -1,14 +1,30 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.src.core.database import SessionLocal
 from app.src.core.models import Student
+from app.src.crew import build_conversation_flow
+from app.src.utils.crew_utils import get_student_data, extract_final_results, save_report_via_api
+from app.src.core.batch_core import fill_reset_and_make_weekly_report
+from app.src.utils.problem_job import generate_problems_for_one_week
 import logging
+from pytz import timezone
+
+
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("output.log", encoding="utf-8"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
 
 logger = logging.getLogger("scheduler")
 scheduler = BackgroundScheduler()
 
-
 def batch_generate_problems():
-    from app.src.service.question_service import generate_problems_for_one_week
     db = SessionLocal()
     try:
         student_ids = [row[0] for row in db.query(Student.student_id).all()]
@@ -19,9 +35,7 @@ def batch_generate_problems():
     finally:
         db.close()
 
-
-def fill_reset_and_make_weekly_report():
-    from app.src.tasks.statistics.statistics import fill_reset_and_make_weekly_report
+def fill_reset_and_make_weekly_report_batch():
     db = SessionLocal()
     try:
         result = fill_reset_and_make_weekly_report(db)
@@ -33,26 +47,34 @@ def fill_reset_and_make_weekly_report():
     finally:
         db.close()
 
-
-def batch_generate_weekly_reports():
-    # fill_reset_and_make_weekly_report를 여기서 import
-    from app.src.main import fill_reset_and_make_weekly_report
+def batch_generate_crewai_reports():
     db = SessionLocal()
     try:
         student_ids = [row[0] for row in db.query(Student.student_id).all()]
-        success_count = 0
         for sid in student_ids:
-            result = fill_reset_and_make_weekly_report(db, sid)
-            if result:
-                print(f"학생 {sid}: 리포트 생성 성공")
-                success_count += 1
-            else:
-                print(f"학생 {sid}: 리포트 생성 실패")
-        db.commit()
-        print(f"총 {success_count}명 리포트 생성 완료!")
+            try:
+                student_data = get_student_data(sid)
+                if not student_data:
+                    logger.warning(f"학생 ID {sid} 데이터 없음, crewai 스킵")
+                    continue
+                flow = build_conversation_flow(student_data=student_data)
+                auto_inputs = [
+                    "이번 주 커리큘럼 요약과 대화 근거(주요 협의·이유)를 요약해 주세요.",
+                    "감사합니다!",
+                    "그만"
+                ]
+                for user_input in auto_inputs:
+                    flow.state.user_input = user_input
+                    _ = flow.get_agent_response()
+                    if flow.state.done:
+                        break
+                curriculum, discussion_log = extract_final_results(flow.state.history)
+                logger.info(f"[CrewAI 학생 {sid}] 커리큘럼: {curriculum[:80]}... / 논의: {discussion_log[:80]}...")
+                save_report_via_api(sid, curriculum, discussion_log)
+            except Exception as e:
+                logger.error(f"CrewAI 학생 {sid} 처리 중 오류: {e}")
     finally:
         db.close()
-
 
 def start_scheduler():
     if not scheduler.running:
@@ -60,36 +82,29 @@ def start_scheduler():
         logger.info("배치 스케줄러 시작")
         print("배치 스케줄러 시작")
 
-
 def stop_scheduler():
     if scheduler.running:
         scheduler.shutdown(wait=False)
         logger.info("배치 스케줄러 종료")
         print("배치 스케줄러 종료")
 
-
-# === 통합 주간 배치 ===
 def total_weekly_batch():
     print("주간 배치 시작!")
-    fill_reset_and_make_weekly_report()
+    fill_reset_and_make_weekly_report_batch()
     print("자모통계 완료")
-
-    batch_generate_weekly_reports()
-    print("리포트 생성 완료")
-
+    batch_generate_crewai_reports()
+    print("CrewAI 대화/리포트 자동 생성 완료!")
     batch_generate_problems()
     print("문제 생성 완료")
     print("전체 주간 배치 완료!")
 
-
-# 스케줄러에 등록 (원하는 시간, KST 타임존 명시 추천)
-from pytz import timezone
+# 스케줄러에 등록
 scheduler.add_job(
     total_weekly_batch,
     'cron',
-    day_of_week='sun',     # 예시: 토요일
-    hour=23,
-    minute=0,
+    day_of_week='sun',
+    hour=20,
+    minute=58,
     id="total_weekly_batch",
     timezone=timezone('Asia/Seoul')
 )

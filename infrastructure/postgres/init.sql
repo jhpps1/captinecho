@@ -47,6 +47,7 @@ CREATE TABLE protector (
     social_id VARCHAR(255) NOT NULL,
     email VARCHAR(500),
     max_student_count SMALLINT DEFAULT 2,
+    terms_agreed BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     is_deleted BOOLEAN DEFAULT false NOT NULL,
     deleted_at TIMESTAMP,
@@ -59,6 +60,7 @@ COMMENT ON COLUMN protector.provider IS '소셜 로그인 제공자 (GOOGLE, KAK
 COMMENT ON COLUMN protector.social_id IS '소셜 로그인 고유 ID';
 COMMENT ON COLUMN protector.email IS '보호자 이메일';
 COMMENT ON COLUMN protector.max_student_count IS '최대 연결 가능한 학생 수';
+COMMENT ON COLUMN protector.terms_agreed IS '서비스 약관 동의 여부';
 
 -- ==============================================
 -- 2. 학생 (STUDENT)
@@ -362,13 +364,8 @@ CREATE INDEX idx_learning_session_student_id ON learning_session(student_id);
 CREATE INDEX idx_learning_session_start_time ON learning_session(start_time);
 CREATE INDEX idx_learning_session_study_type ON learning_session(study_type);
 
--- SESSION_DETAIL
-CREATE INDEX idx_session_detail_session_id ON session_detail(session_id);
-CREATE INDEX idx_session_detail_day_problem_id ON session_detail(day_problem_id);
-
 -- ERROR_PATTERN
-CREATE INDEX idx_error_pattern_student_id ON error_pattern(student_id);
-CREATE INDEX idx_error_pattern_session_detail_id ON error_pattern(session_detail_id);
+CREATE INDEX idx_error_pattern_session_id ON error_pattern(session_id);
 CREATE INDEX idx_error_pattern_real_jamo ON error_pattern(real_jamo);
 
 -- JAMO_STAT

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
  */
 const BeforeLoginNavbar = () => {
   return (
-    <nav className="w-full bg-white px-6 py-3 flex justify-between items-center shadow-sm">
+    <nav className="w-full bg-white/90 backdrop-blur-md px-6 py-3 flex justify-between items-center shadow-sm border-b border-white/20">
       
       <div className="flex items-center space-x-6">
         <Link to="/">
