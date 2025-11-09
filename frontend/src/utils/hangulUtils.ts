@@ -70,16 +70,3 @@ export const bottomMostLineClass = `
   m-0 p-0
   translate-y-0
 `;
-
-// 유틸: 현재 문제에서 "정답이어야 하는 글자"를 구한다
-export function getCorrectAnswerForProblem(p: {
-  initial: string;
-  medial: string;
-  final?: string;
-  hiddenTarget: 'initial' | 'medial' | 'final';
-}) {
-  if (p.hiddenTarget === 'initial') return p.initial;
-  if (p.hiddenTarget === 'medial') return p.medial;
-  if (p.hiddenTarget === 'final') return p.final ?? '';
-  return '';
-}
