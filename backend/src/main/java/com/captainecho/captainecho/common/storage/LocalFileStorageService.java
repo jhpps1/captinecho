@@ -89,6 +89,10 @@ public class LocalFileStorageService implements FileStorageService {
 
     @Override
     public boolean delete(String filePath) {
+        if (filePath == null || filePath.isEmpty()) {
+            return false;
+        }
+
         try {
             Path fileToDelete = this.fileStorageLocation.resolve(filePath).normalize();
             boolean deleted = Files.deleteIfExists(fileToDelete);

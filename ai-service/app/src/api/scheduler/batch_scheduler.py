@@ -103,8 +103,8 @@ scheduler.add_job(
     total_weekly_batch,
     'cron',
     day_of_week='sun',
-    hour=20,
-    minute=58,
+    hour=23,
+    minute=00,
     id="total_weekly_batch",
     timezone=timezone('Asia/Seoul')
 )

@@ -13,6 +13,8 @@ import NewUserTerms from '../pages/NewUserTerms.tsx';
 import FirstTestIntro from '../pages/FirstTestIntro.tsx';
 import FirstTestPage from '../pages/FirstTestPage.tsx';
 import FirstTestResult from '../pages/FirstTestResult.tsx';
+import ParrotStore from '../pages/ParrotStore.tsx';
+
 
 // Adventure 관련 컴포넌트 (새 구조)
 import { DailyRunner } from '../components/adventure/DailyRunner.tsx';
@@ -55,7 +57,11 @@ const router = createBrowserRouter([
     path: '/student',
     element: <StudentDashboard />,
   },
-    {
+  {
+    path: '/parrot-store',
+    element: <ParrotStore />,
+  },
+  {
     path: '/protector',
     element: <ProtectorDashboard />,
   },
