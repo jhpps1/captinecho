@@ -6,6 +6,8 @@ public record RecordAnswerCommand(
         Boolean isCorrect,
         String realJamo,
         String confusionJamo,
-        String phonemePosition
+        String phonemePosition,
+        String studyType,
+        Integer dayProblemId
 ) {
 }
