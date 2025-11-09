@@ -14,24 +14,33 @@ from app.src.core.models import (
 def get_week_boundary(now=None):
     if not now:
         now = datetime.now()
-    start = now - timedelta(days=now.weekday())  # 월요일 시작
-    end = start + timedelta(days=7)              # 다음주 월요일 0시
+    monday_date = now - timedelta(days=now.weekday())
+    
+    # 2. 🌟 핵심 수정: 월요일 날짜를 추출하여 시간 정보를 00:00:00으로 리셋합니다.
+    start = datetime(monday_date.year, monday_date.month, monday_date.day, 0, 0, 0)
+    
+    # 3. 다음 주 월요일 0시 0분 0초를 끝으로 설정합니다.
+    end = start + timedelta(days=7) 
     return start, end
 
 def calculate_weekly_total_time(db: Session, student_id, week_start, week_end):
+    # 주간에 "조금이라도 겹치는 모든 세션을 포함"
     sessions = db.query(LearningSession).filter(
         LearningSession.student_id == student_id,
-        LearningSession.started_at < week_end,
-        LearningSession.ended_at != None
+        LearningSession.end_time != None,
+        LearningSession.start_time <= week_end,
+        LearningSession.end_time >= week_start
     ).all()
     total_seconds = 0
     for s in sessions:
-        session_start = max(s.started_at, week_start)
-        session_end = min(s.ended_at, week_end)
-        if session_end > session_start:
-            duration = (session_end - session_start).total_seconds()
+        session_start = max(s.start_time, week_start)
+        session_end = min(s.end_time, week_end)
+        duration = (session_end - session_start).total_seconds()
+        print(f"DEBUG session: {s.start_time} ~ {s.end_time}, used: {session_start} ~ {session_end} → {duration // 60}분")
+        if duration > 0:
             total_seconds += duration
-    return int(total_seconds)
+    return int(total_seconds // 60)
+
 
 def make_weekly_report_values(student_id: int, db: Session):
     jamo_stats = db.query(WeeklyJamoStat).filter_by(student_id=student_id).all()
@@ -62,36 +71,27 @@ def fill_reset_and_make_weekly_report(db: Session):
         for student_id in student_ids:
             values = make_weekly_report_values(student_id, db)
             total_time = calculate_weekly_total_time(db, student_id, week_start, week_end)
-            protector_goal = ProtectorGoalType.FOCUS_ON_WEAKNESS
-
-            report = WeeklyPersonalReport(
-                student_id=student_id,
-                total_time=total_time,
-                curriculum=values["curriculum"],
-                discussion_log=values["discussion_log"],
-                protector_goal=protector_goal,
-                created_at=now
-            )
-            db.add(report)
-            db.commit()
-            db.refresh(report)
-            report_count += 1
-
-            jamos = db.query(JamoStat).filter_by(student_id=student_id).all()
-            for jamo in jamos:
-                weekly = WeeklyJamoStat(
-                    student_id=jamo.student_id,
-                    report_id=report.report_id,
-                    jamo=jamo.jamo,
-                    total_attempts=jamo.total_attempts,
-                    fail_count=jamo.fail_count,
-                    weekly_fail_rate=jamo.weekly_fail_rate,
-                    weekly_accuracy_rate=jamo.weekly_accuracy_rate,
+            # 최신 리포트 row 찾기
+            report = db.query(WeeklyPersonalReport).filter_by(student_id=student_id).order_by(WeeklyPersonalReport.created_at.desc()).first()
+            if report:
+                # 무조건 현재 집계값으로 업데이트
+                report.total_time = total_time
+                report.curriculum = values["curriculum"]
+                report.discussion_log = values["discussion_log"]
+                db.commit()
+            else:
+                # 없으면 새로 생성
+                report = WeeklyPersonalReport(
+                    student_id=student_id,
+                    total_time=total_time,
+                    curriculum=values["curriculum"],
+                    discussion_log=values["discussion_log"],
+                    protector_goal=ProtectorGoalType.FOCUS_ON_WEAKNESS,
                     created_at=now
                 )
-                db.add(weekly)
-                weekly_stat_written += 1
-            db.commit()
+                db.add(report)
+                db.commit()
+
 
         for jamo in jamo_stats:
             jamo.total_attempts = 0
