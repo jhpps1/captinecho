@@ -9,11 +9,13 @@ import com.captainecho.captainecho.student.application.command.DeleteStudentComm
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
+import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
+import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
 import com.captainecho.captainecho.student.presentation.request.AddStudentInterestRequest;
 import com.captainecho.captainecho.student.presentation.request.RegisterStudentRequest;
 import com.captainecho.captainecho.student.presentation.response.AddStudentInterestResponse;
@@ -21,6 +23,7 @@ import com.captainecho.captainecho.student.presentation.response.DeleteStudentIn
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
+import com.captainecho.captainecho.student.presentation.response.UpdateProfileImageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,9 +31,11 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -153,6 +158,41 @@ public class StudentController {
         GetWeeklyJamoStatResult result = studentService.getWeeklyJamoStat(command);
 
         GetWeeklyJamoStatResponse response = GetWeeklyJamoStatResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 학생 프로필 이미지 등록 API
+     *
+     * @param principal 인증된 보호자 정보
+     * @param studentId 학생 ID
+     * @param file 업로드할 프로필 이미지 파일
+     * @return 업로드된 이미지 URL
+     */
+    @PostMapping(value = "/{student-id}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "학생 프로필 이미지 등록",
+            description = "학생의 프로필 이미지를 등록합니다. 지원 형식: JPG, JPEG, PNG, WEBP (최대 5MB)"
+    )
+    public ResponseEntity<UpdateProfileImageResponse> updateProfileImage(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("student-id") Integer studentId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        // 인증 확인
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        // Command 생성 및 서비스 호출
+        UpdateProfileImageCommand command = new UpdateProfileImageCommand(protectorId, studentId, file);
+        UpdateProfileImageResult result = studentService.updateProfileImage(command);
+
+        // Response 생성 및 반환
+        UpdateProfileImageResponse response = new UpdateProfileImageResponse(result.imageUrl());
 
         return ResponseEntity.ok(response);
     }
