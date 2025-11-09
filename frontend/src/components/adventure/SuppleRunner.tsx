@@ -200,10 +200,10 @@ export const SuppleRunner = () => {
         <div className="text-center">
           <p className="text-2xl text-red-500 mb-4">⚠️ {error}</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/student')}
             className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
           >
-            메인으로 돌아가기
+            돌아가기
           </button>
         </div>
       </div>
