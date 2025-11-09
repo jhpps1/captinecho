@@ -13,7 +13,7 @@ export interface SyllableData {
   initial: string;      // 초성
   medial: string;       // 중성
   final?: string;       // 종성 (선택적)
-  hiddenTarget?: 'initial' | 'medial' | 'final';  // 빈칸으로 표시할 부분
+  hiddenTarget?: 'INITIAL' | 'MEDIAL' | 'FINAL';  // 빈칸으로 표시할 부분
 }
 
 // 컴포넌트 Props 타입
@@ -36,18 +36,18 @@ export const MultiSyllableCard = ({
     }
 
     const isTargetInitial =
-      syllable.hiddenTarget === 'initial' && partName === 'initial';
+      syllable.hiddenTarget === 'INITIAL' && partName === 'initial';
     const isTargetFinal =
-      syllable.hiddenTarget === 'final' && partName === 'final';
+      syllable.hiddenTarget === 'FINAL' && partName === 'final';
     const isTargetMedial =
-      syllable.hiddenTarget === 'medial' &&
+      syllable.hiddenTarget === 'MEDIAL' &&
       (partName === 'medialTop' || partName === 'medialBottom');
 
     const isTarget = isTargetInitial || isTargetFinal || isTargetMedial;
 
-    // 정답 맞추기 전이면 회색, 맞춘 뒤면 검정
+    // 정답 맞추기 전이면 검은 테두리 사각형, 맞춘 뒤면 검정
     if (isTarget && !isAnswered) {
-      return 'text-gray-300';
+      return 'text-white border-4 border-black bg-white px-2 py-1 rounded';
     }
     return 'text-gray-800';
   };

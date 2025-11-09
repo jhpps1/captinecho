@@ -193,4 +193,19 @@ public class ProtectorService {
 
         log.info("PIN 초기화 완료 - Protector ID: {}", protectorId);
     }
+
+    /**
+     * 약관 동의 업데이트
+     */
+    @Transactional
+    public void updateTermsAgreed(Integer protectorId, Boolean termsAgreed) {
+        // 1. Protector 조회
+        Protector protector = protectorRepository.findById(protectorId)
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+
+        // 2. 약관 동의 상태 업데이트
+        protector.updateTermsAgreed(termsAgreed);
+
+        log.info("약관 동의 상태 업데이트 완료 - Protector ID: {}, Terms Agreed: {}", protectorId, termsAgreed);
+    }
 }

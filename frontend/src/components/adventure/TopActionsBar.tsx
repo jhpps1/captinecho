@@ -7,6 +7,7 @@ import { CompletionModal } from './modals/CompletionModal';
 
 type TopActionsBarProps = {
   onTutorialClick: () => void;
+  onExitConfirm?: () => void | Promise<void>;
   isCompleted?: boolean;
 };
 
@@ -43,7 +44,7 @@ export const TopActionsBar = ({
 
   return (
     <>
-      <header className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2 sm:gap-3 z-10">
+      <header className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2 sm:gap-3 z-50">
         {/* 튜토리얼 버튼 */}
         <button
           className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl sm:rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"

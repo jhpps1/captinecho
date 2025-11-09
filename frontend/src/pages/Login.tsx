@@ -8,6 +8,7 @@ import BeforeNavbar from '../components/BeforeLoginNavbar';
 interface LoginResponse {
   protectorId: number;
   accessToken: string;
+  isNewUser: boolean;
 }
 
 const Login = () => {
@@ -34,15 +35,23 @@ const Login = () => {
         }
       );
 
-      // 3. 백엔드 응답에서 AccessToken 추출
-      const { accessToken } = response.data;
+      // 3. 백엔드 응답에서 AccessToken, isNewUser 추출
+      const { accessToken, isNewUser } = response.data;
 
       if (accessToken) {
         // 4. AccessToken을 쿠키에 저장
         Cookies.set('accessToken', accessToken, { expires: 7, path: '/' });
 
-        // 5. /select-profile 페이지로 리디렉션
-        navigate('/select-profile');
+        // 5. 신규 회원 여부에 따라 리디렉션
+        if (isNewUser) {
+          // 신규 회원: 약관 동의 페이지로 이동
+          console.log('✅ 신규 회원: 약관 동의 페이지로 이동');
+          navigate('/new-user-terms');
+        } else {
+          // 기존 회원: 프로필 선택 페이지로 이동
+          console.log('✅ 기존 회원: 프로필 선택 페이지로 이동');
+          navigate('/select-profile');
+        }
       } else {
         console.error('❌ 백엔드 응답에 AccessToken이 없습니다.');
       }

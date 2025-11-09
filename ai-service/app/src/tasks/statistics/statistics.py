@@ -20,11 +20,12 @@ def get_week_boundary(now=None):
     return start, end
 
 def calculate_weekly_total_time(db, student_id, week_start, week_end):
-    """이번 주 실제 학습 세션 전체 시간(초) 집계"""
+    """이번 주 실제 학습 세션 전체 시간(분) 집계"""
     sessions = db.query(LearningSession).filter(
-        LearningSession.student_id == student_id,
-        LearningSession.start_time < week_end,
-        LearningSession.end_time != None
+    LearningSession.student_id == student_id,
+    LearningSession.start_time >= week_start,     # <-- 추가!
+    LearningSession.start_time < week_end,
+    LearningSession.end_time != None
     ).all()
     total_seconds = 0
     for s in sessions:
@@ -33,7 +34,11 @@ def calculate_weekly_total_time(db, student_id, week_start, week_end):
         if session_end > session_start:
             duration = (session_end - session_start).total_seconds()
             total_seconds += duration
-    return int(total_seconds)
+
+    # 분 단위로 변환하여 반환 (소수점 버림)
+    total_minutes = int(total_seconds // 60)
+    return total_minutes
+
 
 def make_weekly_report_values(student_id: int, db: Session):
     """리포트용 자모 누적 집계값 반환"""
@@ -49,6 +54,7 @@ def make_weekly_report_values(student_id: int, db: Session):
         "curriculum": curriculum,
         "discussion_log": discussion_log,
     }
+
 
 def fill_reset_and_make_weekly_report(db):
     """
@@ -66,21 +72,39 @@ def fill_reset_and_make_weekly_report(db):
         for student_id in student_ids:
             values = make_weekly_report_values(student_id, db)
             total_time = calculate_weekly_total_time(db, student_id, week_start, week_end)
-            # protector_goal 결정 로직 필요시 반영 (여기서는 공통 고정 사용)
-            protector_goal = ProtectorGoalType.FOCUS_ON_WEAKNESS
 
-            report = WeeklyPersonalReport(
-                student_id=student_id,
-                total_time=total_time,
-                curriculum=values["curriculum"],
-                discussion_log=values["discussion_log"],
-                protector_goal=protector_goal,
-                created_at=now
-            )
-            db.add(report)
-            db.commit()
-            db.refresh(report)
-            report_count += 1
+            # 리포트 row 최신 항목 찾기
+            report = db.query(WeeklyPersonalReport).filter_by(student_id=student_id).order_by(WeeklyPersonalReport.created_at.desc()).first()
+
+            if report:
+                # 이미 리포트가 있으면 필요한 값만 업데이트 (비어있을 때만)
+                updated = False
+                if not report.total_time or report.total_time == 0:
+                    report.total_time = total_time
+                    updated = True
+                if not report.curriculum:
+                    report.curriculum = values["curriculum"]
+                    updated = True
+                if not report.discussion_log:
+                    report.discussion_log = values["discussion_log"]
+                    updated = True
+                if updated:
+                    db.commit()
+            else:
+                # 없으면 신규 row 생성 (protector_goal 반드시 포함! NOT NULL이니까)
+                protector_goal = ProtectorGoalType.FOCUS_ON_WEAKNESS # 혹은 외부에서 주입된 값
+                report = WeeklyPersonalReport(
+                    student_id=student_id,
+                    total_time=total_time,
+                    curriculum=values["curriculum"],
+                    discussion_log=values["discussion_log"],
+                    protector_goal=protector_goal,
+                    created_at=now
+                )
+                db.add(report)
+                db.commit()
+                db.refresh(report)
+                report_count += 1
 
             # 주간 자모통계 기록
             jamos = db.query(JamoStat).filter_by(student_id=student_id).all()
