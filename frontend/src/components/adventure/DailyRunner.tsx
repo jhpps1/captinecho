@@ -156,15 +156,36 @@ export const DailyRunner = () => {
     // 2. 진행 중인 세션 복원 시도
     const savedData = loadSessionFromStorage();
     if (savedData && savedData.session && savedData.problems) {
-      console.log('🔄 진행 중인 세션 발견, 이어하기 시작');
-      setSession(savedData.session);
-      setProblems(savedData.problems);
-      // 세션 복원 완료, ProblemRunner로 자동 진입
+      console.log('🔄 진행 중인 세션 발견, 새 세션으로 이어하기 시작');
+
+      // 새로운 세션 생성 (이전 세션은 종료되었으므로)
+      startAdventure(parsedStudentId, 'DAILY')
+        .then((sessionId) => {
+          const newSession = {
+            sessionId,
+            studyType: 'DAILY' as const,
+            isActive: true,
+            startedAt: new Date().toISOString(),
+          };
+
+          setSession(newSession);
+          setProblems(savedData.problems); // 문제는 복원
+
+          // localStorage 업데이트 (새 세션 ID로)
+          saveSessionToStorage(newSession, savedData.problems);
+
+          console.log(`✅ 새 세션으로 이어하기 완료 - Session ID: ${sessionId}`);
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error('❌ 세션 재시작 실패:', err);
+          setError('이어하기를 시작하는데 실패했습니다. 다시 시도해주세요.');
+          setIsLoading(false);
+        });
     } else {
       console.log('📝 새로운 세션 시작 대기');
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }, [parsedStudentId]);
 
   // 세션 시작 핸들러
