@@ -51,7 +51,7 @@ const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function StudentDashboard() {
-  // 링크 이동(Navigate) 기능
+  // 라우팅 관련
   const navigate = useNavigate();
 
   // 학생 정보 관련 변수
@@ -348,9 +348,9 @@ export default function StudentDashboard() {
               <button
                 key={button.id}
                 onClick={() =>  {const studentId = sessionStorage.getItem('studentId');
-        navigate(`/adventure/${studentId}/${button.typeId}`);  // ✅ 올바른 경로
+        navigate(`/adventure/${studentId}/${button.typeId}`);
       }}
-                className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white shadow-md hover:scale-105 transition-transform"
+                className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white hover:scale-105 transition-transform"
                 // 버튼 이미지 정보가 저장되는 공간
                 style={{
                   backgroundImage: `url('/studentboard/button.png')`,
