@@ -28,7 +28,13 @@ CREATE TYPE grade_type AS ENUM ('PRE_SCHOOL', 'GRADE_1', 'GRADE_2', 'GRADE_3', '
 CREATE TYPE provider_type AS ENUM ('GOOGLE', 'KAKAO');
 
 -- 초기 진단 문제 유형
-CREATE TYPE diagnosis_type AS ENUM ('TYPE_A', 'TYPE_B', 'TYPE_C');
+CREATE TYPE diagnosis_type AS ENUM (
+    'PHONEME_RECOGNITION',  -- 음소 인식 (Adventure 1)
+    'SYLLABLE_DECODING',    -- 음절 디코딩 (Adventure 2)
+    'WORD_READING',         -- 단어 읽기 (Adventure 3)
+    'NONWORD_READING',      -- 무의미 단어 (사용 안함)
+    'SENTENCE_COMPLETION'   -- 문장 완성 (Adventure 4)
+);
 
 -- 보호자 학습 목표
 CREATE TYPE protector_goal_type AS ENUM ('FOCUS_ON_WEAKNESS', 'BUILD_CONFIDENCE', 'INCREASE_DIFFICULTY');

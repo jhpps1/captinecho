@@ -11,6 +11,9 @@ public record InitialDiagnosisProblemDto(
         String[] choices,
         String problemImageUrl,
         String problemSoundUrl,
-        String correctAnswer
+        String correctAnswer,
+        String[] problemPhonemes,
+        String blankPosition,
+        String blankPhoneme
 ) {
 }

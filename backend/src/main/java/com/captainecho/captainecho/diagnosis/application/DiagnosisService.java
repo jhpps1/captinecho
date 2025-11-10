@@ -92,6 +92,10 @@ public class DiagnosisService {
         // 4. 진단 세션 종료
         session.completeSession();
 
+        // 5. 학생 level을 1로 업데이트 (초기진단 완료)
+        student.updateLevel((short) 1);
+        studentRepository.save(student);
+
         return new EndInitialDiagnosisResult(
                 session.getStudentId(),
                 session.getStartTime(),
@@ -123,6 +127,9 @@ public class DiagnosisService {
                         .problemImageUrl(problem.getProblemImageUrl())
                         .problemSoundUrl(problem.getProblemSoundUrl())
                         .correctAnswer(problem.getCorrectAnswer())
+                        .problemPhonemes(problem.getProblemPhonemes())
+                        .blankPosition(problem.getBlankPosition())
+                        .blankPhoneme(problem.getBlankPhoneme())
                         .build())
                 .toList();
 

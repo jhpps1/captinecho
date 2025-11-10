@@ -110,4 +110,13 @@ public class Student {
         this.birth = birth;
         this.grade = grade;
     }
+
+    /**
+     * 학생의 레벨을 업데이트합니다.
+     *
+     * @param level 새로운 레벨
+     */
+    public void updateLevel(Short level) {
+        this.level = level;
+    }
 }
