@@ -33,10 +33,13 @@ public class WeeklyPersonalReport {
     @Column(name = "curriculum", columnDefinition = "TEXT")
     private String curriculum;
 
-    @Column(name = "discussion_log", columnDefinition = "TEXT")
+    @Column(name = "curriculum_structure", columnDefinition = "json")
+    private String curriculumStructure;
+
+    @Column(name = "discussion_log", columnDefinition = "json")
     private String discussionLog;
 
-    @Column(name = "protector_goal", length = 20)
+    @Column(name = "protector_goal", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private ProtectorGoal protectorGoal;
 
@@ -46,10 +49,12 @@ public class WeeklyPersonalReport {
 
     @Builder
     public WeeklyPersonalReport(Student student, Integer totalTime,
-                                String curriculum, String discussionLog, ProtectorGoal protectorGoal) {
+                                String curriculum, String curriculumStructure,
+                                String discussionLog, ProtectorGoal protectorGoal) {
         this.student = student;
         this.totalTime = totalTime != null ? totalTime : 0;
         this.curriculum = curriculum;
+        this.curriculumStructure = curriculumStructure;
         this.discussionLog = discussionLog;
         this.protectorGoal = protectorGoal;
     }
