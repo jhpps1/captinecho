@@ -15,6 +15,10 @@ import FirstTestPage from '../pages/FirstTestPage.tsx';
 import FirstTestResult from '../pages/FirstTestResult.tsx';
 import ParrotStore from '../pages/ParrotStore.tsx';
 
+import { SyllableTest } from '../pages/SyllableTest.tsx';
+import { HangulAllGrid } from '../pages/HangulAllGrid.tsx';
+import HangulJamoSVGPlayground from '../pages/hangul_jamo_svgplayground.tsx'; 
+
 
 // Adventure 관련 컴포넌트 (새 구조)
 import { DailyRunner } from '../components/adventure/DailyRunner.tsx';
@@ -89,6 +93,18 @@ const router = createBrowserRouter([
   {
     path: '/adventure/:studentId/:typeId',
     element: <SuppleRunner />,
+  },
+  {
+    path: '/test/syllable',
+    element: <SyllableTest />,
+  },
+  {
+    path: '/test/hangul-all',
+    element: <HangulAllGrid />,
+  },
+      {
+    path: '/dev/hangul-svg',
+    element: <HangulJamoSVGPlayground />,
   },
 ]);
 
