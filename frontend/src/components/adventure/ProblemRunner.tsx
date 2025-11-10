@@ -130,6 +130,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         // - answer: 사용자가 선택한 단어 (예: "사과")
         // - correctAnswer: 정답 단어 (예: "사과")
         // - phonemePosition: null (단어 문제는 음소 위치 없음)
+        // Adventure3은 자모통계에 일단 제외 -> 추후 다른 로직 구현
 
         await submitSessionCorrect(studentId, {
           isCorrect: isCorrect,
@@ -146,10 +147,11 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         // - answer: 'voice-answer' (고정값)
         // - questionText: 정답 단어
         // - phonemePosition: null
+        // Adventure4는 자모통계에서 일단 제외 -> 추후 다른 로직 구현
 
         await submitSessionCorrect(studentId, {
           isCorrect: isCorrect,
-          realJamo: currentProblem.questionText, // 정답 단어
+          realJamo: null, // 정답 단어
           confusionJamo: null,                   // 말하기는 혼동 자모 없음
           phonemePosition: null,                 // 말하기 문제는 음소 위치 없음
           studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
@@ -265,16 +267,6 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         mode={mode}
         studentId={studentId}
       />
-
-      {/* 개발용: 오답 버튼 (실제로는 각 Adventure 컴포넌트 내부에서 처리) */}
-      <div className="fixed bottom-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
-        <button
-          onClick={handleWrongAnswer}
-          className="text-sm text-red-500 hover:text-red-700"
-        >
-          오답 처리 (시도: {attemptCount})
-        </button>
-      </div>
 
       {/* 개발용: 문제 네비게이션 버튼 */}
       <div className="fixed bottom-4 right-4 flex gap-2 z-50">
