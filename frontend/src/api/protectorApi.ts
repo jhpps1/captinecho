@@ -3,6 +3,11 @@ import type { BackendGender, BackendGrade } from '../utils/studentMapper';
 
 // ===== 타입 정의 =====
 
+export interface InterestDto {
+  interestId: number;
+  interestName: string;
+}
+
 export interface StudentResponse {
   studentId: number;
   name: string;
@@ -12,6 +17,7 @@ export interface StudentResponse {
   grade?: string;
   level?: number;
   coin: number;
+  interests: InterestDto[];
 }
 
 export interface StudentListResponse {
