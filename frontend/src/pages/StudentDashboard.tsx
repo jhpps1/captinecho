@@ -43,13 +43,6 @@ const ExitIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-// 토글 버튼
-const ChevronLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor" {...props}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-  </svg>
-);
-
 export default function StudentDashboard() {
   // 라우팅 관련
   const navigate = useNavigate();
@@ -65,9 +58,6 @@ export default function StudentDashboard() {
 
   // 일일 탐험 미션 시작 관련 변수
   const [isStartingGame, setIsStartingGame] = useState(false);
-
-  // 현황판 토글 관련 변수
-  const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   // 말풍선 토글 관련 변수
   const [isBubbleVisible, setIsBubbleVisible] = useState(false);
@@ -341,7 +331,7 @@ export default function StudentDashboard() {
         >
           {/* 메뉴 버튼 컨테이너 */}
           <div
-            className="w-64 h-full flex flex-col justify-around items-center py-5"
+            className="w-64 h-full flex flex-col justify-around items-center py-5 ms-15"
           >
             {/* 버튼 관련 정보들 */}
             {woodenButtons.map((button) => (
@@ -364,89 +354,70 @@ export default function StudentDashboard() {
           </div>
 
           {/* 메뉴 토글 버튼 */}
-          <button
+          <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="w-12 h-24 bg-white/80 rounded-r-2xl shadow-lg flex items-center justify-center z-10 hover:bg-white active:scale-95"
+            className="w-20 h-24 flex items-center justify-center z-10 transition-transform duration-300 hover:scale-105 active:scale-95"
           >
-            <ChevronLeftIcon
-              className={`w-8 h-8 text-gray-800 transition-transform duration-300 ${
-                isMenuOpen ? 'rotate-0' : 'rotate-180' 
-              }`}
-            />
+            <img 
+              src={isMenuOpen ? "/studentboard/closebutton.png" : "/studentboard/openbutton.png"} 
+              alt={isMenuOpen ? "닫기" : "열기"}
+              className="w-full h-full object-contain"
+            />
           </button>
         </aside>
 
-        {/* 오른쪽 현황판 관련 사이드 바 */}
-        <aside 
-          className={`fixed top-1/2 -translate-y-1/2 right-0 flex items-center h-[450px] z-50
-                      transition-transform duration-500 ease-in-out
-                      ${isStatsOpen ? 'translate-x-0' : 'translate-x-72'}`} // w-72 (288px)
-        >
-          {/* 현황판 토글 버튼 */}
-          <button
-            onClick={() => setIsStatsOpen(!isStatsOpen)}
-            className="w-12 h-24 bg-white/80 rounded-l-2xl shadow-lg flex items-center justify-center z-10 hover:bg-white active:scale-95"
-          >
-            <ChevronLeftIcon
-              className={`w-8 h-8 text-gray-800 transition-transform duration-300 ${
-                isStatsOpen ? 'rotate-180' : 'rotate-0' 
-              }`}
-            />
-          </button>
-          
-          {/* 현황판 나무 프레임 */}
-          <div
-            className="w-72 h-full bg-contain bg-no-repeat bg-center p-5"
-            // 이미지 정보
-            style={{ backgroundImage: `url('/studentboard/woodenstats.png')` }}
-          >
-            <h2 
-              className="text-center text-3xl font-bold text-white pt-10"
-              style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }} 
-            >
-              현황
-            </h2>
-            
-            {/* 양피지 배경 정보 */}
-            <div
-              className="w-full h-[calc(100%-170px)] mt-3 bg-contain bg-no-repeat bg-center p-4"
-              style={{ backgroundImage: `url('/studentboard/statspaper.png')` }}
-            >
-              {/* 이번 주 탐험 완료 streak 관련 */}
-              <div>
-                <h3 className="text-lg font-bold text-gray-800 mt-1 mb-1">이번 주 목표 탐험 완료</h3>
-                <div className="flex justify-around items-center px-1">
-                  {weeklyStreak.map((isCompleted, index) => (
-                    <img
-                      key={`week-${index}`}
-                      // 값이 True 라면 파랑색 스탬프, 값이 False라면 회색 스탬프
-                      // 배열의 True/False 값을 인식하여 판단한다.
-                      src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
-                      alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
-                      className="w-9 h-9"
-                    />
-                  ))}
-                </div>
-              </div>
-              
-              {/* 오늘의 탐험 문제 풀이 수 관련 */}
-              <div className="mt-6">
-                <h3 className="text-lg font-bold text-gray-800 mb-1">오늘의 탐험 목표</h3>
-                <div className="grid grid-cols-5 gap-y-1 justify-items-center px-1">
-                  {dailyStamps.map((isCompleted, index) => (
-                    <img
-                      key={`today-${index}`}
-                      // 풀이 문제 수 만큼 파랑 스탬프가 찍히게 한다. 위의 streak과 다르게 순서대로 찍힌다.
-                      src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
-                      alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
-                      className="w-9 h-9"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
+        {/* 오른쪽 현황판 */}
+      <div
+        className="fixed top-1/2 -translate-y-1/2 right-0 h-[450px] z-50 me-10 w-72 bg-contain bg-no-repeat bg-center p-5"
+        // 이미지 정보
+        style={{ backgroundImage: `url('/studentboard/woodenstats.png')` }}
+      >
+        <h2 
+          className="text-center text-3xl font-bold text-white pt-10"
+          style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }} 
+        >
+          현황
+        </h2>
+        
+        {/* 양피지 배경 정보 */}
+        <div
+          className="w-full h-[calc(100%-170px)] mt-3 bg-contain bg-no-repeat bg-center p-4"
+          style={{ backgroundImage: `url('/studentboard/statspaper.png')` }}
+        >
+          {/* 이번 주 탐험 완료 streak 관련 */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 mt-1 mb-1">이번 주 목표 탐험 완료</h3>
+            <div className="flex justify-around items-center px-1">
+              {weeklyStreak.map((isCompleted, index) => (
+                <img
+                  key={`week-${index}`}
+                  // 값이 True 라면 파랑색 스탬프, 값이 False라면 회색 스탬프
+                  // 배열의 True/False 값을 인식하여 판단한다.
+                  src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
+                  alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
+                  className="w-9 h-9"
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* 오늘의 탐험 문제 풀이 수 관련 */}
+          <div className="mt-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">오늘의 탐험 목표</h3>
+            <div className="grid grid-cols-5 gap-y-1 justify-items-center px-1">
+              {dailyStamps.map((isCompleted, index) => (
+                <img
+                  key={`today-${index}`}
+                  // 풀이 문제 수 만큼 파랑 스탬프가 찍히게 한다. 위의 streak과 다르게 순서대로 찍힌다.
+                  src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
+                  alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
+                  className="w-9 h-9"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
         {/* 게임 시작 시 페이드 아웃 오버레이 */}
         <div
