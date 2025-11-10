@@ -197,7 +197,7 @@ const ParrotStore = () => {
             <img
               src={profileImg}
               alt="프로필"
-              className="h-[3.5vw] w-[3.5vw] min-h-[56px] min-w-[56px] rounded-full border-2 border-white object-cover"
+              className="h-[3.5vw] w-[3.5vw] min-h-[48px] min-w-[48px] ms-2 rounded-full border-2 border-white object-cover"
             />
           )}
           {/* 프로필 이름 표시 */}
