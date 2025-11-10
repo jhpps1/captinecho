@@ -7,11 +7,10 @@ import os
 from sqlalchemy import text
 from app.src.tasks.question import get_latest_curriculum, create_day_problem
 from app.src.utils.llm import llm_problem
-from app.src.utils.s3 import upload_to_local # 로컬 개발용
-# 🚨 [수정 필요]: 파일명을 gms_api.py에서 gemini_api.py로 변경했다면 이 부분을 수정해야 합니다.
-# 파일명을 그대로 유지했다면 이 줄은 수정하지 않아도 됩니다. (여기서는 파일명이 바뀌었다고 가정하고 작성합니다)
+from app.src.utils.s3 import upload_to_s3  # S3 업로드 (필요 시 사용)
+# 🚨 TTS 및 이미지 생성 함수는 내부적으로 S3 업로드를 처리합니다
 from app.src.api.tts_api import generate_tts_and_upload
-from app.src.api.gemini_api import generate_image_with_gemini_flash # <--- import 경로 수정!
+from app.src.api.gemini_api import generate_image_with_gemini_flash
 from dotenv import load_dotenv
 from app.src.api.scheduler.batch_scheduler import start_scheduler
 

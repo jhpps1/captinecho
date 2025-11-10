@@ -2,7 +2,7 @@ import os
 import hashlib
 import time
 import requests
-from app.src.utils.s3 import upload_to_local 
+from app.src.utils.s3 import upload_to_s3
 from dotenv import load_dotenv
 
 
@@ -52,14 +52,14 @@ def call_gms_tts_api(text: str, api_key: str) -> bytes | None:
 
 def generate_tts_and_upload(text_to_speak: str, student_id: int, key_prefix: str = 'problems/sound/') -> str:
     """
-    GMS TTS API를 호출하여 음성 파일을 생성하고 로컬에 저장 후 경로를 반환합니다.
+    GMS TTS API를 호출하여 음성 파일을 생성하고 S3에 업로드 후 Public URL을 반환합니다.
     """
-    GMS_API_KEY = os.getenv("OPENAI_API_KEY") 
-    
+    GMS_API_KEY = os.getenv("OPENAI_API_KEY")
+
     if not GMS_API_KEY:
         print("❌ OPENAI_API_KEY가 없어 음성 생성을 건너뜁니다.")
         return ""
-        
+
     if not text_to_speak or len(text_to_speak) > 4096:
         print("❌ 음성 합성 텍스트가 없거나 너무 깁니다.")
         return ""
@@ -69,23 +69,23 @@ def generate_tts_and_upload(text_to_speak: str, student_id: int, key_prefix: str
     try:
         # 1. GMS TTS API 호출 및 MP3 바이너리 데이터 획득
         audio_content = call_gms_tts_api(text_to_speak, GMS_API_KEY)
-        
+
         if not audio_content:
             print("❌ TTS 음성 생성 실패")
             return ""
 
-        # 2. ✅ 수정: 직접 upload_to_local 호출
-        uploaded_url = upload_to_local(
+        # 2. ✅ S3 업로드 (로컬 저장에서 변경)
+        uploaded_url = upload_to_s3(
             file_data=audio_content,
             key_prefix=key_prefix,
             file_extension='mp3'
         )
 
         if uploaded_url:
-            print(f"✅ TTS 파일 업로드 성공: {uploaded_url}")
+            print(f"✅ TTS 파일 S3 업로드 성공: {uploaded_url}")
             return uploaded_url
         else:
-            print("❌ TTS 파일 업로드 실패.")
+            print("❌ TTS 파일 S3 업로드 실패.")
             return ""
 
     except Exception as e:
