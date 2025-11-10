@@ -172,8 +172,43 @@ public class StudentController {
      */
     @PostMapping(value = "/{student-id}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-            summary = "학생 프로필 이미지 등록",
-            description = "학생의 프로필 이미지를 등록합니다. 지원 형식: JPG, JPEG, PNG, WEBP (최대 5MB)"
+            summary = "학생 프로필 이미지 최초 등록",
+            description = "학생의 프로필 이미지를 최초 등록합니다. 이미 등록된 경우 오류 반환. 지원 형식: JPG, JPEG, PNG, WEBP (최대 5MB)"
+    )
+    public ResponseEntity<UpdateProfileImageResponse> registerProfileImage(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("student-id") Integer studentId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        // 인증 확인
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        // Command 생성 및 서비스 호출
+        UpdateProfileImageCommand command = new UpdateProfileImageCommand(protectorId, studentId, file);
+        UpdateProfileImageResult result = studentService.registerProfileImage(command);
+
+        // Response 생성 및 반환
+        UpdateProfileImageResponse response = new UpdateProfileImageResponse(result.imageUrl());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 학생 프로필 이미지 수정 API
+     *
+     * @param principal 인증된 보호자 정보
+     * @param studentId 학생 ID
+     * @param file 업로드할 프로필 이미지 파일
+     * @return 업로드된 이미지 URL
+     */
+    @PatchMapping(value = "/{student-id}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "학생 프로필 이미지 수정",
+            description = "기존 프로필 이미지를 수정합니다. 취소 시 기존 이미지 유지. 지원 형식: JPG, JPEG, PNG, WEBP (최대 5MB)"
     )
     public ResponseEntity<UpdateProfileImageResponse> updateProfileImage(
             @AuthenticationPrincipal ProtectorPrincipal principal,
