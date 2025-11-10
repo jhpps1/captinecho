@@ -238,7 +238,7 @@ export default function StudentDashboard() {
             <img
               src={profile.imageUrl}
               alt="프로필"
-              className="w-[64px] h-[64px] rounded-full object-cover border-2 border-yellow-300/50"
+              className="w-[48px] h-[48px] ms-2.5 rounded-full object-cover border-2 border-yellow-300/50"
             />
             {/* 이름 출력 공간 */}
             <span 
