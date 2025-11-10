@@ -4,6 +4,8 @@ import com.captainecho.captainecho.adventure.persistence.DayProblemRepository;
 import com.captainecho.captainecho.common.domain.PhonemeFeature;
 import com.captainecho.captainecho.common.persistence.PhonemeFeatureRepository;
 import com.captainecho.captainecho.common.storage.FileStorageService;
+import com.captainecho.captainecho.config.FileStorageProperties;
+
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
@@ -21,6 +23,8 @@ import com.captainecho.captainecho.student.application.command.GetDailyGoalCount
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
+import com.captainecho.captainecho.student.application.event.FileDeleteEvent;
+
 import com.captainecho.captainecho.student.application.command.GetWeeklyGoalPercentCommand;
 import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
@@ -38,6 +42,7 @@ import com.captainecho.captainecho.student.application.result.GetWeeklyGoalPerce
 import com.captainecho.captainecho.student.persistence.StudentRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,6 +64,8 @@ public class StudentService {
     private final DayProblemRepository dayProblemRepository;
     private final PhonemeFeatureRepository phonemeFeatureRepository;
     private final JamoStatRepository jamoStatRepository;
+    private final FileStorageProperties fileStorageProperties;
+    private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
 
     @Transactional
@@ -376,7 +383,8 @@ public class StudentService {
     }
 
     /**
-     * 학생 프로필 이미지를 업데이트합니다.
+     * 프로필 이미지를 수정합니다 (PATCH용)
+     * 트랜잭션 실패 시 기존 이미지 유지를 보장합니다.
      *
      * @param command 프로필 이미지 업데이트 명령 (protectorId, studentId, file)
      * @return 업데이트 결과 (success, imageUrl)
@@ -384,32 +392,66 @@ public class StudentService {
      */
     @Transactional
     public UpdateProfileImageResult updateProfileImage(UpdateProfileImageCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
-        }
-
-        // 2. 보호자-학생 관계 확인 (접근 권한)
-        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+        // 1. 학생 조회 및 권한 확인
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+        
+        if (!student.getProtector().getProtectorId().equals(command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 학생 엔티티 조회
-        Student student = studentRepository.findById(command.studentId())
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+        // 2. 기존 프로필 이미지 경로 보관 (삭제하지 않음!)
+        String oldImagePath = student.getProfileImage();
 
-        // 4. 기존 프로필 이미지가 있으면 삭제
-        if (student.getProfileImage() != null && !student.getProfileImage().isEmpty()) {
-            fileStorageService.delete(student.getProfileImage());
+        // 3. 새 이미지 저장 (실패 시 예외 발생 → 자동 롤백)
+        String profilePath = fileStorageProperties.getUpload().getProfileImages().getPath();
+        String storedFilePath = fileStorageService.store(command.file(), profilePath);
+
+        // 4. 학생 엔티티 업데이트 (트랜잭션 내)
+        student.updateProfileImage(storedFilePath);
+        studentRepository.save(student);
+
+        // 5. 트랜잭션 커밋 후 기존 파일 삭제 이벤트 발행
+        if (oldImagePath != null && !oldImagePath.isEmpty()) {
+            eventPublisher.publishEvent(new FileDeleteEvent(oldImagePath));
         }
 
-        // 5. 새로운 프로필 이미지 저장 (prefix: "profiles")
-        String storedFilePath = fileStorageService.store(command.file(), "profiles");
+        // 6. URL 생성 및 결과 반환
+        String imageUrl = fileStorageService.getFileUrl(storedFilePath);
+        return new UpdateProfileImageResult(true, imageUrl);
+    }
+    /**
+     * 프로필 이미지를 최초 등록합니다 (POST용)
+     * 이미 프로필 이미지가 있으면 예외를 발생시킵니다.
+     *
+     * @param command 프로필 이미지 등록 명령 (protectorId, studentId, file)
+     * @return 등록 결과 (success, imageUrl)
+     * @throws EchoException 이미 프로필 이미지가 있거나, 학생을 찾을 수 없거나, 접근 권한이 없는 경우
+     */
+    @Transactional
+    public UpdateProfileImageResult registerProfileImage(UpdateProfileImageCommand command) {
+        // 1. 학생 조회 및 권한 확인
+        Student student = studentRepository.findById(command.studentId())
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+        
+        if (!student.getProtector().getProtectorId().equals(command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
 
-        // 6. 학생 엔티티의 프로필 이미지 업데이트
+        // 2. 이미 프로필 이미지가 있으면 예외 발생
+        if (student.getProfileImage() != null && !student.getProfileImage().isEmpty()) {
+            throw new EchoException(StudentErrorCode.PROFILE_IMAGE_ALREADY_EXISTS);
+        }
+
+        // 3. 새 이미지 저장
+        String profilePath = fileStorageProperties.getUpload().getProfileImages().getPath();
+        String storedFilePath = fileStorageService.store(command.file(), profilePath);
+
+        // 4. 학생 엔티티 업데이트
         student.updateProfileImage(storedFilePath);
+        studentRepository.save(student);
 
-        // 7. URL 생성 및 결과 반환
+        // 5. URL 생성 및 결과 반환
         String imageUrl = fileStorageService.getFileUrl(storedFilePath);
         return new UpdateProfileImageResult(true, imageUrl);
     }

@@ -19,6 +19,7 @@ public enum StudentErrorCode implements ErrorCode {
     EMPTY_FILE(HttpStatus.BAD_REQUEST, "ST40008", "빈 파일은 업로드할 수 없습니다"),
     INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "ST40009", "지원하지 않는 파일 형식입니다"),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "ST40010", "파일 크기가 제한을 초과했습니다"),
+    PROFILE_IMAGE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "ST40011", "프로필 이미지가 이미 등록되어 있습니다"),
 
     // 403 FORBIDDEN
     STUDENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ST40301", "해당 학생에 대한 접근 권한이 없습니다"),
