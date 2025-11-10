@@ -6,6 +6,7 @@ import com.captainecho.captainecho.exception.code.StudentErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +29,7 @@ import java.util.UUID;
 @Service
 @Primary
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "file.storage.type", havingValue = "local", matchIfMissing = true)
 public class LocalFileStorageService implements FileStorageService {
 
     private final FileStorageProperties fileStorageProperties;

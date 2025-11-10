@@ -13,9 +13,9 @@ import {
   TrendingUp,
   ChevronDown,
   ArrowRight,
-  Shield,
+  Gamepad,
   Clock,
-  Star
+  Star,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -27,34 +27,34 @@ const Introduction = () => {
       id: 1,
       name: '음소 분절',
       description: '소리를 나누는 탐험! 단어를 자음과 모음으로 분리해보세요.',
-      icon: Sparkles,
-      color: 'from-purple-500 to-pink-500',
-      example: '예: "강아지" → "ㄱ-ㅏ-ㅇ-ㅏ-ㅈ-ㅣ"'
+      icon: Sparkles, // 이 아이콘은 이제 사용되지 않습니다.
+      color: 'from-purple-500 to-pink-500', // 이 색상값도 사용되지 않습니다.
+      example: '예: "강아지" → "ㄱ-ㅏ-ㅇ-ㅏ-ㅈ-ㅣ"',
     },
     {
       id: 2,
       name: '음소 합성',
-      description: '소리를 모으는 탐험! 자음과 모음을 합쳐 단어를 만들어보세요.',
+      description: '그림을 보고 빈 자리에 들어갈 음소를 찾아보세요.',
       icon: LinkIcon,
       color: 'from-blue-500 to-cyan-500',
-      example: '예: "ㄱ-ㅏ" → "가"'
+      example: '예: "ㄱ-ㅏ" → "가"',
     },
     {
       id: 3,
-      name: '단어 읽기',
-      description: '단어를 읽는 탐험! 다양한 단어를 정확하게 읽어보세요.',
-      icon: FileText,
+      name: '단어 맞추기',
+      description: '그림을 보고 어울리는 단어를 찾아보세요',
+      icon: BookOpen,
       color: 'from-green-500 to-emerald-500',
-      example: '예: "강아지"를 정확하게 읽기'
+      example: '예: "가방" 그림을 보고 "가방" 단어 찾기',
     },
     {
       id: 4,
-      name: '문장 읽기',
-      description: '문장을 읽는 탐험! 긴 문장을 유창하게 읽어보세요.',
-      icon: BookOpen,
+      name: '단어 읽기',
+      description: '단어를 읽는 탐험! 다양한 단어를 정확하게 읽어보세요.',
+      icon: FileText,
       color: 'from-orange-500 to-red-500',
-      example: '예: "귀여운 강아지가 뛰어놀아요"'
-    }
+      example: '예: "강아지"를 정확하게 읽기',
+    },
   ];
 
   const learningFlow = [
@@ -63,49 +63,53 @@ const Introduction = () => {
     { step: 'STT 인식', icon: Brain, description: 'AI가 음성을 텍스트로 변환' },
     { step: '정답 검증', icon: CheckCircle, description: '자동으로 정답 확인' },
     { step: '피드백', icon: Star, description: '성공/실패 애니메이션' },
-    { step: '진행도 저장', icon: BarChart3, description: '학습 데이터 자동 저장' }
+    { step: '진행도 저장', icon: BarChart3, description: '학습 데이터 자동 저장' },
   ];
 
   const dashboardFeatures = [
     {
       title: '자녀별 학습 진도',
       icon: TrendingUp,
-      description: '모험별 완료율과 성취도를 한눈에 확인하세요'
+      description: '모험별 완료율과 성취도를 한눈에 확인하세요',
     },
     {
       title: '약점 영역 시각화',
       icon: BarChart3,
-      description: '차트로 보는 우리 아이의 강점과 약점 분석'
+      description: '차트로 보는 우리 아이의 강점과 약점 분석',
     },
     {
       title: '세션별 분석',
       icon: Calendar,
-      description: '정답률, 소요 시간 등 상세한 학습 기록'
+      description: '정답률, 소요 시간 등 상세한 학습 기록',
     },
     {
       title: 'AI 주간 리포트',
       icon: FileText,
-      description: 'AI가 생성하는 맞춤형 학습 분석 보고서'
-    }
+      description: 'AI가 생성하는 맞춤형 학습 분석 보고서',
+    },
   ];
 
   const faqs = [
     {
       question: '난독증이 무엇인가요?',
-      answer: '난독증은 지능이나 시력에 문제가 없음에도 불구하고 글자를 읽거나 쓰는 데 어려움을 겪는 학습 장애입니다. Captain Echo는 음소 인식 훈련을 통해 난독증 아동의 읽기 능력 향상을 돕습니다.'
+      answer:
+        '난독증은 지능이나 시력에 문제가 없음에도 불구하고 글자를 읽거나 쓰는 데 어려움을 겪는 학습 장애입니다. 꼬마선장 에코는 음소 인식 훈련을 통해 난독증 아동의 읽기 능력 향상을 돕습니다.',
     },
     {
       question: '하루에 얼마나 학습하면 되나요?',
-      answer: 'AI 에이전트가 아이의 상태, 학습 진도, 부모님의 목표를 종합하여 매일 최적의 학습 계획을 제안합니다. 일반적으로 하루 15-30분 정도가 권장됩니다.'
+      answer:
+        'AI 에이전트가 아이의 상태, 학습 진도, 부모님의 목표를 종합하여 매일 최적의 학습 계획을 제안합니다. 일반적으로 하루 15-30분 정도가 권장됩니다만, 아이가 학습을 어려워한다면 천천히 완료하는 것에 의의를 두고 진행해주셔도 괜찮습니다.',
     },
     {
       question: 'A2A 시스템이란 무엇인가요?',
-      answer: '3개의 AI 에이전트(학업, 정서, 부모)가 서로 협의하여 아이에게 가장 적합한 학습 계획을 만드는 시스템입니다. 마치 여러 전문가가 상담하는 것처럼 균형 잡힌 교육을 제공합니다.'
+      answer:
+        '3개의 AI 에이전트(학업, 정서, 부모)가 서로 협의하여 아이에게 가장 적합한 학습 계획을 만드는 시스템입니다. 마치 여러 전문가가 상담하는 것처럼 균형 잡힌 교육을 제공합니다.',
     },
     {
       question: '학습 데이터는 안전한가요?',
-      answer: '모든 학습 데이터는 암호화되어 안전하게 저장되며, 부모님만 접근할 수 있습니다. 개인정보 보호를 최우선으로 합니다.'
-    }
+      answer:
+        '모든 학습 데이터는 외부의 어떤 사람도 접근할 수 없으며 오직 부모님만 접근할 수 있습니다. 저희 서비스는 개인정보 보호를 최우선으로 합니다.',
+    },
   ];
 
   return (
@@ -116,22 +120,27 @@ const Introduction = () => {
       <section className="relative z-10 pt-32 pb-20 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6 font-peach drop-shadow-lg">
-            Captain Echo 서비스 둘러보기
+            꼬마선장 에코 서비스 둘러보기
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
-            게임처럼 즐겁게, AI가 맞춤형으로 설계하는<br />
+            게임처럼 즐겁게, AI가 맞춤형으로 설계하는
+            <br />
             우리 아이만의 난독증 극복 여정
           </p>
 
           {/* Trust Badges */}
           <div className="flex justify-center gap-4 mb-8 flex-wrap">
             <div className="flex items-center gap-2 bg-white/95 backdrop-blur-sm px-5 py-3 rounded-full shadow-lg">
-              <Shield className="w-5 h-5 text-blue-600" />
-              <span className="text-sm font-semibold text-gray-700">전문가 검증</span>
+              <Gamepad className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-semibold text-gray-700">
+                게이미피케이션
+              </span>
             </div>
             <div className="flex items-center gap-2 bg-white/95 backdrop-blur-sm px-5 py-3 rounded-full shadow-lg">
               <Clock className="w-5 h-5 text-purple-600" />
-              <span className="text-sm font-semibold text-gray-700">하루 15분</span>
+              <span className="text-sm font-semibold text-gray-700">
+                짧고 꾸준하게
+              </span>
             </div>
           </div>
         </div>
@@ -145,21 +154,29 @@ const Introduction = () => {
               4가지 모험으로 배우는 읽기
             </h2>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              각 모험은 난독증 극복에 필수적인 음소 인식 능력을 단계별로 향상시킵니다
+              각 모험은 난독증 극복에 필수적인 음소 인식 능력을 단계별로
+              향상시킵니다
             </p>
           </div>
 
+          {/* --- 이 부분이 수정되었습니다. --- */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {adventures.map((adventure) => {
-              const Icon = adventure.icon;
+              // const Icon = adventure.icon; // 아이콘 대신 이미지를 사용
               return (
                 <div
                   key={adventure.id}
-                  className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group"
+                  className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-xl transition-all duration-300 group"
                 >
-                  <div className={`w-20 h-20 bg-gradient-to-br ${adventure.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-10 h-10 text-white" />
+                  {/* --- 아이콘 div 대신 이미지 div로 교체 --- */}
+                  <div className="relative w-full aspect-[8/5] rounded-2xl overflow-hidden mb-6 transition-transform duration-300">
+                    <img
+                      src={`/introduce/card${adventure.id}.png`}
+                      alt={adventure.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
+                  {/* --- 여기까지 --- */}
 
                   <h3 className="text-2xl font-bold text-gray-800 mb-3 font-peach">
                     모험 {adventure.id}: {adventure.name}
@@ -199,16 +216,22 @@ const Introduction = () => {
               return (
                 <div
                   key={index}
-                  className="bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-lg transition-all duration-300"
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
                       <Icon className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-blue-600 mb-1">STEP {index + 1}</div>
-                      <h4 className="text-lg font-bold text-gray-800 mb-2">{item.step}</h4>
-                      <p className="text-sm text-gray-600">{item.description}</p>
+                      <div className="text-sm font-bold text-blue-600 mb-1">
+                        STEP {index + 1}
+                      </div>
+                      <h4 className="text-lg font-bold text-gray-800 mb-2">
+                        {item.step}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {item.description}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -226,7 +249,8 @@ const Introduction = () => {
               부모 대시보드
             </h2>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              우리 아이의 학습 과정을 투명하게 확인하고<br />
+              우리 아이의 학습 과정을 투명하게 확인하고
+              <br />
               데이터 기반으로 성장을 지켜보세요
             </p>
           </div>
@@ -237,7 +261,7 @@ const Introduction = () => {
               return (
                 <div
                   key={index}
-                  className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                  className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-xl transition-all duration-300 "
                 >
                   <div className="flex items-start gap-6">
                     <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl flex items-center justify-center flex-shrink-0">
@@ -261,9 +285,7 @@ const Introduction = () => {
           <div className="mt-12 bg-white/95 backdrop-blur-sm p-6 rounded-3xl shadow-xl">
             <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center">
               <div className="text-center">
-                <BarChart3 className="w-20 h-20 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg font-semibold">대시보드 화면 미리보기</p>
-                <p className="text-gray-400 text-sm mt-2">실시간 학습 데이터 시각화</p>
+                <img src="/introduce/dashboard.png" alt="대시보드 미리보기" />
               </div>
             </div>
           </div>
@@ -290,7 +312,7 @@ const Introduction = () => {
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="w-full p-6 flex items-center justify-between hover:bg-blue-50 transition-colors"
+                  className="w-full p-6 flex items-center justify-between transition-colors"
                 >
                   <h3 className="text-lg font-bold text-gray-800 text-left pr-4">
                     {faq.question}
@@ -323,22 +345,24 @@ const Introduction = () => {
               지금 바로 시작하세요
             </h2>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              우리 아이의 난독증 극복 여정,<br />
-              Captain Echo와 함께라면 가능합니다
+              우리 아이의 난독증 극복 여정,
+              <br />
+              꼬마선장 에코와 함께라면 가능합니다
             </p>
+            {/* 이전에 오류가 있었던 부분 (</img > -> </p>) */}
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/login"
-                className="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-xl font-bold px-10 py-5 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                className="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-xl font-bold px-10 py-5 rounded-full shadow-xl transition-all duration-300"
               >
                 지금 시작하기
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-6 h-6 transition-transform" />
               </Link>
 
               <Link
                 to="/"
-                className="inline-flex items-center justify-center gap-3 bg-white text-blue-600 text-xl font-bold px-10 py-5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-blue-600"
+                className="inline-flex items-center justify-center gap-3 bg-white text-blue-600 text-xl font-bold px-10 py-5 rounded-full shadow-lg transition-all duration-300 border-2 border-blue-600"
               >
                 홈으로 돌아가기
               </Link>
@@ -347,8 +371,55 @@ const Introduction = () => {
         </div>
       </section>
 
-      {/* Bottom padding */}
-      <div className="h-20"></div>
+      {/* Footer */}
+      <footer className="bg-blue-900 text-blue-200 py-16 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-12 mb-12">
+            <div>
+              <img
+                src="/nav/logo.png"
+                alt="꼬마선장 에코"
+                className="h-12 mb-6 opacity-90"
+              />
+              <p className="text-blue-300 leading-relaxed">
+                난독증 아동을 위한 AI 기반 맞춤형 학습 플랫폼
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold text-white mb-4 text-lg">서비스</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link
+                    to="/introduction"
+                    className="hover:text-white transition-colors"
+                  >
+                    서비스 소개
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/login"
+                    className="hover:text-white transition-colors"
+                  >
+                    시작하기
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-white mb-4 text-lg">기술</h4>
+              <p className="text-blue-300 text-sm leading-relaxed">
+                CrewAI Multi-Agent System으로 아이만을 위한 학습 계획을 만듭니다
+              </p>
+            </div>
+          </div>
+          <div className="border-t border-blue-800 pt-8 text-center">
+            <p className="text-sm text-blue-300">
+              © 2025 Captain Echo. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

@@ -51,6 +51,9 @@ public class Student {
     @Column(name = "level")
     private Short level;
 
+    @Column(name = "student_pin", nullable = false, length = 100)
+    private String studentPin;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -63,11 +66,12 @@ public class Student {
 
     @Builder
     public Student(Protector protector, String name, Gender gender, LocalDate birth,
-                   String profileImage, Grade grade, Short level) {
+                   String profileImage,String studentPin, Grade grade, Short level) {
         this.protector = protector;
         this.name = name;
         this.gender = gender;
         this.birth = birth;
+        this.studentPin = studentPin;
         this.profileImage = profileImage;
         this.coin = 0;
         this.grade = grade;
@@ -81,5 +85,29 @@ public class Student {
      */
     public void updateProfileImage(String imageUrl) {
         this.profileImage = imageUrl;
+    }
+
+    /**
+     * 학생 PIN을 업데이트합니다.
+     *
+     * @param pin 새로운 PIN
+     */
+    public void updateStudentPin(String pin) {
+        this.studentPin = pin;
+    }
+
+    /**
+     * 학생 정보를 업데이트합니다.
+     *
+     * @param name 이름
+     * @param gender 성별
+     * @param birth 생년월일
+     * @param grade 학년
+     */
+    public void updateStudentInfo(String name, Gender gender, LocalDate birth, Grade grade) {
+        this.name = name;
+        this.gender = gender;
+        this.birth = birth;
+        this.grade = grade;
     }
 }

@@ -15,6 +15,7 @@ import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.student.domain.Student;
+import com.captainecho.captainecho.student.domain.StudentInterest;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
 import com.captainecho.captainecho.protector.application.result.StudentListResult;
 import com.captainecho.captainecho.protector.application.result.StudentDto;
@@ -34,6 +35,7 @@ public class ProtectorService {
 
     private final ProtectorRepository protectorRepository;
     private final StudentRepository studentRepository;
+    private final com.captainecho.captainecho.student.persistence.StudentInterestRepository studentInterestRepository;
     private final EmailService emailService;
     private final RecoveryCodeService recoveryCodeService;
 
@@ -109,21 +111,45 @@ public class ProtectorService {
     public StudentListResult getStudents(Integer protectorId) {
         // 1. 학생 목록 조회
         List<Student> students = studentRepository.findByProtector_ProtectorId(protectorId);
+        log.info("📋 조회된 학생 수: {}", students.size());
 
         // 2. DTO 변환
         List<StudentDto> studentDtos = students.stream()
-                .map(student -> StudentDto.builder()
-                        .studentId(student.getStudentId())
-                        .name(student.getName())
-                        .gender(student.getGender() != null ? student.getGender().name() : null)
-                        .birth(student.getBirth() != null ? student.getBirth().toString() : null)
-                        .profileImage(student.getProfileImage())
-                        .grade(student.getGrade() != null ? student.getGrade().name() : null)
-                        .level(student.getLevel() != null ? student.getLevel().intValue() : null)
-                        .coin(student.getCoin())
-                        .build())
+                .map(student -> {
+                    // 학생의 관심사 조회
+                    List<StudentInterest> studentInterests = studentInterestRepository
+                            .findByStudent_StudentId(student.getStudentId());
+                    log.info("👤 학생 ID {}: 관심사 개수 = {}", student.getStudentId(), studentInterests.size());
+
+                    List<StudentDto.InterestDto> interests = studentInterests.stream()
+                            .map(studentInterest -> {
+                                log.info("  ✨ 관심사: ID={}, 이름={}",
+                                    studentInterest.getSubInterest().getSubInterestId(),
+                                    studentInterest.getSubInterest().getSmallInterestName());
+                                return StudentDto.InterestDto.builder()
+                                        .interestId(studentInterest.getSubInterest().getSubInterestId().intValue())
+                                        .interestName(studentInterest.getSubInterest().getSmallInterestName())
+                                        .build();
+                            })
+                            .collect(Collectors.toList());
+
+                    log.info("  🎯 변환된 관심사 DTO 개수: {}", interests.size());
+
+                    return StudentDto.builder()
+                            .studentId(student.getStudentId())
+                            .name(student.getName())
+                            .gender(student.getGender() != null ? student.getGender().name() : null)
+                            .birth(student.getBirth() != null ? student.getBirth().toString() : null)
+                            .profileImage(student.getProfileImage())
+                            .grade(student.getGrade() != null ? student.getGrade().name() : null)
+                            .level(student.getLevel() != null ? student.getLevel().intValue() : null)
+                            .coin(student.getCoin())
+                            .interests(interests)
+                            .build();
+                })
                 .collect(Collectors.toList());
 
+        log.info("✅ 최종 StudentDto 개수: {}", studentDtos.size());
         return new StudentListResult(studentDtos);
     }
 

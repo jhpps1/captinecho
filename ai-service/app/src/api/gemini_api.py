@@ -9,9 +9,10 @@ from google import genai
 from google.genai.errors import APIError
 from PIL import Image
 import unicodedata
+from app.src.utils.s3 import upload_to_s3
 
 
-# 로컬에 이미지 파일을 저장할 기본 디렉토리
+# 로컬에 이미지 파일을 저장할 기본 디렉토리 (레거시 - S3 사용 시 불필요)
 IMAGE_OUTPUT_DIR = "static/problems/images"
 # 디렉토리가 없으면 생성합니다.
 os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
@@ -37,14 +38,14 @@ def is_hangul_jamo(word: str) -> bool:
 
 def generate_image_with_gemini_flash(problem_text: str, api_key: str) -> str:
     """
-    Google GenAI SDK (Imagen 모델)을 사용하여 이미지를 생성하고 로컬 파일 경로를 반환합니다.
-    
+    Google GenAI SDK (Imagen 모델)을 사용하여 이미지를 생성하고 S3에 업로드 후 Public URL을 반환합니다.
+
     Args:
         problem_text (str): 이미지 생성 프롬프트 (correct_answer 텍스트).
         api_key (str): Gemini API Key.
-        
+
     Returns:
-        str: 로컬에 저장된 이미지 파일의 상대 경로 (DB 저장용) 또는 실패 시 빈 문자열.
+        str: S3 Public URL (DB 저장용) 또는 실패 시 빈 문자열.
     """
     if not api_key:
         print("❌ Gemini API Key가 제공되지 않았습니다.")
@@ -112,20 +113,24 @@ def generate_image_with_gemini_flash(problem_text: str, api_key: str) -> str:
         if not image_data_bytes:
             raise ValueError("이미지 바이트 변환에 실패했습니다.")
 
-        # 4-3. 파일명 생성 및 경로 설정
-        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
-        safe_problem_text = re.sub(r'[^\w\s-]', '', problem_text, flags=re.UNICODE)[:15].strip()
-        filename = f"{safe_problem_text}_{timestamp}.png"
-        local_path = os.path.join(IMAGE_OUTPUT_DIR, filename)
-        
-        # 4-4. 바이트 데이터 저장
-        with open(local_path, "wb") as f:
-            f.write(image_data_bytes)
-        
-        # DB에 저장될 최종 URL/경로
-        db_path = f"problems/images/{filename}" 
-        
-        return db_path
+        # 4-3. ✅ S3 업로드 (로컬 저장에서 변경)
+        try:
+            s3_url = upload_to_s3(
+                file_data=image_data_bytes,
+                key_prefix='problems/images/',
+                file_extension='png'
+            )
+
+            if s3_url:
+                print(f"✅ Gemini 이미지 S3 업로드 성공: {s3_url}")
+                return s3_url
+            else:
+                print("❌ Gemini 이미지 S3 업로드 실패")
+                return ""
+
+        except Exception as upload_error:
+            print(f"❌ S3 업로드 중 오류 발생: {upload_error}")
+            return ""
 
     except APIError as e:
         # 🚨 결제 문제(400 INVALID_ARGUMENT) 포함 모든 API 오류 처리
