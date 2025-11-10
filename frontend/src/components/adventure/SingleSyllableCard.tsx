@@ -1,15 +1,16 @@
 import Hangul from 'hangul-js';
-import { getJamoPositions } from '../../utils/hangulSVGPositions';
+import { getJamoPositions, type JamoPosition } from '../../utils/hangulSVGPositions';
 import type { ProblemData } from '../../types/problem';
 
 type SingleSyllableCardProps = {
   problem: ProblemData;
 };
 
-const getPartForJamo = (index: number): 'INITIAL' | 'MEDIAL' | 'FINAL' => {
-  if (index === 0) return 'INITIAL';
-  if (index === 1) return 'MEDIAL';
-  return 'FINAL'; // Only possible if problem.final exists and positions has 3 elements
+// The 'part' property is available again on JamoPosition
+const getPartForJamo = (jamo: JamoPosition): 'INITIAL' | 'MEDIAL' | 'FINAL' => {
+  if (jamo.part === 'L') return 'INITIAL';
+  if (jamo.part === 'V') return 'MEDIAL';
+  return 'FINAL'; // 'T'
 };
 
 export const SingleSyllableCard = ({ problem }: SingleSyllableCardProps) => {
@@ -41,9 +42,9 @@ export const SingleSyllableCard = ({ problem }: SingleSyllableCardProps) => {
     <div className="w-[85vw] max-w-2xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 p-4">
       <svg viewBox="0 0 100 100" className="w-full h-full">
         {positions.map((pos, index) => {
-          const part = getPartForJamo(index);
+          const part = getPartForJamo(pos);
           const isHidden = part === problem.hiddenTarget;
-          const charToShow = isHidden ? '_' : pos.char;
+          const charToShow = pos.char; // Always show the character
 
           return (
             <text

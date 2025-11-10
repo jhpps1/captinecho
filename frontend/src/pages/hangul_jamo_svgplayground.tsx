@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Hangul from "hangul-js";
 
 /** ------------------------- 타입/유틸 ------------------------- */
-export type JamoPosition = {
+type PlaygroundJamoPosition = {
   char: string; // 자모 문자
   x: number;   // 0~100 (viewBox 기준)
   y: number;   // 0~100
@@ -41,7 +41,7 @@ function detectPattern(jung: string, hasJong: boolean): PatternKey {
 
 /** ------------------------- 기본 배치 ------------------------- */
 // viewBox 100x100 기준 기본값(경험치 기반 초기치)
-const DEFAULTS: Record<PatternKey, [JamoPosition, JamoPosition, JamoPosition | null]> = {
+const DEFAULTS: Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]> = {
   VERT_NOJONG: [
     { char: "", x: 25, y: 55, fontSize: 45 }, // 초성
     { char: "", x: 60, y: 55, fontSize: 45 }, // 중성
@@ -99,9 +99,9 @@ function persistSave(blob: SaveBlob) {
 /** ------------------------- 좌표 계산 ------------------------- */
 export function getJamoPositions(
   syllable: string,
-  patternDefaults: Partial<Record<PatternKey, [JamoPosition, JamoPosition, JamoPosition | null]>>,
+  patternDefaults: Partial<Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]>>,
   overrides: SaveBlob["overrides"],
-): JamoPosition[] {
+): PlaygroundJamoPosition[] {
   const parts = Hangul.disassemble(syllable);
   if (parts.length === 0) return [];
   const [ch, ju, jo] = parts as [string, string, string?];
@@ -109,16 +109,16 @@ export function getJamoPositions(
   const pat = detectPattern(ju, hasJong);
 
   const base = (patternDefaults[pat] ?? DEFAULTS[pat]).map((p) => (p ? { ...p } : null)) as [
-    JamoPosition,
-    JamoPosition,
-    JamoPosition | null,
+    PlaygroundJamoPosition,
+    PlaygroundJamoPosition,
+    PlaygroundJamoPosition | null,
   ];
 
   // 글자 단위 오버라이드 적용
   const save = loadSave();
   const flat = overrides[syllable] ?? save.overrides[syllable] ?? undefined;
 
-  const applyFlat = (arr: [JamoPosition, JamoPosition, JamoPosition | null], flat?: number[]) => {
+  const applyFlat = (arr: [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null], flat?: number[]) => {
     if (!flat) return arr;
     const [x1, y1, s1, x2, y2, s2, x3, y3, s3] = flat;
     arr[0].x = x1 ?? arr[0].x; arr[0].y = y1 ?? arr[0].y; arr[0].fontSize = s1 ?? arr[0].fontSize;
@@ -136,9 +136,18 @@ export function getJamoPositions(
   // 실 자모 문자 채워넣기
   withFlat[0].char = ch;
   withFlat[1].char = ju;
-  if (hasJong && withFlat[2]) withFlat[2]!.char = jo!;
+  if (hasJong) {
+    if (withFlat[2]) {
+      withFlat[2]!.char = jo!;
+    } else {
+      // 패턴에 종성 슬롯이 없는 경우에 대한 방어 코드
+      console.error(`Pattern ${pat} is missing a final consonant slot for syllable ${syllable}`);
+      const fallbackFinalPos = { char: jo!, x: 42, y: 78, fontSize: 36 };
+      (withFlat as (PlaygroundJamoPosition | null)[]).push(fallbackFinalPos);
+    }
+  }
 
-  return withFlat.filter(Boolean) as JamoPosition[];
+  return withFlat.filter(Boolean) as PlaygroundJamoPosition[];
 }
 
 /** ------------------------- 캔버스 유사도 ------------------------- */
@@ -154,7 +163,7 @@ function drawOriginal(ctx: CanvasRenderingContext2D, char: string) {
   ctx.fillText(char, ctx.canvas.width / 2, ctx.canvas.height / 2);
 }
 
-function drawComposed(ctx: CanvasRenderingContext2D, jamo: JamoPosition[]) {
+function drawComposed(ctx: CanvasRenderingContext2D, jamo: PlaygroundJamoPosition[]) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.imageSmoothingEnabled = true;
   ctx.textAlign = "center";
@@ -202,12 +211,12 @@ export default function HangulJamoSVGPlayground() {
 
   // ⬇⬇ 순서 중요: patternDefaults / overrides / current 가 먼저 선언되어야 함
   const [patternDefaults, setPatternDefaults] =
-    useState<Partial<Record<PatternKey, [JamoPosition, JamoPosition, JamoPosition | null]>>>({});
+    useState<Partial<Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]>>>({});
   const [overrides, setOverrides] = useState<Record<string, number[]>>({});
   const [current, setCurrent] = useState<string>("가");
 
   // positions 는 초기엔 빈 배열로, 의존성 준비 후 useEffect에서 계산
-  const [positions, setPositions] = useState<JamoPosition[]>([]);
+  const [positions, setPositions] = useState<PlaygroundJamoPosition[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
 
@@ -514,7 +523,7 @@ function buildSyllables(): string[] {
 
 // 항상 number[]을 반환하도록 undefined 제거
 function flattenPositions(
-  pos: JamoPosition[],
+  pos: PlaygroundJamoPosition[],
   hasJong: boolean
 ): number[] {
   const a = pos[0], b = pos[1], c = pos[2];
