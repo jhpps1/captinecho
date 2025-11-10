@@ -192,7 +192,7 @@ export const SuppleRunner = () => {
           }}
         >
           <h1 className="text-4xl font-bold text-green-700 mb-4">추가학습</h1>
-          <p className="text-xl text-white text-shadow-lg/50 mb-8">선택한 유형의 학습을 시작할 준비가 되셨나요?</p>
+          <p className="text-xl text-[#623d14] mb-8">선택한 유형의 학습을 시작할 준비가 되셨나요?</p>
           <button
             onClick={handleStartAdventure}
             disabled={isStarting}

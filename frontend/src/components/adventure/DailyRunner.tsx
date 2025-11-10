@@ -316,7 +316,7 @@ export const DailyRunner = () => {
           }}
         > {/* z-index를 줘서 동영상 위에 오도록 */}
           <h1 className="text-4xl font-bold text-blue-900 mb-4">일일탐험</h1>
-          <h2 className="text-xl text-white mb-8 text-shadow-lg/60">오늘의 모험을 시작할 준비가 되셨나요?</h2>
+          <h2 className="text-xl text-[#623d14] mb-8">오늘의 모험을 시작할 준비가 되셨나요?</h2>
           <button
             onClick={handleStartAdventure}
             disabled={isStarting}
