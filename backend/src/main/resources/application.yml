@@ -115,3 +115,14 @@ file:
       path: ${FILE_UPLOAD_PROFILE_PATH:profiles}
       max-size: 5242880  # 5MB in bytes
       allowed-extensions: jpg,jpeg,png,webp
+
+# AWS S3 설정
+cloud:
+  aws:
+    s3:
+      bucket: ${AWS_S3_BUCKET:captain-echo-files}
+    credentials:
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
+    region:
+      static: ${AWS_REGION:ap-northeast-2}
