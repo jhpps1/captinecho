@@ -46,8 +46,14 @@ class Settings(BaseSettings):
     # 🚨 2. Gemini API Key 추가 (이미지 생성용)
     # .env 파일에 있어야 하는 키입니다. (Validation 오류 해결)
     GEMINI_API_KEY: Optional[str] = Field(default="")
-    
-    # 🚨 3. 충돌 방지를 위해 최소한의 필수 필드 정의 (다른 곳에서 사용될 수 있는 필드)
+
+    # 🚨 3. AWS S3 설정 (파일 업로드용)
+    AWS_ACCESS_KEY_ID: Optional[str] = Field(default="")
+    AWS_SECRET_ACCESS_KEY: Optional[str] = Field(default="")
+    AWS_REGION: str = Field(default="ap-northeast-2")
+    S3_BUCKET_NAME: Optional[str] = Field(default="captain-echo-files")
+
+    # 🚨 4. 충돌 방지를 위해 최소한의 필수 필드 정의 (다른 곳에서 사용될 수 있는 필드)
     # 이 필드들이 app/src/core/config.py와 겹치거나 누락되면 다시 오류가 발생할 수 있습니다.
     DATABASE_URL: Optional[str] = Field(default=None)
 
