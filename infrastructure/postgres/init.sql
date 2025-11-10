@@ -76,6 +76,7 @@ CREATE TABLE student (
     coin INTEGER DEFAULT 0 NOT NULL CHECK (coin >= 0),
     grade grade_type NOT NULL,
     level SMALLINT,
+    student_pin CHAR(100) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP,
     expired_at TIMESTAMP
@@ -234,7 +235,8 @@ CREATE TABLE weekly_personal_report (
     student_id INTEGER NOT NULL REFERENCES student(student_id) ON DELETE CASCADE,
     total_time INTEGER DEFAULT 0,
     curriculum TEXT,
-    discussion_log TEXT,
+    curriculum_structure JSON, 
+    discussion_log JSON,
     protector_goal protector_goal_type NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

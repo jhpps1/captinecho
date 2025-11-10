@@ -10,20 +10,34 @@ import com.captainecho.captainecho.student.application.command.DeleteStudentInte
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
+import com.captainecho.captainecho.student.application.command.UpdatePinCommand;
+import com.captainecho.captainecho.student.application.command.UpdateStudentCommand;
+import com.captainecho.captainecho.student.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
+import com.captainecho.captainecho.student.application.result.UpdatePinResult;
+import com.captainecho.captainecho.student.application.result.UpdateStudentResult;
+import com.captainecho.captainecho.student.application.result.VerifyPinResult;
 import com.captainecho.captainecho.student.presentation.request.AddStudentInterestRequest;
 import com.captainecho.captainecho.student.presentation.request.RegisterStudentRequest;
+import com.captainecho.captainecho.student.presentation.request.UpdatePinRequest;
+import com.captainecho.captainecho.student.presentation.request.UpdateStudentRequest;
+import com.captainecho.captainecho.student.presentation.request.VerifyPinRequest;
+import com.captainecho.captainecho.student.presentation.request.VerifyRecoveryCodeRequest;
 import com.captainecho.captainecho.student.presentation.response.AddStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.DeleteStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
+import com.captainecho.captainecho.student.presentation.response.RecoveryCodeResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
+import com.captainecho.captainecho.student.presentation.response.UpdatePinResponse;
 import com.captainecho.captainecho.student.presentation.response.UpdateProfileImageResponse;
+import com.captainecho.captainecho.student.presentation.response.UpdateStudentResponse;
+import com.captainecho.captainecho.student.presentation.response.VerifyPinResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -81,6 +95,27 @@ public class StudentController {
         studentService.deleteStudent(command);
 
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PatchMapping("/{student-id}")
+    @Operation(summary = "학생 정보 수정", description = "보호자가 자신의 학생 정보를 수정합니다 (이름, 성별, 생년월일, 학년)")
+    public ResponseEntity<UpdateStudentResponse> updateStudent(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable("student-id") Integer studentId,
+            @Valid @RequestBody UpdateStudentRequest request
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        UpdateStudentCommand command = request.toCommand(protectorId, studentId);
+        UpdateStudentResult result = studentService.updateStudent(command);
+
+        UpdateStudentResponse response = UpdateStudentResponse.from(result);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{studentId}/interests")
@@ -195,5 +230,93 @@ public class StudentController {
         UpdateProfileImageResponse response = new UpdateProfileImageResponse(result.imageUrl());
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 학생 PIN 검증 API
+     *
+     * @param studentId 학생 ID
+     * @param request PIN 검증 요청 (pin)
+     * @return PIN 검증 결과
+     */
+    @PostMapping("/{student-id}/pin/verify")
+    @Operation(
+            summary = "학생 PIN 검증",
+            description = "학생 대시보드 접근 시 PIN을 검증합니다"
+    )
+    public ResponseEntity<VerifyPinResponse> verifyPin(
+            @PathVariable("student-id") Integer studentId,
+            @Valid @RequestBody VerifyPinRequest request
+    ) {
+        VerifyPinCommand command = request.toCommand(studentId);
+        VerifyPinResult result = studentService.verifyPin(command);
+
+        VerifyPinResponse response = VerifyPinResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 학생 PIN 수정 API
+     *
+     * @param studentId 학생 ID
+     * @param request PIN 수정 요청 (currentPin, newPin)
+     * @return PIN 수정 결과
+     */
+    @PatchMapping("/{student-id}/pin")
+    @Operation(
+            summary = "학생 PIN 수정",
+            description = "학생의 PIN을 수정합니다"
+    )
+    public ResponseEntity<UpdatePinResponse> updatePin(
+            @PathVariable("student-id") Integer studentId,
+            @Valid @RequestBody UpdatePinRequest request
+    ) {
+        UpdatePinCommand command = request.toCommand(studentId);
+        UpdatePinResult result = studentService.updatePin(command);
+
+        UpdatePinResponse response = UpdatePinResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 학생 PIN 복구 인증 코드 전송 API
+     *
+     * @param studentId 학생 ID
+     * @return 성공 여부
+     */
+    @PostMapping("/{student-id}/pin/send-recovery-code")
+    @Operation(
+            summary = "학생 PIN 복구 인증 코드 전송",
+            description = "학생의 보호자 이메일로 PIN 복구 인증 코드를 전송합니다"
+    )
+    public ResponseEntity<RecoveryCodeResponse> sendRecoveryCode(
+            @PathVariable("student-id") Integer studentId
+    ) {
+        studentService.sendRecoveryCode(studentId);
+
+        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
+    }
+
+    /**
+     * 학생 PIN 복구 인증 코드 검증 및 PIN 초기화 API
+     *
+     * @param studentId 학생 ID
+     * @param request 인증 코드 검증 요청 (code)
+     * @return 성공 여부
+     */
+    @PostMapping("/{student-id}/pin/verify-recovery-code")
+    @Operation(
+            summary = "학생 PIN 복구 인증 코드 검증 및 PIN 초기화",
+            description = "인증 코드를 검증하고 학생 PIN을 000000으로 초기화합니다"
+    )
+    public ResponseEntity<RecoveryCodeResponse> verifyRecoveryCode(
+            @PathVariable("student-id") Integer studentId,
+            @Valid @RequestBody VerifyRecoveryCodeRequest request
+    ) {
+        studentService.verifyRecoveryCodeAndResetPin(studentId, request.code());
+
+        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
     }
 }

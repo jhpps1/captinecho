@@ -19,6 +19,7 @@ public enum StudentErrorCode implements ErrorCode {
     EMPTY_FILE(HttpStatus.BAD_REQUEST, "ST40008", "빈 파일은 업로드할 수 없습니다"),
     INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "ST40009", "지원하지 않는 파일 형식입니다"),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "ST40010", "파일 크기가 제한을 초과했습니다"),
+    PIN_NOT_MATCH(HttpStatus.BAD_REQUEST, "ST40011", "PIN이 일치하지 않습니다"),
 
     // 403 FORBIDDEN
     STUDENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ST40301", "해당 학생에 대한 접근 권한이 없습니다"),
@@ -28,7 +29,10 @@ public enum StudentErrorCode implements ErrorCode {
     NO_ONGOING_SESSION(HttpStatus.NOT_FOUND, "ST40402", "진행 중인 학습 세션이 없습니다"),
     STUDENT_INTEREST_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40403", "학생 관심사를 찾을 수 없습니다"),
     PROBLEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40404", "문제를 찾을 수 없습니다"),
+    PIN_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40405", "PIN이 등록되지 않았습니다"),
+    EMAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "ST40406", "보호자 이메일을 찾을 수 없습니다"),
     PROBLEM_NOT_ASSIGNED(HttpStatus.FORBIDDEN, "ST40302", "해당 문제는 학생에게 할당되지 않았습니다"),
+    INVALID_RECOVERY_CODE(HttpStatus.BAD_REQUEST, "ST40012", "유효하지 않은 복구 코드입니다"),
 
     // 500 INTERNAL SERVER ERROR
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "ST50001", "파일 업로드 중 오류가 발생했습니다");
