@@ -17,6 +17,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="allow",  # 추가 필드 허용 (OPENAI_MODEL_NAME 등)
     )
 
     # 기본 설정
