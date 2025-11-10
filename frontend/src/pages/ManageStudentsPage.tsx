@@ -69,7 +69,7 @@ export default function ManageStudentsPage() {
         birthDate: s.birth || '생년월일 미등록',
         gender: s.gender ? mapGenderToFrontend(s.gender) : '남',
         grade: s.grade ? mapGradeToFrontend(s.grade) : '미취학',
-        interests: [],
+        interests: s.interests?.map(interest => interest.interestName) || [],
         profileImage: s.profileImage
       }));
       setStudents(studentList);
