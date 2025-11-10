@@ -291,13 +291,32 @@ export const DailyRunner = () => {
     );
   }
 
-  // 시작 대기 화면 (세션이 활성화되지 않았을 때)
+  // 시작 대기 화면 (세션이 활성화되지 않았을 때) - 동영상 배경 추가
   if (!session.isActive && !isLoading && !error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-blue-100">
-        <div className="text-center bg-white p-10 rounded-2xl shadow-xl">
-          <h1 className="text-4xl font-bold text-blue-600 mb-4">🗺️ 일일탐험</h1>
-          <p className="text-xl text-gray-600 mb-8">오늘의 모험을 시작할 준비가 되셨나요?</p>
+      <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          src="/adventurepage/todaysgamebackground.mp4"
+        >
+          Your browser does not support the video tag.
+        </video>
+        <div 
+          className="relative text-center p-25 rounded-2xl z-10" 
+          style={{ 
+            backgroundImage: `url('/adventurepage/layoutmap.png')`, 
+            backgroundSize: 'cover', 
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            // Tailwind bg-white 대신 투명 배경으로
+            backgroundColor: 'transparent' 
+          }}
+        > {/* z-index를 줘서 동영상 위에 오도록 */}
+          <h1 className="text-4xl font-bold text-blue-900 mb-4">일일탐험</h1>
+          <h2 className="text-xl text-white mb-8 drop-shadow-xl/100">오늘의 모험을 시작할 준비가 되셨나요?</h2>
           <button
             onClick={handleStartAdventure}
             disabled={isStarting}

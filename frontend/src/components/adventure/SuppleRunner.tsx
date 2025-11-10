@@ -164,13 +164,35 @@ export const SuppleRunner = () => {
     );
   }
 
-  // 시작 대기 화면 (세션이 활성화되지 않았을 때)
+// 시작 대기 화면 (세션이 활성화되지 않았을 때)
   if (!session.isActive && !isLoading && !error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
-        <div className="text-center bg-white p-10 rounded-2xl shadow-xl">
-          <h1 className="text-4xl font-bold text-green-600 mb-4">📚 추가학습</h1>
-          <p className="text-xl text-gray-600 mb-8">선택한 유형의 학습을 시작할 준비가 되셨나요?</p>
+      <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
+        {/* 동영상 배경 */}
+        <video
+          src="/adventurepage/beforegamebackground.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover -z-10"
+        />
+        {/* 가독성을 위한 어두운 오버레이 (선택 사항) */}
+        <div className="absolute inset-0 bg-black/30 -z-10" />
+
+        {/* 기존 콘텐츠 (z-index가 비디오보다 높으므로 위에 표시됨) */}
+        <div 
+          className="text-center p-30 rounded-2xl"
+          style={{ 
+            backgroundImage: `url('/adventurepage/layoutmap.png')`, 
+            backgroundSize: 'cover', // 이미지가 div를 꽉 채우도록
+            backgroundPosition: 'center', // 이미지가 중앙에 오도록
+            backgroundRepeat: 'no-repeat', // 이미지가 반복되지 않도록
+            backgroundColor: 'transparent' // 기존 bg-white 대신 투명 배경
+          }}
+        >
+          <h1 className="text-4xl font-bold text-green-700 mb-4">추가학습</h1>
+          <p className="text-xl text-white text-shadow-lg/50 mb-8">선택한 유형의 학습을 시작할 준비가 되셨나요?</p>
           <button
             onClick={handleStartAdventure}
             disabled={isStarting}
