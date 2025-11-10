@@ -73,8 +73,17 @@ def fill_reset_and_make_weekly_report(db):
             values = make_weekly_report_values(student_id, db)
             total_time = calculate_weekly_total_time(db, student_id, week_start, week_end)
 
-            # 리포트 row 최신 항목 찾기
-            report = db.query(WeeklyPersonalReport).filter_by(student_id=student_id).order_by(WeeklyPersonalReport.created_at.desc()).first()
+            # 최신 리포트에서 protector_goal 가져오기
+            latest_report = db.query(WeeklyPersonalReport)\
+                .filter_by(student_id=student_id)\
+                .order_by(WeeklyPersonalReport.created_at.desc())\
+                .first()
+
+            # protector_goal 설정 (최신 리포트 있으면 그대로, 없으면 기본값)
+            protector_goal = latest_report.protector_goal if latest_report else ProtectorGoalType.FOCUS_ON_WEAKNESS
+
+            # 리포트 row 확인
+            report = latest_report
 
             if report:
                 # 이미 리포트가 있으면 필요한 값만 업데이트 (비어있을 때만)
@@ -91,13 +100,13 @@ def fill_reset_and_make_weekly_report(db):
                 if updated:
                     db.commit()
             else:
-                # 없으면 신규 row 생성 (protector_goal 반드시 포함! NOT NULL이니까)
-                protector_goal = ProtectorGoalType.FOCUS_ON_WEAKNESS # 혹은 외부에서 주입된 값
+                # 없으면 신규 row 생성 (curriculum_structure, discussion_log JSON 포함)
                 report = WeeklyPersonalReport(
                     student_id=student_id,
                     total_time=total_time,
                     curriculum=values["curriculum"],
-                    discussion_log=values["discussion_log"],
+                    discussion_log=None,         # CrewAI가 나중에 채움 (JSON)
+                    curriculum_structure=None,   # CrewAI가 나중에 채움 (JSON)
                     protector_goal=protector_goal,
                     created_at=now
                 )
