@@ -19,7 +19,11 @@ import { CompletionModal } from './modals/CompletionModal';
  */
 export const SuppleRunner = () => {
   const navigate = useNavigate();
-  const { studentId, typeId } = useParams<{ studentId: string; typeId: string }>();
+  // [수정됨] typeId만 useParams에서 가져옵니다.
+  const { typeId } = useParams<{ typeId: string }>();
+
+  // [추가됨] studentId를 state로 관리합니다.
+  const [studentId, setStudentId] = useState<number | null>(null);
 
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,19 +39,20 @@ export const SuppleRunner = () => {
 
   const [isStarting, setIsStarting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false); // 완료 여부 추가
-  // studentId, typeId 검증
-  const parsedStudentId = studentId ? parseInt(studentId, 10) : null;
+
+  // [수정됨] typeId만 파싱합니다.
   const parsedTypeId = typeId ? parseInt(typeId, 10) : null;
 
   // 페이지 이탈 시 세션 종료
   useEffect(() => {
-    if (!parsedStudentId || !session.isActive) return;
+    // [수정됨] parsedStudentId 대신 state의 studentId 사용
+    if (!studentId || !session.isActive) return;
 
     // 컴포넌트 언마운트 시 세션 종료 (다른 페이지로 이동)
     const cleanup = async () => {
       try {
         console.log('🚪 페이지 이탈 감지, 세션 종료 중...');
-        await endAdventure(parsedStudentId);
+        await endAdventure(studentId); // [수정됨]
       } catch (err) {
         console.error('❌ 페이지 이탈 시 세션 종료 실패:', err);
       }
@@ -57,7 +62,8 @@ export const SuppleRunner = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (session.isActive) {
         // 세션이 활성화되어 있으면 동기적으로 종료 시도
-        navigator.sendBeacon(`/api/student/${parsedStudentId}/adventure/end`);
+        // [수정됨] URL에 studentId 동적 삽입
+        navigator.sendBeacon(`/api/student/${studentId}/adventure/end`);
       }
     };
 
@@ -67,24 +73,31 @@ export const SuppleRunner = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanup(); // 언마운트 시 세션 종료
     };
-  }, [session.isActive, parsedStudentId]);
+    // [수정됨] 의존성 배열 변경
+  }, [session.isActive, studentId]);
 
-  // studentId, typeId 검증만 수행 (자동 로드 제거)
+  // [수정됨] studentId(세션 스토리지) 및 typeId(URL) 검증
   useEffect(() => {
+    const storedStudentId = sessionStorage.getItem('studentId'); // "studentId" 키로 가정
+    const parsedStudentId = storedStudentId ? parseInt(storedStudentId, 10) : null;
+
     if (!parsedStudentId || isNaN(parsedStudentId)) {
-      setError('유효하지 않은 학생 ID입니다.');
+      setError('학생 정보를 불러올 수 없습니다. 다시 로그인해주세요.');
       setIsLoading(false);
     } else if (!parsedTypeId || isNaN(parsedTypeId) || parsedTypeId < 1 || parsedTypeId > 4) {
       setError('유효하지 않은 탐험 타입입니다. (1~4)');
       setIsLoading(false);
     } else {
+      setStudentId(parsedStudentId); // [추가됨] 유효한 studentId를 state에 설정
       setIsLoading(false); // 초기 로딩 완료
     }
-  }, [parsedStudentId, parsedTypeId]);
+    // [수정됨] 의존성 배열 변경
+  }, [parsedTypeId]);
 
   // 세션 시작 핸들러
   const handleStartAdventure = async () => {
-    if (!parsedStudentId || !parsedTypeId) {
+    // [수정됨] state의 studentId 사용
+    if (!studentId || !parsedTypeId) {
       setError('유효하지 않은 ID입니다.');
       return;
     }
@@ -95,8 +108,8 @@ export const SuppleRunner = () => {
 
       console.log('🚀 추가학습 세션 시작 중...');
 
-      // 1. 세션 생성
-      const sessionId = await startAdventure(parsedStudentId, 'SUPPLE');
+      // 1. 세션 생성 (state의 studentId 사용)
+      const sessionId = await startAdventure(studentId, 'SUPPLE');
 
       setSession({
         sessionId,
@@ -107,8 +120,8 @@ export const SuppleRunner = () => {
 
       console.log(`✅ 세션 시작됨 - Session ID: ${sessionId}`);
 
-      // 2. 문제 불러오기
-      const data = await getSuppleProblems(parsedStudentId, parsedTypeId);
+      // 2. 문제 불러오기 (state의 studentId 사용)
+      const data = await getSuppleProblems(studentId, parsedTypeId);
 
       if (!data.problems || data.problems.length === 0) {
         setError('추가학습 문제가 없습니다.');
@@ -128,11 +141,11 @@ export const SuppleRunner = () => {
 
   // 세션 종료 핸들러 (완료 시 호출)
   const handleEndAdventure = async () => {
-    if (!parsedStudentId || !session.isActive) return;
+   if (!studentId || !session.isActive) return;
 
     try {
       console.log('🏁 세션 종료 중...');
-      const success = await endAdventure(parsedStudentId);
+      const success = await endAdventure(studentId);
 
       if (success) {
         console.log('✅ 세션 종료 성공');
@@ -234,7 +247,7 @@ export const SuppleRunner = () => {
 
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   // 추가학습은 모든 문제가 같은 타입이므로 parsedTypeId를 직접 사용
-  return (
+return (
     <AdventureLayout
       adventureTypeId={parsedTypeId as 1 | 2 | 3 | 4}
       onExitConfirm={handleEndAdventure}
@@ -243,7 +256,7 @@ export const SuppleRunner = () => {
         <ProblemRunner
           problems={problems}
           mode="supple"
-          studentId={parsedStudentId!}
+          studentId={studentId!}
           isTutorialMode={isTutorialMode}
           onComplete={handleEndAdventure}
         />

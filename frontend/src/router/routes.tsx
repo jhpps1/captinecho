@@ -88,11 +88,11 @@ const router = createBrowserRouter([
   },
   // 새로운 Adventure 라우트 (설계 문서 기반)
   {
-    path: '/daily/:studentId/:idx?',
+    path: '/daily/:idx?',
     element: <DailyRunner />,
   },
   {
-    path: '/adventure/:studentId/:typeId',
+    path: '/adventure/:typeId',
     element: <SuppleRunner />,
   },
 ]);
