@@ -40,6 +40,11 @@ const COMPLEX_FINAL_MAP: Record<string, [string, string]> = {
 const VERTICAL_VOWELS = new Set(['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅣ']);
 const HORIZONTAL_VOWELS = new Set(['ㅗ','ㅛ','ㅜ','ㅠ','ㅡ']);
 
+// 한글 자음(단일) 판정용
+const CONSONANTS = new Set([
+  'ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'
+]);
+
 type VowelType = 'vertical' | 'horizontal' | 'complex';
 const getVowelType = (v: string): VowelType =>
   v in COMPLEX_VOWEL_MAP ? 'complex'
@@ -50,10 +55,12 @@ const getVowelType = (v: string): VowelType =>
 /** 모음 여부(단일 성분 기준) */
 const isVowelChar = (ch: any): ch is string =>
   typeof ch === 'string' && (
-    VERTICAL_VOWELS.has(ch) || HORIZONTAL_VOWELS.has(ch) ||
-    // 복합 모음 성분들(예: ㅗ,ㅏ,ㅜ,ㅓ 등)은 위 집합에 이미 포함됨
-    ch === 'ㅣ'
+    VERTICAL_VOWELS.has(ch) || HORIZONTAL_VOWELS.has(ch) || ch === 'ㅣ'
   );
+
+/** 자음 여부(단일 성분 기준) */
+const isConsonantChar = (ch: any): ch is string =>
+  typeof ch === 'string' && CONSONANTS.has(ch);
 
 /** 복합 종성인지 여부(문자 한 칸 기준) */
 const isComplexFinal = (t: string | undefined) => !!t && t in COMPLEX_FINAL_MAP;
@@ -71,17 +78,23 @@ function normalizeJamoParts(parts: any): {
   let V: any = raw[1];
   let T: any = raw[2];
 
-  // V가 배열로 오는 정석 케이스
+  // --- V 보정 ---
   if (Array.isArray(V) && V.length === 2) {
     // OK
-  }
-  // V가 한 칸씩 나뉘어 들어온 케이스: ['ㅇ','ㅗ','ㅏ','ㅇ']
-  else if (!Array.isArray(V) && raw.length >= 4 && isVowelChar(raw[1]) && isVowelChar(raw[2])) {
+  } else if (!Array.isArray(V) && raw.length >= 4 && isVowelChar(raw[1]) && isVowelChar(raw[2])) {
+    // 예: ['ㅇ','ㅗ','ㅏ','ㅇ'] → V=[ㅗ,ㅏ], T=raw[3]
     V = [raw[1] as string, raw[2] as string];
-    T = raw[3]; // 종성은 한 칸 밀림
+    T = raw[3];
   }
 
-  // T가 배열로 오는 케이스(드묾)도 그대로 허용
+  // --- T 보정 ---
+  // 케이스 A: T가 배열(이미 분해됨) → OK
+  // 케이스 B: T가 단일 자음이고 뒤에 또 자음이 따라붙음 → 겹받침 분해로 간주
+  //   예: ['ㄷ','ㅏ','ㄹ','ㄱ'] → T=[ㄹ,ㄱ]  (닭)
+  if (!Array.isArray(T) && isConsonantChar(T) && raw.length >= 4 && isConsonantChar(raw[3])) {
+    T = [T as string, raw[3] as string];
+  }
+
   return { L, V, T };
 }
 
@@ -206,7 +219,7 @@ export function getJamoPositions(
     const Vy = (hasT ? yMapT : yMapNoT)[vChar] ?? (hasT ? 46 : 50);
     pos.push({ part: 'V', char: vChar, x: 50, y: Vy, fontSize: FS });
   } else {
-    // 복합 모음: [가로 성분] + [우측 세로 성분]로 분해해서 각각 찍기
+    // 복합 모음: [가로 성분] + [우측 세로 성분]
     const [Vh, Vr] = Array.isArray(V) ? V : COMPLEX_VOWEL_MAP[V as string];
 
     const yMapNoT: Record<string, number> = { 'ㅗ': 32, 'ㅡ': 50, 'ㅜ': 58 };
@@ -217,8 +230,8 @@ export function getJamoPositions(
     const VyR = hasT ? 42 : 54;
 
     pos.push(
-      { part: 'V', char: Vh, x: 48, y: VyH, fontSize: FS }, // 가로 성분
-      { part: 'V', char: Vr, x: VxR, y: VyR, fontSize: FS } // 우측 세로 성분
+      { part: 'V', char: Vh, x: 48, y: VyH, fontSize: FS },
+      { part: 'V', char: Vr, x: VxR, y: VyR, fontSize: FS }
     );
   }
 
