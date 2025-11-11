@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
   const woodenButtons = [
     { id: 1, label: '자모맞추기', typeId: 1 },
     { id: 2, label: '글자합치기', typeId: 2 },
-    { id: 3, label: '그림맞추기', typeId: 3 },
+    { id: 3, label: '그림맞히기', typeId: 3 },
     { id: 4, label: '단어읽기', typeId: 4 },
   ];
 
