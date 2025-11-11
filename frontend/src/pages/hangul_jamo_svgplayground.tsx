@@ -23,37 +23,94 @@ function getVowelType(vowel: string): VowelType {
   return "vertical"; // 기본값
 }
 
-// 모음 여부 판별
-function isVowel(ch: string): boolean {
-  return "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅛㅜㅠㅡㅣ".includes(ch);
-}
-
-// 복합 모음/받침 분리 분해 (두 낱자 유지)
-type SplitResult = {
-  L: string;        // 초성 (1개)
-  V: string[];      // 중성 (1-2개)
-  T: string[];      // 종성 (0-2개)
+/* ✅ 자모/겹받침 정규화 + 위치별 자모 치환에 필요한 유틸/사전 추가 */
+type Part = "L" | "V" | "T";
+type GlyphSet = "positional" | "compat";
+type GetJamoOptions = {
+  glyphSet?: GlyphSet;
+  /** 종성 없을 때(LV) 초성/중성은 호환 자모로 유지 */
+  lvCompatWhenNoT?: boolean; // default: true
 };
 
-function splitAsIs(syllable: string): SplitResult {
-  const parts = Hangul.disassemble(syllable);
-  if (parts.length === 0) return { L: "", V: [], T: [] };
+const COMPLEX_VOWEL_MAP: Record<string, [string, string]> = {
+  "ㅘ": ["ㅗ","ㅏ"], "ㅙ": ["ㅗ","ㅐ"], "ㅚ": ["ㅗ","ㅣ"],
+  "ㅝ": ["ㅜ","ㅓ"], "ㅞ": ["ㅜ","ㅔ"], "ㅟ": ["ㅜ","ㅣ"],
+  "ㅢ": ["ㅡ","ㅣ"],
+};
 
-  const L = parts[0];  // 초성
-  const V: string[] = [parts[1]];  // 중성 첫 번째
+const COMPLEX_FINAL_MAP: Record<string, [string, string]> = {
+  "ㄳ": ["ㄱ","ㅅ"], "ㄵ": ["ㄴ","ㅈ"], "ㄶ": ["ㄴ","ㅎ"],
+  "ㄺ": ["ㄹ","ㄱ"], "ㄻ": ["ㄹ","ㅁ"], "ㄼ": ["ㄹ","ㅂ"],
+  "ㄽ": ["ㄹ","ㅅ"], "ㄾ": ["ㄹ","ㅌ"], "ㄿ": ["ㄹ","ㅍ"], "ㅀ": ["ㄹ","ㅎ"],
+  "ㅄ": ["ㅂ","ㅅ"],
+};
 
-  // 중성 두 번째가 모음이면 복합 모음
-  if (parts[2] && isVowel(parts[2])) {
-    V.push(parts[2]);
-  }
+const VERTICAL_VOWELS_SET = new Set(["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅣ"]);
+const HORIZONTAL_VOWELS_SET = new Set(["ㅗ","ㅛ","ㅜ","ㅠ","ㅡ"]);
+const CONSONANTS_SET = new Set([
+  "ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"
+]);
+const isVowelChar = (ch: any): ch is string =>
+  typeof ch === "string" && (VERTICAL_VOWELS_SET.has(ch) || HORIZONTAL_VOWELS_SET.has(ch) || ch === "ㅣ");
+const isConsonantChar = (ch: any): ch is string =>
+  typeof ch === "string" && CONSONANTS_SET.has(ch);
+const isComplexFinal = (t: string | undefined) => !!t && t in COMPLEX_FINAL_MAP;
 
-  // 나머지는 종성
-  const T = parts.slice(1 + V.length);
+// 호환 자모 → 초/중/종 전용 자모 매핑
+const CHOSEONG_MAP: Record<string, string> = {
+  "ㄱ":"ᄀ","ㄲ":"ᄁ","ㄴ":"ᄂ","ㄷ":"ᄃ","ㄸ":"ᄄ","ㄹ":"ᄅ","ㅁ":"ᄆ","ㅂ":"ᄇ","ㅃ":"ᄈ","ㅅ":"ᄉ","ㅆ":"ᄊ","ㅇ":"ᄋ","ㅈ":"ᄌ","ㅉ":"ᄍ","ㅊ":"ᄎ","ㅋ":"ᄏ","ㅌ":"ᄐ","ㅍ":"ᄑ","ㅎ":"ᄒ",
+};
+const JUNGSEONG_MAP: Record<string, string> = {
+  "ㅏ":"ᅡ","ㅐ":"ᅢ","ㅑ":"ᅣ","ㅒ":"ᅤ","ㅓ":"ᅥ","ㅔ":"ᅦ","ㅕ":"ᅧ","ㅖ":"ᅨ","ㅗ":"ᅩ","ㅛ":"ᅭ","ㅜ":"ᅮ","ㅠ":"ᅲ","ㅡ":"ᅳ","ㅣ":"ᅵ",
+};
+const JONGSEONG_MAP: Record<string, string> = {
+  "ㄱ":"ᆨ","ㄲ":"ᆩ","ㄳ":"ᆪ","ㄴ":"ᆫ","ㄵ":"ᆬ","ㄶ":"ᆭ","ㄷ":"ᆮ","ㄹ":"ᆯ","ㄺ":"ᆰ","ㄻ":"ᆱ","ㄼ":"ᆲ","ㄽ":"ᆳ","ㄾ":"ᆴ","ㄿ":"ᆵ","ㅀ":"ᆶ",
+  "ㅁ":"ᆷ","ㅂ":"ᆸ","ㅄ":"ᆹ","ㅅ":"ᆺ","ㅆ":"ᆻ","ㅇ":"ᆼ","ㅈ":"ᆽ","ㅊ":"ᆾ","ㅋ":"ᆿ","ㅌ":"ᇀ","ㅍ":"ᇁ","ㅎ":"ᇂ",
+};
 
-  return { L, V, T };
+function toPositionalGlyph(part: Part, ch: string, glyphSet: GlyphSet): string {
+  if (glyphSet !== "positional") return ch; // 기존 호환 자모 유지
+  if (part === "L") return CHOSEONG_MAP[ch] ?? ch;
+  if (part === "V") return JUNGSEONG_MAP[ch] ?? ch;
+  return JONGSEONG_MAP[ch] ?? ch; // T
 }
 
-// 패턴 6분류
+/** disassemble(true) 결과를 L, V(1~2), T(0~2)로 안정 정규화 */
+function normalizeJamoParts(syllable: string): { L: string; V: string[]; T: string[] } | null {
+  const parts = Hangul.disassemble(syllable, true);
+  const raw: any[] = Array.isArray(parts?.[0]) ? parts[0] : parts;
+  if (!Array.isArray(raw) || raw.length < 2) return null;
+
+  let L = raw[0] as string;
+  let V: any = raw[1];
+  let T: any = raw[2];
+
+  // 중성 보정: ['ㅇ','ㅗ','ㅏ','ㅇ'] → V=[ㅗ,ㅏ], T=raw[3]
+  if (Array.isArray(V) && V.length === 2) {
+    // OK
+  } else if (!Array.isArray(V) && raw.length >= 4 && isVowelChar(raw[1]) && isVowelChar(raw[2])) {
+    V = [raw[1] as string, raw[2] as string];
+    T = raw[3];
+  }
+
+  // 종성 보정: 단일자음 + 다음도 자음 → 겹받침
+  if (!Array.isArray(T) && isConsonantChar(T) && raw.length >= 4 && isConsonantChar(raw[3])) {
+    T = [T as string, raw[3] as string];
+  }
+
+  const outV: string[] = Array.isArray(V) ? V : (V ? [V] : []);
+  let outT: string[] = [];
+  if (Array.isArray(T)) {
+    outT = T;
+  } else if (typeof T === "string" && T) {
+    outT = (isComplexFinal(T) ? COMPLEX_FINAL_MAP[T] : [T]);
+  }
+  return { L, V: outV, T: outT };
+}
+
+/* ===== splitAsIs 제거 끝 ===== */
+
+/* 패턴 6분류 */
 export type PatternKey =
   | "VERT_NOJONG" // 세로모음, 종성 없음
   | "VERT_JONG"   // 세로모음, 종성 있음
@@ -131,38 +188,56 @@ export function getJamoPositions(
   syllable: string,
   patternDefaults: Partial<Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]>>,
   overrides: SaveBlob["overrides"],
+  options?: GetJamoOptions // ← 옵션 확장
 ): PlaygroundJamoPosition[] {
-  // splitAsIs로 복합 모음/받침 분리
-  const { L, V, T } = splitAsIs(syllable);
-  if (!L) return [];
+  const glyphSet: GlyphSet = options?.glyphSet ?? "positional";
+  const lvCompatWhenNoT = options?.lvCompatWhenNoT ?? true;
+
+  // ✅ 안전 정규화
+  const norm = normalizeJamoParts(syllable);
+  if (!norm) return [];
+  const { L, V, T } = norm;
+
+  const hasT = T.length > 0;
+
+  // LV(종성 없음)일 땐 초/중성만 호환 자모로 유지
+  const effectiveGlyphSetFor = (part: Part): GlyphSet => {
+    if (!hasT && lvCompatWhenNoT && (part === "L" || part === "V")) return "compat";
+    return glyphSet;
+  };
 
   // 패턴 판별 (복합 모음 여부 고려)
   const isComplex = V.length === 2;
-  const pat = isComplex
-    ? (T.length > 0 ? 'COMP_JONG' : 'COMP_NOJONG')
-    : detectPattern(V[0], T.length > 0);
+  const pat: PatternKey = isComplex
+    ? (hasT ? "COMP_JONG" : "COMP_NOJONG")
+    : detectPattern(V[0], hasT);
 
   // 글자 단위 오버라이드 우선 적용
   const save = loadSave();
   const flat = overrides[syllable] ?? save.overrides[syllable];
 
+  // [L, ...V, ...T] 순서로 위치별 자모 문자 생성(치환)
+  const allParts: { part: Part; char: string }[] = [
+    { part: "L", char: L },
+    ...V.map(v => ({ part: "V" as const, char: v })),
+    ...T.map(t => ({ part: "T" as const, char: t })),
+  ];
+
   if (flat && flat.length >= 3) {
     // 오버라이드가 있으면 가변 길이로 적용
     const positions: PlaygroundJamoPosition[] = [];
-    const allChars = [L, ...V, ...T];  // [L, ...V, ...T] 순서
-
-    for (let i = 0; i < allChars.length; i++) {
+    for (let i = 0; i < allParts.length; i++) {
       const idx = i * 3;
       if (idx + 2 < flat.length) {
+        const { part, char } = allParts[i];
         positions.push({
-          char: allChars[i],
+          char: toPositionalGlyph(part, char, effectiveGlyphSetFor(part)),
           x: flat[idx],
           y: flat[idx + 1],
           fontSize: flat[idx + 2],
         });
       }
     }
-
     return positions;
   }
 
@@ -171,37 +246,36 @@ export function getJamoPositions(
 
   // 기본 좌표로 글리프 생성
   const positions: PlaygroundJamoPosition[] = [];
-  const allChars = [L, ...V, ...T];
 
   // 초성
   if (base[0]) {
-    positions.push({ ...base[0], char: L });
+    positions.push({ ...base[0], char: toPositionalGlyph("L", L, effectiveGlyphSetFor("L")) });
   }
 
   // 중성 (1-2개)
   if (V.length === 1 && base[1]) {
-    positions.push({ ...base[1], char: V[0] });
+    positions.push({ ...base[1], char: toPositionalGlyph("V", V[0], effectiveGlyphSetFor("V")) });
   } else if (V.length === 2) {
     // 복합 모음: 두 자모를 좌우/상하로 배치
     const baseV = base[1] ?? { x: 60, y: 55, fontSize: 45 };
     positions.push(
-      { char: V[0], x: baseV.x - 8, y: baseV.y, fontSize: baseV.fontSize - 5 },
-      { char: V[1], x: baseV.x + 8, y: baseV.y, fontSize: baseV.fontSize - 5 }
+      { char: toPositionalGlyph("V", V[0], effectiveGlyphSetFor("V")), x: baseV.x - 8, y: baseV.y, fontSize: baseV.fontSize - 5 },
+      { char: toPositionalGlyph("V", V[1], effectiveGlyphSetFor("V")), x: baseV.x + 8, y: baseV.y, fontSize: baseV.fontSize - 5 }
     );
   }
 
   // 종성 (0-2개)
-  if (T.length === 1) {
-    // 단일 받침: fallback 좌표 제공
-    const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
-    positions.push({ ...baseT, char: T[0] });
-  } else if (T.length === 2) {
-    // 복합 받침: 두 자모를 좌우로 배치 (fallback 좌표 제공)
-    const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
-    positions.push(
-      { char: T[0], x: baseT.x - 8, y: baseT.y, fontSize: baseT.fontSize - 4 },
-      { char: T[1], x: baseT.x + 8, y: baseT.y, fontSize: baseT.fontSize - 4 }
-    );
+  if (hasT) {
+    if (T.length === 1) {
+      const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
+      positions.push({ ...baseT, char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")) });
+    } else if (T.length === 2) {
+      const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
+      positions.push(
+        { char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")), x: baseT.x - 8, y: baseT.y, fontSize: baseT.fontSize - 4 },
+        { char: toPositionalGlyph("T", T[1], effectiveGlyphSetFor("T")), x: baseT.x + 8, y: baseT.y, fontSize: baseT.fontSize - 4 }
+      );
+    }
   }
 
   return positions;
