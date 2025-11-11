@@ -87,13 +87,15 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
     }
   }, [currentProblem, onAdventureTypeChange]);
 
-  // URL idx 파라미터와 currentIndex 동기화
+  // [수정됨] URL idx 파라미터와 currentIndex 동기화
   useEffect(() => {
     if (mode === 'daily') {
       // 일일문제는 진행도 URL에 반영 (새로고침 시 복원)
-      navigate(`/daily/${studentId}/${currentIndex}`, { replace: true });
+      // studentId를 URL에서 제거합니다.
+      navigate(`/daily/${currentIndex}`, { replace: true });
     }
-  }, [currentIndex, mode, studentId, navigate]);
+    // [수정됨] 의존성 배열에서 studentId 제거
+  }, [currentIndex, mode, navigate]);
 
   // 정답 제출 핸들러
   const handleSubmit = async (answer: unknown, attempts: number) => {
@@ -117,8 +119,8 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
 
         await submitSessionCorrect(studentId, {
           isCorrect: isCorrect,
-          realJamo: correctAnswer,                    // 정답 자모
-          confusionJamo: null,                        // 정답이므로 혼동 자모 없음
+          realJamo: correctAnswer, // 정답 자모
+          confusionJamo: null,  // 정답이므로 혼동 자모 없음
           phonemePosition: currentProblem.blankPosition, // 음소 위치
           studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
           dayProblemId: currentProblem.dayProblemId,  // 문제 ID
@@ -134,11 +136,11 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
 
         await submitSessionCorrect(studentId, {
           isCorrect: isCorrect,
-          realJamo: null,    // 정답 단어
-          confusionJamo: null,        // 정답이므로 혼동 없음
-          phonemePosition: null,      // 단어 문제는 음소 위치 없음
+          realJamo: null,   // 정답 단어
+          confusionJamo: null,  // 정답이므로 혼동 없음
+          phonemePosition: null, // 단어 문제는 음소 위치 없음
           studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
-          dayProblemId: currentProblem.dayProblemId,  // 문제 ID
+          dayProblemId: currentProblem.dayProblemId,  // 문제 ID
         });
         console.log(`✅ 학습 데이터 수집 완료 (Adventure3): is_completed만 처리, jamo_stat 건너뜀`);
 
@@ -152,8 +154,8 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         await submitSessionCorrect(studentId, {
           isCorrect: isCorrect,
           realJamo: null, // 정답 단어
-          confusionJamo: null,                   // 말하기는 혼동 자모 없음
-          phonemePosition: null,                 // 말하기 문제는 음소 위치 없음
+          confusionJamo: null,  // 말하기는 혼동 자모 없음
+          phonemePosition: null,  // 말하기 문제는 음소 위치 없음
           studyType: mode.toUpperCase() as 'DAILY' | 'SUPPLE', // 'daily' → 'DAILY'
           dayProblemId: currentProblem.dayProblemId,  // 문제 ID
         });
@@ -219,7 +221,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
     }
   };
   // ==================================================
-  
+
   // 완료 화면 - 부모 컴포넌트(DailyRunner/SuppleRunner)에서 관리
   // 완료 시 onComplete() 콜백이 호출되면 부모에서 완료 UI 처리
   if (isAllCompleted) {
