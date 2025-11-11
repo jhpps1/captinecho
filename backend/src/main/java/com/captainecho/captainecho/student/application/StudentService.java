@@ -112,7 +112,7 @@ public class StudentService {
             }
         }
 
-        // 5. Student 엔티티 생성 및 저장 (level=1, coin=0)
+        // 5. Student 엔티티 생성 및 저장 (level=null for initial diagnosis, coin=0)
         Student student = Student.builder()
                 .protector(protector)
                 .name(command.studentName())
@@ -120,7 +120,7 @@ public class StudentService {
                 .birth(command.birth())
                 .grade(command.grade())
                 .studentPin(command.studentPin())
-                .level((short) 1)
+                .level(null)  // null로 설정하여 초기진단 필요 표시
                 .build();
 
         Student savedStudent = studentRepository.save(student);

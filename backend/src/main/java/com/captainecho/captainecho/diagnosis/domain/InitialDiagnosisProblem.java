@@ -36,14 +36,27 @@ public class InitialDiagnosisProblem {
     @Column(name = "correct_answer", nullable = false, length = 500)
     private String correctAnswer;
 
+    @Column(name = "problem_phonemes", columnDefinition = "TEXT[]")
+    private String[] problemPhonemes;
+
+    @Column(name = "blank_position", length = 20)
+    private String blankPosition;
+
+    @Column(name = "blank_phoneme", length = 5)
+    private String blankPhoneme;
+
     @Builder
     public InitialDiagnosisProblem(DiagnosisType diagnosisType, String problem, String[] choices,
-                                   String problemImageUrl, String problemSoundUrl, String correctAnswer) {
+                                   String problemImageUrl, String problemSoundUrl, String correctAnswer,
+                                   String[] problemPhonemes, String blankPosition, String blankPhoneme) {
         this.diagnosisType = diagnosisType;
         this.problem = problem;
         this.choices = choices;
         this.problemImageUrl = problemImageUrl;
         this.problemSoundUrl = problemSoundUrl;
         this.correctAnswer = correctAnswer;
+        this.problemPhonemes = problemPhonemes;
+        this.blankPosition = blankPosition;
+        this.blankPhoneme = blankPhoneme;
     }
 }

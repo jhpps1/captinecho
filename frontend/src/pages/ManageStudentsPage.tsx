@@ -129,6 +129,7 @@ export default function ManageStudentsPage() {
         gender: mapGenderToBackend(studentData.gender),
         birth: formatDateToBackend(studentData.birthDate),
         grade: mapGradeToBackend(studentData.grade),
+        pin: "000000", // 기본 PIN 6자리 (학생 관리에서 수정 가능)
         interests: selectedInterests.map(id => ({ interestId: id }))
       };
 

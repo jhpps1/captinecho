@@ -10,7 +10,10 @@ public record InitialDiagnosisProblemResponse(
         String[] choices,
         String problemImageUrl,
         String problemSoundUrl,
-        String correctAnswer
+        String correctAnswer,
+        String[] problemPhonemes,
+        String blankPosition,
+        String blankPhoneme
 ) {
     public static InitialDiagnosisProblemResponse from(InitialDiagnosisProblemDto dto) {
         return new InitialDiagnosisProblemResponse(
@@ -20,7 +23,10 @@ public record InitialDiagnosisProblemResponse(
                 dto.choices(),
                 dto.problemImageUrl(),
                 dto.problemSoundUrl(),
-                dto.correctAnswer()
+                dto.correctAnswer(),
+                dto.problemPhonemes(),
+                dto.blankPosition(),
+                dto.blankPhoneme()
         );
     }
 }

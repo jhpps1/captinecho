@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
   const woodenButtons = [
     { id: 1, label: '자모맞추기', typeId: 1 },
     { id: 2, label: '글자합치기', typeId: 2 },
-    { id: 3, label: '그림맞추기', typeId: 3 },
+    { id: 3, label: '그림맞히기', typeId: 3 },
     { id: 4, label: '단어읽기', typeId: 4 },
   ];
 
@@ -21,6 +21,7 @@ interface ApiStudent {
   studentId: number;
   name: string;
   profileImage: string;
+  level: string | null; // 초기진단 완료 시 레벨, 미완료 시 null
 }
 
 // 햑생 정보를 검증하기 위해 존재하는 인터페이스
@@ -130,6 +131,13 @@ export default function StudentDashboard() {
         );
 
         // 학생의 이름과 프로필 사진 정보를 가져오는 코드
+
+        // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
+        if (foundStudent && foundStudent.level === null) {
+          navigate("/initial-assessment");
+          return;
+        }
+
         if (foundStudent) {
           setProfile({
             name: foundStudent.name,
