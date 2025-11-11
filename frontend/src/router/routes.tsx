@@ -14,6 +14,7 @@ import FirstTestIntro from '../pages/FirstTestIntro.tsx';
 import FirstTestPage from '../pages/FirstTestPage.tsx';
 import FirstTestResult from '../pages/FirstTestResult.tsx';
 import ParrotStore from '../pages/ParrotStore.tsx';
+import { InitialAssessmentPage } from '../pages/InitialAssessmentPage.tsx';
 
 import { SyllableTest } from '../pages/SyllableTest.tsx';
 import { HangulAllGrid } from '../pages/HangulAllGrid.tsx';
@@ -44,6 +45,10 @@ const router = createBrowserRouter([
   {
     path: '/select-profile',
     element: <SelectProfile />,
+  },
+  {
+    path: '/initial-assessment',
+    element: <InitialAssessmentPage />,
   },
   {
     path: '/first-test-intro',
