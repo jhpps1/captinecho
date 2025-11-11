@@ -108,7 +108,26 @@ function normalizeJamoParts(syllable: string): { L: string; V: string[]; T: stri
   return { L, V: outV, T: outT };
 }
 
-/* ===== splitAsIs 제거 끝 ===== */
+/* ------------------------- 메트릭/보정 ------------------------- */
+// Compact metrics (렌더러와 동일 컨셉)
+const METRICS = {
+  FS: { noT: 72, withT: 60 },                   // 기본 폰트 크기
+  L:  { xNoT: 28, yNoT: 54, xT: 27, yT: 46 },   // 초성 위치(조금 아래)
+  V: {
+    vert: { xNoT: 62, yNoT: 56, xT: 60, yT: 46 }, // 세로모음 위치(조금 아래/오른쪽)
+    // 가로모음 높이(약간 아래)
+    horizYNoT: { 'ㅗ': 44, 'ㅡ': 52, 'ㅜ': 60 } as Record<string, number>,
+    horizYT:   { 'ㅗ': 42, 'ㅡ': 50, 'ㅜ': 58 } as Record<string, number>,
+    // 복합모음
+    complex: { xFirst: 46, xSecond: 60, yNoT: 56, yT: 46, fsDelta: -5 },
+  },
+  T:  { x: 50, y: 55, pairDx: 4, fsDeltaPair: -2 }, // 종성 위로 당김 (y 작을수록 위)
+  LV_SPREAD: 4,                                       // 초성-세로중성 간 벌림 정도(+X)
+};
+// 세로 모음 개별 미세 보정(겹침 완화)
+const VERT_X_ADJUST: Record<string, number> = {
+  'ㅑ': 2, 'ㅕ': 3, 'ㅒ': 2, 'ㅖ': 3,
+};
 
 /* 패턴 6분류 */
 export type PatternKey =
@@ -127,37 +146,37 @@ function detectPattern(jung: string, hasJong: boolean): PatternKey {
 }
 
 /** ------------------------- 기본 배치 ------------------------- */
-// viewBox 100x100 기준 기본값(경험치 기반 초기치)
+// viewBox 100x100 기준 기본값(메트릭 기반)
 const DEFAULTS: Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]> = {
   VERT_NOJONG: [
-    { char: "", x: 25, y: 55, fontSize: 45 }, // 초성
-    { char: "", x: 60, y: 55, fontSize: 45 }, // 중성
-    null, // 종성 없음
+    { char: "", x: METRICS.L.xNoT,      y: METRICS.L.yNoT,      fontSize: METRICS.FS.noT },
+    { char: "", x: METRICS.V.vert.xNoT, y: METRICS.V.vert.yNoT, fontSize: METRICS.FS.noT },
+    null,
   ],
   VERT_JONG: [
-    { char: "", x: 25, y: 42, fontSize: 38 },
-    { char: "", x: 58, y: 42, fontSize: 38 },
-    { char: "", x: 42, y: 78, fontSize: 36 },
+    { char: "", x: METRICS.L.xT,      y: METRICS.L.yT,      fontSize: METRICS.FS.withT },
+    { char: "", x: METRICS.V.vert.xT, y: METRICS.V.vert.yT, fontSize: METRICS.FS.withT },
+    { char: "", x: METRICS.T.x,       y: METRICS.T.y,       fontSize: METRICS.FS.withT - 4 },
   ],
   HORZ_NOJONG: [
-    { char: "", x: 50, y: 38, fontSize: 45 },
-    { char: "", x: 50, y: 74, fontSize: 45 },
+    { char: "", x: 50, y: METRICS.V.horizYNoT["ㅗ"], fontSize: METRICS.FS.noT },
+    { char: "", x: 50, y: METRICS.V.horizYNoT["ㅜ"], fontSize: METRICS.FS.noT },
     null,
   ],
   HORZ_JONG: [
-    { char: "", x: 50, y: 32, fontSize: 38 },
-    { char: "", x: 50, y: 58, fontSize: 38 },
-    { char: "", x: 50, y: 84, fontSize: 36 },
+    { char: "", x: 50, y: METRICS.V.horizYT["ㅗ"], fontSize: METRICS.FS.withT },
+    { char: "", x: 50, y: METRICS.V.horizYT["ㅜ"], fontSize: METRICS.FS.withT },
+    { char: "", x: METRICS.T.x, y: METRICS.T.y, fontSize: METRICS.FS.withT - 4 },
   ],
   COMP_NOJONG: [
-    { char: "", x: 22, y: 55, fontSize: 45 },
-    { char: "", x: 60, y: 55, fontSize: 45 },
+    { char: "", x: METRICS.L.xNoT, y: METRICS.L.yNoT, fontSize: METRICS.FS.noT },
+    { char: "", x: METRICS.V.vert.xNoT, y: METRICS.V.vert.yNoT, fontSize: METRICS.FS.noT + METRICS.V.complex.fsDelta },
     null,
   ],
   COMP_JONG: [
-    { char: "", x: 22, y: 42, fontSize: 38 },
-    { char: "", x: 58, y: 42, fontSize: 38 },
-    { char: "", x: 42, y: 78, fontSize: 36 },
+    { char: "", x: METRICS.L.xT, y: METRICS.L.yT, fontSize: METRICS.FS.withT },
+    { char: "", x: METRICS.V.vert.xT, y: METRICS.V.vert.yT, fontSize: METRICS.FS.withT + METRICS.V.complex.fsDelta },
+    { char: "", x: METRICS.T.x, y: METRICS.T.y, fontSize: METRICS.FS.withT - 4 },
   ],
 };
 
@@ -188,7 +207,7 @@ export function getJamoPositions(
   syllable: string,
   patternDefaults: Partial<Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]>>,
   overrides: SaveBlob["overrides"],
-  options?: GetJamoOptions // ← 옵션 확장
+  options?: GetJamoOptions
 ): PlaygroundJamoPosition[] {
   const glyphSet: GlyphSet = options?.glyphSet ?? "positional";
   const lvCompatWhenNoT = options?.lvCompatWhenNoT ?? true;
@@ -224,7 +243,6 @@ export function getJamoPositions(
   ];
 
   if (flat && flat.length >= 3) {
-    // 오버라이드가 있으면 가변 길이로 적용
     const positions: PlaygroundJamoPosition[] = [];
     for (let i = 0; i < allParts.length; i++) {
       const idx = i * 3;
@@ -247,33 +265,89 @@ export function getJamoPositions(
   // 기본 좌표로 글리프 생성
   const positions: PlaygroundJamoPosition[] = [];
 
-  // 초성
+  // === 초성
   if (base[0]) {
     positions.push({ ...base[0], char: toPositionalGlyph("L", L, effectiveGlyphSetFor("L")) });
   }
 
-  // 중성 (1-2개)
+  // === 중성
   if (V.length === 1 && base[1]) {
-    positions.push({ ...base[1], char: toPositionalGlyph("V", V[0], effectiveGlyphSetFor("V")) });
+    const v = V[0];
+    const vt = getVowelType(v);
+
+    if (vt === "vertical") {
+      // 세로모음: 초/중 벌림 + 개별 X 보정
+      const spread = METRICS.LV_SPREAD;
+      // 초성은 살짝 왼쪽
+      positions[0] = { ...positions[0], x: (positions[0].x ?? METRICS.L.xNoT) - Math.round(spread / 2) };
+
+      const baseX = base[1].x ?? (hasT ? METRICS.V.vert.xT : METRICS.V.vert.xNoT);
+      const baseY = base[1].y ?? (hasT ? METRICS.V.vert.yT : METRICS.V.vert.yNoT);
+      const vx = baseX + spread + (VERT_X_ADJUST[v] ?? 0);
+
+      positions.push({
+        ...base[1],
+        char: toPositionalGlyph("V", v, effectiveGlyphSetFor("V")),
+        x: vx,
+        y: baseY,
+      });
+    } else {
+      // 가로모음: Y 맵 사용
+      const Vy = (hasT ? METRICS.V.horizYT : METRICS.V.horizYNoT)[v] ?? (hasT ? 50 : 52);
+      positions.push({
+        ...base[1],
+        char: toPositionalGlyph("V", v, effectiveGlyphSetFor("V")),
+        x: 50,
+        y: Vy,
+      });
+    }
   } else if (V.length === 2) {
-    // 복합 모음: 두 자모를 좌우/상하로 배치
-    const baseV = base[1] ?? { x: 60, y: 55, fontSize: 45 };
+    // 복합 모음: 메트릭 사용
+    const [Vh, Vr] = V;
+    const VyH = (hasT ? METRICS.V.horizYT : METRICS.V.horizYNoT)[Vh] ?? (hasT ? 50 : 52);
+    const VyR = hasT ? METRICS.V.complex.yT : METRICS.V.complex.yNoT;
+    const fBase = base[1]?.fontSize ?? (hasT ? METRICS.FS.withT : METRICS.FS.noT);
+
     positions.push(
-      { char: toPositionalGlyph("V", V[0], effectiveGlyphSetFor("V")), x: baseV.x - 8, y: baseV.y, fontSize: baseV.fontSize - 5 },
-      { char: toPositionalGlyph("V", V[1], effectiveGlyphSetFor("V")), x: baseV.x + 8, y: baseV.y, fontSize: baseV.fontSize - 5 }
+      {
+        char: toPositionalGlyph("V", Vh, effectiveGlyphSetFor("V")),
+        x: METRICS.V.complex.xFirst,
+        y: VyH,
+        fontSize: fBase + METRICS.V.complex.fsDelta,
+      },
+      {
+        char: toPositionalGlyph("V", Vr, effectiveGlyphSetFor("V")),
+        x: METRICS.V.complex.xSecond,
+        y: VyR,
+        fontSize: fBase + METRICS.V.complex.fsDelta,
+      }
     );
   }
 
-  // 종성 (0-2개)
+  // === 종성
   if (hasT) {
+    const fT = base[2]?.fontSize ?? (hasT ? METRICS.FS.withT - 4 : METRICS.FS.noT);
     if (T.length === 1) {
-      const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
-      positions.push({ ...baseT, char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")) });
+      positions.push({
+        char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")),
+        x: METRICS.T.x,
+        y: METRICS.T.y, // 더 위(기존 78 → 55 근방)
+        fontSize: fT,
+      });
     } else if (T.length === 2) {
-      const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
       positions.push(
-        { char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")), x: baseT.x - 8, y: baseT.y, fontSize: baseT.fontSize - 4 },
-        { char: toPositionalGlyph("T", T[1], effectiveGlyphSetFor("T")), x: baseT.x + 8, y: baseT.y, fontSize: baseT.fontSize - 4 }
+        {
+          char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")),
+          x: METRICS.T.x - METRICS.T.pairDx,
+          y: METRICS.T.y,
+          fontSize: fT + METRICS.T.fsDeltaPair,
+        },
+        {
+          char: toPositionalGlyph("T", T[1], effectiveGlyphSetFor("T")),
+          x: METRICS.T.x + METRICS.T.pairDx,
+          y: METRICS.T.y,
+          fontSize: fT + METRICS.T.fsDeltaPair,
+        }
       );
     }
   }
@@ -301,7 +375,6 @@ function drawComposed(ctx: CanvasRenderingContext2D, jamo: PlaygroundJamoPositio
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#000";
   jamo.forEach((p) => {
-    // viewBox 100→ canvas 좌표로 변환
     const cx = (p.x / 100) * ctx.canvas.width;
     const cy = (p.y / 100) * ctx.canvas.height;
     ctx.font = `700 ${p.fontSize}px 'Noto Sans KR', sans-serif`;
@@ -322,8 +395,8 @@ function similarity(a: ImageData, b: ImageData): number {
     const gb = gray(b, i);
     const active = ga < 250 || gb < 250; // 글자 영역만
     if (!active) continue;
-    const diff = Math.abs(ga - gb) / 255; // 0~1
-    acc += 1 - diff; // 유사할수록 1에 가까움
+    const diff = Math.abs(ga - gb) / 255;
+    acc += 1 - diff;
   }
   const px = n / 4;
   return Math.max(0, Math.min(1, acc / px));
@@ -331,49 +404,39 @@ function similarity(a: ImageData, b: ImageData): number {
 
 /** ------------------------- 메인 컴포넌트 ------------------------- */
 export default function HangulJamoSVGPlayground() {
-  // 상태
   const [query, setQuery] = useState("");
-  const [count, setCount] = useState(200); // 초기 로드 수
+  const [count, setCount] = useState(200);
   const syllables = useMemo(() => buildSyllables(), []);
   const filtered = useMemo(
     () => (query ? syllables.filter((c) => c.includes(query)) : syllables).slice(0, count),
     [syllables, query, count]
   );
 
-  // ⬇⬇ 순서 중요: patternDefaults / overrides / current 가 먼저 선언되어야 함
   const [patternDefaults, setPatternDefaults] =
     useState<Partial<Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]>>>({});
   const [overrides, setOverrides] = useState<Record<string, number[]>>({});
   const [current, setCurrent] = useState<string>("가");
 
-  // positions 는 초기엔 빈 배열로, 의존성 준비 후 useEffect에서 계산
   const [positions, setPositions] = useState<PlaygroundJamoPosition[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
 
-  // 드래그 상태 관리 (리렌더링 최소화)
   const dragRef = useRef({ isDragging: false, targetIdx: -1 });
 
-  // 캔버스
-  const leftRef = useRef<HTMLCanvasElement | null>(null); // 원본
-  const rightRef = useRef<HTMLCanvasElement | null>(null); // 조합
+  const leftRef = useRef<HTMLCanvasElement | null>(null);
+  const rightRef = useRef<HTMLCanvasElement | null>(null);
   const W = 200, H = 200;
 
-  // 저장 불러오기 (패턴 기본/오버라이드)
   useEffect(() => {
     const save = loadSave();
     setOverrides(save.overrides || {});
-    // 패턴 기본값은 저장 포맷(number[]) → 화면 표시/계산은 DEFAULTS를 쓰되,
-    // 별도로 패턴 에디터가 생기면 setPatternDefaults로 반영하세요.
   }, []);
 
-  // current / 패턴 / 오버라이드가 준비되면 positions 계산
   useEffect(() => {
     const p = getJamoPositions(current, patternDefaults, overrides);
     setPositions(p);
   }, [current, patternDefaults, overrides]);
 
-  // 폰트 로딩 보장 + 비교 캔버스 그리기
   useEffect(() => {
     (async () => {
       // @ts-ignore
@@ -395,21 +458,18 @@ export default function HangulJamoSVGPlayground() {
     const a = l.getImageData(0, 0, W, H);
     const b = r.getImageData(0, 0, W, H);
     const s = similarity(a, b);
-    setScore(Math.round(s * 1000) / 10); // 소수1자리
+    setScore(Math.round(s * 1000) / 10);
   }
 
-  // 드래그 이동
   function onMouseDown(e: React.MouseEvent) {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    // 가장 가까운 자모 선택
     let min = Infinity, idx = 0;
     positions.forEach((p, i) => {
       const d = (p.x - x) ** 2 + (p.y - y) ** 2;
       if (d < min) { min = d; idx = i; }
     });
-    // 드래그 상태 즉시 설정
     dragRef.current = { isDragging: true, targetIdx: idx };
     setSelectedIdx(idx);
   }
@@ -428,15 +488,14 @@ export default function HangulJamoSVGPlayground() {
   }
 
   function onWheel(e: React.WheelEvent) {
-    if (!e.shiftKey) return; // Shift+휠만 크기 변경
+    if (!e.shiftKey) return;
     e.preventDefault();
-    const delta = -Math.sign(e.deltaY); // 위로 굴리면 +
+    const delta = -Math.sign(e.deltaY);
     setPositions((prev) => prev.map((p, i) =>
       i === selectedIdx ? { ...p, fontSize: Math.max(20, Math.min(80, p.fontSize + delta)) } : p
     ));
   }
 
-  // 저장/내보내기
   function savePatternDefault() {
     const parts = Hangul.disassemble(current);
     const hasJong = parts.length >= 3;
@@ -475,12 +534,10 @@ export default function HangulJamoSVGPlayground() {
     URL.revokeObjectURL(url);
   }
 
-  // 카드 클릭 시 편집 전환
   function openEditor(ch: string) {
     setCurrent(ch);
   }
 
-  // 패턴 추정 배지
   function patternBadge(ch: string) {
     const parts = Hangul.disassemble(ch);
     if (parts.length < 2) return "-";
@@ -488,7 +545,6 @@ export default function HangulJamoSVGPlayground() {
     return key;
   }
 
-  // SVG 렌더 프리뷰
   function SvgPreview({ ch }: { ch: string }) {
     const ps = getJamoPositions(ch, patternDefaults, overrides);
     return (
@@ -512,7 +568,6 @@ export default function HangulJamoSVGPlayground() {
     );
   }
 
-  // 편집 캔버스 안내 라인 + 자모 포인트
   function EditorOverlay({ children }: { children: React.ReactNode }) {
     return (
       <div
@@ -524,17 +579,14 @@ export default function HangulJamoSVGPlayground() {
         onWheel={onWheel}
         title="드래그로 이동, Shift+휠로 크기 조절"
       >
-        {/* 그리드 */}
         <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 pointer-events-none">
           {Array.from({ length: 100 }).map((_, i) => (
             <div key={i} className="border border-gray-100" />
           ))}
         </div>
-        {/* 중심선 */}
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 pointer-events-none" />
         <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-200 pointer-events-none" />
         {children}
-        {/* 선택 점 */}
         {positions.map((p, i) => (
           <div
             key={i}
@@ -555,7 +607,6 @@ export default function HangulJamoSVGPlayground() {
         카드 클릭 → 우측 편집. 드래그로 위치 이동, <b>Shift+휠</b>로 크기 조절. 상단 검색/더보기 지원.
       </p>
 
-      {/* 검색/컨트롤 */}
       <div className="flex items-center gap-2">
         <input
           className="px-3 py-2 border rounded w-60"
@@ -569,7 +620,6 @@ export default function HangulJamoSVGPlayground() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* 좌: 목록 */}
         <div>
           <div className="grid grid-cols-10 gap-2">
             {filtered.map((ch) => (
@@ -589,7 +639,6 @@ export default function HangulJamoSVGPlayground() {
           </div>
         </div>
 
-        {/* 우: 편집기 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-xl font-semibold">편집: {current}</div>
@@ -600,10 +649,8 @@ export default function HangulJamoSVGPlayground() {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            {/* A: 편집 뷰 */}
             <div className="border rounded aspect-square relative overflow-hidden">
               <EditorOverlay>
-                {/* 자모 SVG 실제 렌더 */}
                 <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
                   {positions.map((p, i) => (
                     <text
@@ -624,7 +671,6 @@ export default function HangulJamoSVGPlayground() {
               </EditorOverlay>
             </div>
 
-            {/* B: 캔버스 비교 */}
             <div className="border rounded p-2 space-y-2">
               <div className="text-sm text-gray-600">원본 vs 조합 비교</div>
               <div className="flex items-center gap-2">
@@ -636,7 +682,6 @@ export default function HangulJamoSVGPlayground() {
               <button className="px-2 py-1 border rounded" onClick={redraw}>↻ 재계산</button>
             </div>
 
-            {/* C: 현재 좌표 */}
             <div className="border rounded p-2">
               <div className="text-sm font-medium mb-1">현재 좌표</div>
               <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto max-h-48">
@@ -658,7 +703,6 @@ function buildSyllables(): string[] {
   return arr;
 }
 
-// 가변 길이 평탄화: 모든 글리프를 (x, y, fontSize) 순서로
 function flattenPositions(pos: PlaygroundJamoPosition[]): number[] {
   const out: number[] = [];
   for (const p of pos) {
