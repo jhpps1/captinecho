@@ -5,6 +5,7 @@ import type { JamoPosition } from '../../utils/hangulSVGPositions';
 interface SyllableSVGProps {
   syllable: string;
   highlightIndex: number; // 0: 초성, 1: 중성, 2: 종성
+  overrides?: Record<string, number[]>; // 외부 오버라이드 좌표
   className?: string;
   color?: string;
   mutedColor?: string;
@@ -14,12 +15,13 @@ interface SyllableSVGProps {
 export const SyllableSVG: React.FC<SyllableSVGProps> = ({
   syllable,
   highlightIndex,
+  overrides,
   className = 'w-32 h-32',
   color = '#111827',
   mutedColor = '#9CA3AF',
   fontFamily = "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif",
 }) => {
-  const pos = getJamoPositions(syllable);
+  const pos = getJamoPositions(syllable, overrides);
   if (pos.length === 0) return <div className={className}>?</div>;
 
   const fillFor = (p: JamoPosition) => {

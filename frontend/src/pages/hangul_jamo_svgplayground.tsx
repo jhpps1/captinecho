@@ -23,6 +23,36 @@ function getVowelType(vowel: string): VowelType {
   return "vertical"; // 기본값
 }
 
+// 모음 여부 판별
+function isVowel(ch: string): boolean {
+  return "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅛㅜㅠㅡㅣ".includes(ch);
+}
+
+// 복합 모음/받침 분리 분해 (두 낱자 유지)
+type SplitResult = {
+  L: string;        // 초성 (1개)
+  V: string[];      // 중성 (1-2개)
+  T: string[];      // 종성 (0-2개)
+};
+
+function splitAsIs(syllable: string): SplitResult {
+  const parts = Hangul.disassemble(syllable);
+  if (parts.length === 0) return { L: "", V: [], T: [] };
+
+  const L = parts[0];  // 초성
+  const V: string[] = [parts[1]];  // 중성 첫 번째
+
+  // 중성 두 번째가 모음이면 복합 모음
+  if (parts[2] && isVowel(parts[2])) {
+    V.push(parts[2]);
+  }
+
+  // 나머지는 종성
+  const T = parts.slice(1 + V.length);
+
+  return { L, V, T };
+}
+
 // 패턴 6분류
 export type PatternKey =
   | "VERT_NOJONG" // 세로모음, 종성 없음
@@ -102,52 +132,79 @@ export function getJamoPositions(
   patternDefaults: Partial<Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]>>,
   overrides: SaveBlob["overrides"],
 ): PlaygroundJamoPosition[] {
-  const parts = Hangul.disassemble(syllable);
-  if (parts.length === 0) return [];
-  const [ch, ju, jo] = parts as [string, string, string?];
-  const hasJong = parts.length >= 3 && !!jo;
-  const pat = detectPattern(ju, hasJong);
+  // splitAsIs로 복합 모음/받침 분리
+  const { L, V, T } = splitAsIs(syllable);
+  if (!L) return [];
 
-  const base = (patternDefaults[pat] ?? DEFAULTS[pat]).map((p) => (p ? { ...p } : null)) as [
-    PlaygroundJamoPosition,
-    PlaygroundJamoPosition,
-    PlaygroundJamoPosition | null,
-  ];
+  // 패턴 판별 (복합 모음 여부 고려)
+  const isComplex = V.length === 2;
+  const pat = isComplex
+    ? (T.length > 0 ? 'COMP_JONG' : 'COMP_NOJONG')
+    : detectPattern(V[0], T.length > 0);
 
-  // 글자 단위 오버라이드 적용
+  // 글자 단위 오버라이드 우선 적용
   const save = loadSave();
-  const flat = overrides[syllable] ?? save.overrides[syllable] ?? undefined;
+  const flat = overrides[syllable] ?? save.overrides[syllable];
 
-  const applyFlat = (arr: [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null], flat?: number[]) => {
-    if (!flat) return arr;
-    const [x1, y1, s1, x2, y2, s2, x3, y3, s3] = flat;
-    arr[0].x = x1 ?? arr[0].x; arr[0].y = y1 ?? arr[0].y; arr[0].fontSize = s1 ?? arr[0].fontSize;
-    arr[1].x = x2 ?? arr[1].x; arr[1].y = y2 ?? arr[1].y; arr[1].fontSize = s2 ?? arr[1].fontSize;
-    if (arr[2] && flat.length >= 9) {
-      arr[2].x = x3 ?? arr[2].x!;
-      arr[2].y = y3 ?? arr[2].y!;
-      arr[2].fontSize = s3 ?? arr[2].fontSize!;
+  if (flat && flat.length >= 3) {
+    // 오버라이드가 있으면 가변 길이로 적용
+    const positions: PlaygroundJamoPosition[] = [];
+    const allChars = [L, ...V, ...T];  // [L, ...V, ...T] 순서
+
+    for (let i = 0; i < allChars.length; i++) {
+      const idx = i * 3;
+      if (idx + 2 < flat.length) {
+        positions.push({
+          char: allChars[i],
+          x: flat[idx],
+          y: flat[idx + 1],
+          fontSize: flat[idx + 2],
+        });
+      }
     }
-    return arr;
-  };
 
-  const withFlat = applyFlat(base, flat);
-
-  // 실 자모 문자 채워넣기
-  withFlat[0].char = ch;
-  withFlat[1].char = ju;
-  if (hasJong) {
-    if (withFlat[2]) {
-      withFlat[2]!.char = jo!;
-    } else {
-      // 패턴에 종성 슬롯이 없는 경우에 대한 방어 코드
-      console.error(`Pattern ${pat} is missing a final consonant slot for syllable ${syllable}`);
-      const fallbackFinalPos = { char: jo!, x: 42, y: 78, fontSize: 36 };
-      (withFlat as (PlaygroundJamoPosition | null)[]).push(fallbackFinalPos);
-    }
+    return positions;
   }
 
-  return withFlat.filter(Boolean) as PlaygroundJamoPosition[];
+  // 오버라이드 없으면 기본 패턴 사용 (3개 슬롯)
+  const base = (patternDefaults[pat] ?? DEFAULTS[pat]).map((p) => (p ? { ...p } : null));
+
+  // 기본 좌표로 글리프 생성
+  const positions: PlaygroundJamoPosition[] = [];
+  const allChars = [L, ...V, ...T];
+
+  // 초성
+  if (base[0]) {
+    positions.push({ ...base[0], char: L });
+  }
+
+  // 중성 (1-2개)
+  if (V.length === 1 && base[1]) {
+    positions.push({ ...base[1], char: V[0] });
+  } else if (V.length === 2) {
+    // 복합 모음: 두 자모를 좌우/상하로 배치
+    const baseV = base[1] ?? { x: 60, y: 55, fontSize: 45 };
+    positions.push(
+      { char: V[0], x: baseV.x - 8, y: baseV.y, fontSize: baseV.fontSize - 5 },
+      { char: V[1], x: baseV.x + 8, y: baseV.y, fontSize: baseV.fontSize - 5 }
+    );
+  }
+
+  // 종성 (0-2개)
+  if (T.length === 1) {
+    // 단일 받침: fallback 좌표 제공
+    const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
+    positions.push({ ...baseT, char: T[0] });
+  } else if (T.length === 2) {
+    // 복합 받침: 두 자모를 좌우로 배치 (fallback 좌표 제공)
+    const baseT = base[2] ?? { x: 42, y: 78, fontSize: 36 };
+    positions.push(
+      { char: T[0], x: baseT.x - 8, y: baseT.y, fontSize: baseT.fontSize - 4 },
+      { char: T[1], x: baseT.x + 8, y: baseT.y, fontSize: baseT.fontSize - 4 }
+    );
+  }
+
+  return positions;
 }
 
 /** ------------------------- 캔버스 유사도 ------------------------- */
@@ -310,7 +367,7 @@ export default function HangulJamoSVGPlayground() {
     const parts = Hangul.disassemble(current);
     const hasJong = parts.length >= 3;
     const pat = detectPattern(parts[1], hasJong);
-    const flat = flattenPositions(positions, hasJong);
+    const flat = flattenPositions(positions);
     const save = loadSave();
     save.patterns[pat] = flat;
     persistSave(save);
@@ -319,9 +376,7 @@ export default function HangulJamoSVGPlayground() {
 
   function saveOverride() {
     const save = loadSave();
-    const parts = Hangul.disassemble(current);
-    const hasJong = parts.length >= 3;
-    save.overrides[current] = flattenPositions(positions, hasJong);
+    save.overrides[current] = flattenPositions(positions);
     persistSave(save);
     setOverrides({ ...overrides, [current]: save.overrides[current] });
     alert(`개별 저장: ${current}`);
@@ -329,11 +384,19 @@ export default function HangulJamoSVGPlayground() {
 
   function exportAll() {
     const save = loadSave();
-    const blob = new Blob([JSON.stringify(save, null, 2)], { type: "application/json" });
+    const exportData = {
+      overrides: save.overrides,
+      meta: {
+        version: 1,
+        convention: "order=[L,...V,...T], triplet=(x,y,fontSize), viewBox=100",
+        description: "가변 길이 자모 좌표 (복합 모음/받침 분리)"
+      }
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "hangul_svg_positions_export.json";
+    a.download = "overrides.json";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -521,13 +584,11 @@ function buildSyllables(): string[] {
   return arr;
 }
 
-// 항상 number[]을 반환하도록 undefined 제거
-function flattenPositions(
-  pos: PlaygroundJamoPosition[],
-  hasJong: boolean
-): number[] {
-  const a = pos[0], b = pos[1], c = pos[2];
-  const out: (number | undefined)[] = [a.x, a.y, a.fontSize, b.x, b.y, b.fontSize];
-  if (hasJong && c) out.push(c.x, c.y, c.fontSize);
-  return out.filter((v): v is number => typeof v === "number");
+// 가변 길이 평탄화: 모든 글리프를 (x, y, fontSize) 순서로
+function flattenPositions(pos: PlaygroundJamoPosition[]): number[] {
+  const out: number[] = [];
+  for (const p of pos) {
+    out.push(p.x, p.y, p.fontSize);
+  }
+  return out;
 }

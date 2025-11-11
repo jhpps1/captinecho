@@ -2,11 +2,16 @@ import Hangul from 'hangul-js';
 import overridesData from "./hangulSVGOverrides.json";
 
 // Type assertion for the imported JSON
-type SaveBlob = {
-  patterns: unknown; // Patterns are not used in this hybrid approach
-  overrides: Record<string, number[]>;
-};
-const { overrides } = overridesData as SaveBlob;
+ type SaveBlob = {
+   patterns?: unknown;  // optional로 변경
+   overrides: Record<string, number[]>;
+   meta?: {  // 추가
+     version?: number;
+     convention?: string;
+     description?: string;
+   };
+ };
+ const { overrides } = overridesData as SaveBlob;
 
 
 export type Part = 'L' | 'V' | 'T';
@@ -48,28 +53,90 @@ const isComplexFinal = (t: string | undefined) => !!t && t in COMPLEX_FINAL_MAP;
 
 /**
  * 한글 음절을 자모로 분해하고 좌표를 계산해서 반환
- * - 우선적으로 `hangulSVGOverrides.json` 에서 좌표를 찾습니다.
+ * - 우선적으로 외부에서 전달된 오버라이드 또는 `hangulSVGOverrides.json` 에서 좌표를 찾습니다.
  * - 오버라이드가 없으면 규칙 기반으로 계산하며, 복합 모음/겹받침은 각각 2개의 글리프로 분해해서 배치합니다.
+ *
+ * @param syllable - 한글 음절 (예: "왕", "닭")
+ * @param customOverrides - 외부에서 전달된 오버라이드 (선택적)
  */
-export function getJamoPositions(syllable: string): JamoPosition[] {
-  // 1. Check for a direct override from JSON
-  const overrideCoords = overrides[syllable];
-  if (overrideCoords) {
-    const [L, V, T] = Hangul.disassemble(syllable, true) as unknown as [string, string, string?];
-    const positions: JamoPosition[] = [];
-    const [x1, y1, s1, x2, y2, s2, x3, y3, s3] = overrideCoords;
+export function getJamoPositions(
+  syllable: string,
+  customOverrides?: Record<string, number[]>
+): JamoPosition[] {
+  console.log('🔍 getJamoPositions 호출:', syllable); // 콘솔 디버그용
+  // 1. Check for a direct override (custom > default)
+  const overrideCoords = customOverrides?.[syllable] ?? overrides[syllable];
+  console.log('📦 overrideCoords:', overrideCoords); // 콘솔 디버그용
+  if (overrideCoords && overrideCoords.length >= 3) {
+    // 가변 길이 오버라이드 적용
+    const parts = Hangul.disassemble(syllable, true);
+    // 콘솔 디버그용
+    console.log('🔤 Hangul.disassemble 결과:', parts);
+    console.log('📊 parts 타입:', typeof parts, Array.isArray(parts));
+    console.log('📊 parts[0] 타입:', typeof parts[0], Array.isArray(parts[0]));
+    // 이중 배열인 경우 첫 번째 요소 추출
+    const actualParts = Array.isArray(parts[0]) ? parts[0] : parts;
+    if (actualParts.length < 2) return [];
+    const L = actualParts[0] as string;
+    const V = actualParts[1] as string;
+    const T = actualParts[2] as string | undefined;
+    console.log('✅ L, V, T:', L, V, T); // 콘솔 디버그용
+    // 복합 모음/받침 분리
+    const allChars: { part: Part; char: string }[] = [];
 
-    if (L) positions.push({ part: 'L', char: L, x: x1, y: y1, fontSize: s1 });
-    if (V) positions.push({ part: 'V', char: V, x: x2, y: y2, fontSize: s2 });
-    if (T && overrideCoords.length >= 9) {
-      positions.push({ part: 'T', char: T, x: x3, y: y3, fontSize: s3 });
+    // 초성
+    allChars.push({ part: 'L', char: L });
+
+    // 중성 (복합 모음 처리)
+    if (V in COMPLEX_VOWEL_MAP) {
+      const [Vh, Vr] = COMPLEX_VOWEL_MAP[V];
+      allChars.push({ part: 'V', char: Vh }, { part: 'V', char: Vr });
+    } else {
+      allChars.push({ part: 'V', char: V });
     }
+
+    // 종성 (겹받침 처리)
+    if (T) {
+      if (isComplexFinal(T)) {
+        const [T1, T2] = COMPLEX_FINAL_MAP[T];
+        allChars.push({ part: 'T', char: T1 }, { part: 'T', char: T2 });
+      } else {
+        allChars.push({ part: 'T', char: T });
+      }
+    }
+
+    console.log('🎯 allChars 배열:', allChars.map(c => `${c.char}(${c.part})`).join(', '));
+    console.log('📏 allChars.length:', allChars.length, 'overrideCoords.length:', overrideCoords.length);
+
+    // 오버라이드 좌표 적용 ([L, ...V, ...T] 순서로)
+    const positions: JamoPosition[] = [];
+    for (let i = 0; i < allChars.length; i++) {
+      const idx = i * 3;
+      console.log(`  [${i}] idx=${idx}, char=${allChars[i].char}, check: ${idx}+2=${idx+2} < ${overrideCoords.length}?`, idx + 2 < overrideCoords.length);
+      if (idx + 3 <= overrideCoords.length) {
+        positions.push({
+          ...allChars[i],
+          x: overrideCoords[idx],
+          y: overrideCoords[idx + 1],
+          fontSize: overrideCoords[idx + 2],
+        });
+      }
+    }
+
+    console.log('✅ 오버라이드 적용 완료 - positions:', positions.map(p => `${p.char}(${p.part})`).join(', '));
     return positions;
   }
 
   // 2. If no override, proceed with rule-based calculation and splitting
-  const [L, V, T] = Hangul.disassemble(syllable, false) as [string, string, string?];
+  const parts = Hangul.disassemble(syllable, true); // true로 변경: 초성/중성/종성으로 정확히 분리
+  // 이중 배열인 경우 첫 번째 요소 추출
+  const actualParts = Array.isArray(parts[0]) ? parts[0] : parts;
+  if (actualParts.length < 2) return [];
+ const L = actualParts[0] as string;
+ const V = actualParts[1] as string;
+ const T = actualParts[2] as string | undefined;
   if (!L || !V) return [];
+  console.log('🔧 규칙 기반 계산 - L, V, T:', L, V, T);
 
   const hasT = !!T;
   const vowelType = getVowelType(V);
@@ -136,5 +203,6 @@ export function getJamoPositions(syllable: string): JamoPosition[] {
     }
   }
 
+  console.log('✨ 최종 positions 배열:', pos.map(p => `${p.char}(${p.part})`).join(', '));
   return pos;
 }
