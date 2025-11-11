@@ -41,7 +41,7 @@ const Introduction = () => {
     },
     {
       id: 3,
-      name: '단어 맞추기',
+      name: '단어 맞히기',
       description: '그림을 보고 어울리는 단어를 찾아보세요',
       icon: BookOpen,
       color: 'from-green-500 to-emerald-500',
