@@ -2,8 +2,6 @@ package com.captainecho.captainecho.student.application;
 
 import com.captainecho.captainecho.adventure.persistence.DayProblemRepository;
 import com.captainecho.captainecho.common.domain.PhonemeFeature;
-import com.captainecho.captainecho.common.mail.EmailService;
-import com.captainecho.captainecho.common.mail.RecoveryCodeService;
 import com.captainecho.captainecho.common.persistence.PhonemeFeatureRepository;
 import com.captainecho.captainecho.common.storage.FileStorageService;
 import com.captainecho.captainecho.config.FileStorageProperties;
@@ -77,8 +75,6 @@ public class StudentService {
     private final FileStorageProperties fileStorageProperties;
     private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
-    private final EmailService emailService;
-    private final RecoveryCodeService recoveryCodeService;
 
     @Transactional
     public RegisterStudentResult registerStudent(RegisterStudentCommand command) {
@@ -112,14 +108,13 @@ public class StudentService {
             }
         }
 
-        // 5. Student 엔티티 생성 및 저장 (level=null for initial diagnosis, coin=0)
+        // 5. Student 엔티티 생성 및 저장 (level=null for initial diagnosis, coin=0, studentPin=0000은 엔티티 기본값)
         Student student = Student.builder()
                 .protector(protector)
                 .name(command.studentName())
                 .gender(command.gender())
                 .birth(command.birth())
                 .grade(command.grade())
-                .studentPin(command.studentPin())
                 .level(null)  // null로 설정하여 초기진단 필요 표시
                 .build();
 
@@ -560,59 +555,4 @@ public class StudentService {
         return new UpdatePinResult(true);
     }
 
-    /**
-     * 학생 PIN 복구 인증 코드 전송
-     * 학생의 보호자 이메일로 복구 코드를 전송합니다.
-     *
-     * @param studentId 학생 ID
-     * @throws EchoException 학생을 찾을 수 없거나, 보호자 이메일이 없는 경우
-     */
-    @Transactional
-    public void sendRecoveryCode(Integer studentId) {
-        // 1. Student 조회
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
-
-        // 2. 보호자 이메일 확인
-        Protector protector = student.getProtector();
-        String email = protector.getEmail();
-
-        if (email == null || email.isEmpty()) {
-            throw new EchoException(StudentErrorCode.EMAIL_NOT_FOUND);
-        }
-
-        // 3. 인증 코드 생성 및 Redis 저장 (studentId를 키로 사용)
-        String code = recoveryCodeService.generateAndSaveCode(studentId);
-
-        // 4. 이메일 발송
-        emailService.sendPinRecoveryCode(email, code);
-
-        log.info("학생 PIN 복구 인증 코드 전송 완료 - Student ID: {}, Protector Email: {}", studentId, email);
-    }
-
-    /**
-     * 학생 PIN 복구 인증 코드 검증 및 PIN 초기화
-     *
-     * @param studentId 학생 ID
-     * @param code 인증 코드
-     * @throws EchoException 학생을 찾을 수 없거나, 인증 코드가 유효하지 않은 경우
-     */
-    @Transactional
-    public void verifyRecoveryCodeAndResetPin(Integer studentId, String code) {
-        // 1. Student 조회
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
-
-        // 2. 인증 코드 검증
-        boolean isValid = recoveryCodeService.verifyCode(studentId, code);
-
-        if (!isValid) {
-            throw new EchoException(StudentErrorCode.INVALID_RECOVERY_CODE);
-        }
-
-        // 3. PIN 초기화 (기본값 "000000"으로 리셋)
-        student.updateStudentPin("000000");
-
-        log.info("학생 PIN 초기화 완료 - Student ID: {}", studentId);
-    }
 }
