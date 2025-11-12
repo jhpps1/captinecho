@@ -1,3 +1,4 @@
+// 한글 자모 배치(SVG) 페이지
 import React, { useEffect, useMemo, useRef, useState } from "react";
 // 외부 의존성: hangul-js (npm i hangul-js) — 편의 유틸로 남겨두되, 분해는 유니코드 공식 사용
 import Hangul from "hangul-js";

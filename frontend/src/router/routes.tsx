@@ -15,9 +15,6 @@ import FirstTestPage from '../pages/FirstTestPage.tsx';
 import FirstTestResult from '../pages/FirstTestResult.tsx';
 import ParrotStore from '../pages/ParrotStore.tsx';
 import { InitialAssessmentPage } from '../pages/InitialAssessmentPage.tsx';
-
-import { SyllableTest } from '../pages/SyllableTest.tsx';
-import { HangulAllGrid } from '../pages/HangulAllGrid.tsx';
 import HangulJamoSVGPlayground from '../pages/hangul_jamo_svgplayground.tsx'; 
 
 
@@ -100,14 +97,6 @@ const router = createBrowserRouter([
     element: <SuppleRunner />,
   },
   {
-    path: '/test/syllable',
-    element: <SyllableTest />,
-  },
-  {
-    path: '/test/hangul-all',
-    element: <HangulAllGrid />,
-  },
-      {
     path: '/dev/hangul-svg',
     element: <HangulJamoSVGPlayground />,
   },
