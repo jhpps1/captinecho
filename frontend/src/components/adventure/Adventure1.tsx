@@ -1,9 +1,5 @@
 import { useState } from 'react';
 import type { Problem } from '../../types/adventure';
-import {
-  splitVowelForLayout,
-  getVowelLayoutType
-} from '../../utils/hangulUtils';
 import { SingleSyllableCard } from './SingleSyllableCard';
 import { OptionsList } from './OptionsList';
 import { FeedbackCharacter } from './FeedbackCharacter';
@@ -72,8 +68,6 @@ export const Adventure1 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
   }
 
   const correctAnswer = problem.correctAnswer[0];
-  const vowelLayoutType = getVowelLayoutType(currentProblem.medial);
-  const vowelParts = splitVowelForLayout(currentProblem.medial);
 
   // 선택지 클릭
   const handleOptionClick = (option: string) => {
@@ -120,26 +114,6 @@ export const Adventure1 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
     }
   };
 
-  // 글자 색상 결정
-  const getColorClassForPart = (
-    partName: 'initial' | 'medialTop' | 'medialBottom' | 'final'
-  ) => {
-    const isTargetInitial =
-      currentProblem.hiddenTarget === 'INITIAL' && partName === 'initial';
-    const isTargetFinal =
-      currentProblem.hiddenTarget === 'FINAL' && partName === 'final';
-    const isTargetMedial =
-      currentProblem.hiddenTarget === 'MEDIAL' &&
-      (partName === 'medialTop' || partName === 'medialBottom');
-
-    const isTarget = isTargetInitial || isTargetFinal || isTargetMedial;
-
-    if (isTarget && !isAnswered) {
-      return 'text-gray-300';
-    }
-    return 'text-gray-800';
-  };
-
   return (
     <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
       {/* 안내문 (위쪽) */}
@@ -159,9 +133,7 @@ export const Adventure1 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       <div className="mb-6 sm:mb-8 md:mb-10">
         <SingleSyllableCard
           problem={currentProblem}
-          vowelLayoutType={vowelLayoutType}
-          vowelParts={vowelParts}
-          getColorClassForPart={getColorClassForPart}
+          isAnswered={isAnswered}
         />
       </div>
 
