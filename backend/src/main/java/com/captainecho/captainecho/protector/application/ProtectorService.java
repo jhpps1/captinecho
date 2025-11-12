@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -105,20 +106,39 @@ public class ProtectorService {
     }
 
     /**
-     * 보호자의 학생 목록 조회
+     * 보호자의 학생 목록 조회 (N+1 문제 해결)
      */
     @Transactional(readOnly = true)
     public StudentListResult getStudents(Integer protectorId) {
-        // 1. 학생 목록 조회
+        // 1. 학생 목록 조회 (1개 쿼리)
         List<Student> students = studentRepository.findByProtector_ProtectorId(protectorId);
         log.info("📋 조회된 학생 수: {}", students.size());
 
-        // 2. DTO 변환
+        if (students.isEmpty()) {
+            return new StudentListResult(List.of());
+        }
+
+        // 2. 학생 ID 리스트 추출
+        List<Integer> studentIds = students.stream()
+                .map(Student::getStudentId)
+                .collect(Collectors.toList());
+
+        // 3. 모든 학생의 관심사를 한 번에 조회 (1개 쿼리, IN 절 사용으로 N+1 방지)
+        List<StudentInterest> allStudentInterests = studentInterestRepository
+                .findByStudentIdsWithSubInterest(studentIds);
+        log.info("📚 조회된 전체 관심사 개수: {}", allStudentInterests.size());
+
+        // 4. 학생 ID별로 관심사 그룹화 (메모리에서 처리)
+        Map<Integer, List<StudentInterest>> interestsByStudentId = allStudentInterests.stream()
+                .collect(Collectors.groupingBy(si -> si.getStudent().getStudentId()));
+
+        // 5. DTO 변환
         List<StudentDto> studentDtos = students.stream()
                 .map(student -> {
-                    // 학생의 관심사 조회
-                    List<StudentInterest> studentInterests = studentInterestRepository
-                            .findByStudent_StudentId(student.getStudentId());
+                    // 해당 학생의 관심사 가져오기 (이미 메모리에 로드됨, 추가 쿼리 없음)
+                    List<StudentInterest> studentInterests = interestsByStudentId
+                            .getOrDefault(student.getStudentId(), List.of());
+
                     log.info("👤 학생 ID {}: 관심사 개수 = {}", student.getStudentId(), studentInterests.size());
 
                     List<StudentDto.InterestDto> interests = studentInterests.stream()

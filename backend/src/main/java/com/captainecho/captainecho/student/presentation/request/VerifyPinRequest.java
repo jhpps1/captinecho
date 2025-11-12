@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Pattern;
 
 public record VerifyPinRequest(
         @NotBlank(message = "PIN은 필수입니다")
-        @Pattern(regexp = "^\\d{6}$", message = "PIN은 6자리 숫자여야합니다")
+        @Pattern(regexp = "^\\d{4}$", message = "PIN은 4자리 숫자여야합니다")
         String pin
 ) {
     public VerifyPinCommand toCommand(Integer studentId) {

@@ -52,7 +52,8 @@ public class Student {
     private Short level;
 
     @Column(name = "student_pin", nullable = false, length = 100)
-    private String studentPin;
+    @ColumnDefault("'0000'")
+    private String studentPin = "0000";
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -66,12 +67,12 @@ public class Student {
 
     @Builder
     public Student(Protector protector, String name, Gender gender, LocalDate birth,
-                   String profileImage,String studentPin, Grade grade, Short level) {
+                   String profileImage, Grade grade, Short level) {
         this.protector = protector;
         this.name = name;
         this.gender = gender;
         this.birth = birth;
-        this.studentPin = studentPin;
+        this.studentPin = "0000";  // 기본값 0000으로 초기화
         this.profileImage = profileImage;
         this.coin = 0;
         this.grade = grade;

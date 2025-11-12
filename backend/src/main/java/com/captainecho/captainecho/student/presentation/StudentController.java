@@ -314,44 +314,4 @@ public class StudentController {
 
         return ResponseEntity.ok(response);
     }
-
-    /**
-     * 학생 PIN 복구 인증 코드 전송 API
-     *
-     * @param studentId 학생 ID
-     * @return 성공 여부
-     */
-    @PostMapping("/{student-id}/pin/send-recovery-code")
-    @Operation(
-            summary = "학생 PIN 복구 인증 코드 전송",
-            description = "학생의 보호자 이메일로 PIN 복구 인증 코드를 전송합니다"
-    )
-    public ResponseEntity<RecoveryCodeResponse> sendRecoveryCode(
-            @PathVariable("student-id") Integer studentId
-    ) {
-        studentService.sendRecoveryCode(studentId);
-
-        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
-    }
-
-    /**
-     * 학생 PIN 복구 인증 코드 검증 및 PIN 초기화 API
-     *
-     * @param studentId 학생 ID
-     * @param request 인증 코드 검증 요청 (code)
-     * @return 성공 여부
-     */
-    @PostMapping("/{student-id}/pin/verify-recovery-code")
-    @Operation(
-            summary = "학생 PIN 복구 인증 코드 검증 및 PIN 초기화",
-            description = "인증 코드를 검증하고 학생 PIN을 000000으로 초기화합니다"
-    )
-    public ResponseEntity<RecoveryCodeResponse> verifyRecoveryCode(
-            @PathVariable("student-id") Integer studentId,
-            @Valid @RequestBody VerifyRecoveryCodeRequest request
-    ) {
-        studentService.verifyRecoveryCodeAndResetPin(studentId, request.code());
-
-        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
-    }
 }
