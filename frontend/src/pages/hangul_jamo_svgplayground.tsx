@@ -27,18 +27,9 @@ const L_TABLE = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","�
 const V_TABLE = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
 const T_TABLE = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 
-/* 복합 모음/겹받침 분해 */
-const COMPLEX_VOWEL_MAP: Record<string, [string, string]> = {
-  "ㅘ": ["ㅗ","ㅏ"], "ㅙ": ["ㅗ","ㅐ"], "ㅚ": ["ㅗ","ㅣ"],
-  "ㅝ": ["ㅜ","ㅓ"], "ㅞ": ["ㅜ","ㅔ"], "ㅟ": ["ㅜ","ㅣ"],
-  "ㅢ": ["ㅡ","ㅣ"],
-};
-const COMPLEX_FINAL_MAP: Record<string, [string, string]> = {
-  "ㄳ": ["ㄱ","ㅅ"], "ㄵ": ["ㄴ","ㅈ"], "ㄶ": ["ㄴ","ㅎ"],
-  "ㄺ": ["ㄹ","ㄱ"], "ㄻ": ["ㄹ","ㅁ"], "ㄼ": ["ㄹ","ㅂ"],
-  "ㄽ": ["ㄹ","ㅅ"], "ㄾ": ["ㄹ","ㅌ"], "ㄿ": ["ㄹ","ㅍ"], "ㅀ": ["ㄹ","ㅎ"],
-  "ㅄ": ["ㅂ","ㅅ"],
-};
+/* (참고용) 복합 모음/겹받침 분해표 — 이제 사용하지 않지만 남겨둠 */
+// const COMPLEX_VOWEL_MAP: Record<string, [string, string]> = { ... };
+// const COMPLEX_FINAL_MAP: Record<string, [string, string]> = { ... };
 
 type Part = "L" | "V" | "T";
 type GlyphSet = "positional" | "compat";
@@ -52,9 +43,16 @@ type GetJamoOptions = {
 const CHOSEONG_MAP: Record<string, string> = {
   "ㄱ":"ᄀ","ㄲ":"ᄁ","ㄴ":"ᄂ","ㄷ":"ᄃ","ㄸ":"ᄄ","ㄹ":"ᄅ","ㅁ":"ᄆ","ㅂ":"ᄇ","ㅃ":"ᄈ","ㅅ":"ᄉ","ㅆ":"ᄊ","ㅇ":"ᄋ","ㅈ":"ᄌ","ㅉ":"ᄍ","ㅊ":"ᄎ","ㅋ":"ᄏ","ㅌ":"ᄐ","ㅍ":"ᄑ","ㅎ":"ᄒ",
 };
+
+// ✅ 복합 모음까지 포함해서 '중성 전용'으로 매핑
 const JUNGSEONG_MAP: Record<string, string> = {
-  "ㅏ":"ᅡ","ㅐ":"ᅢ","ㅑ":"ᅣ","ㅒ":"ᅤ","ㅓ":"ᅥ","ㅔ":"ᅦ","ㅕ":"ᅧ","ㅖ":"ᅨ","ㅗ":"ᅩ","ㅛ":"ᅭ","ㅜ":"ᅮ","ㅠ":"ᅲ","ㅡ":"ᅳ","ㅣ":"ᅵ",
+  // 단일 모음
+  "ㅏ":"ᅡ","ㅐ":"ᅢ","ㅑ":"ᅣ","ㅒ":"ᅤ","ㅓ":"ᅥ","ㅔ":"ᅦ","ㅕ":"ᅧ","ㅖ":"ᅨ",
+  "ㅗ":"ᅩ","ㅛ":"ᅭ","ㅜ":"ᅮ","ㅠ":"ᅲ","ㅡ":"ᅳ","ㅣ":"ᅵ",
+  // 복합 모음 
+  "ㅘ":"ᅪ","ㅙ":"ᅫ","ㅚ":"ᅬ","ㅝ":"ᅯ","ㅞ":"ᅰ","ㅟ":"ᅱ","ㅢ":"ᅴ",
 };
+
 const JONGSEONG_MAP: Record<string, string> = {
   "ㄱ":"ᆨ","ㄲ":"ᆩ","ㄳ":"ᆪ","ㄴ":"ᆫ","ㄵ":"ᆬ","ㄶ":"ᆭ","ㄷ":"ᆮ","ㄹ":"ᆯ","ㄺ":"ᆰ","ㄻ":"ᆱ","ㄼ":"ᆲ","ㄽ":"ᆳ","ㄾ":"ᆴ","ㄿ":"ᆵ","ㅀ":"ᆶ",
   "ㅁ":"ᆷ","ㅂ":"ᆸ","ㅄ":"ᆹ","ㅅ":"ᆺ","ㅆ":"ᆻ","ㅇ":"ᆼ","ㅈ":"ᆽ","ㅊ":"ᆾ","ㅋ":"ᆿ","ㅌ":"ᇀ","ㅍ":"ᇁ","ㅎ":"ᇂ",
@@ -67,7 +65,7 @@ function toPositionalGlyph(part: Part, ch: string, glyphSet: GlyphSet): string {
   return JONGSEONG_MAP[ch] ?? ch; // T
 }
 
-/** ✅ 유니코드 공식으로 확정 분해 (중복/오인 방지) */
+/** ✅ 유니코드 공식으로 확정 분해 — 복합모음/겹받침을 분해하지 않음 */
 function decomposeSyllable(s: string): { L: string; V: string[]; T: string[] } | null {
   if (!s || s.length !== 1) return null;
   const code = s.charCodeAt(0);
@@ -82,8 +80,9 @@ function decomposeSyllable(s: string): { L: string; V: string[]; T: string[] } |
   const VChar = V_TABLE[VIndex];
   const TChar = T_TABLE[TIndex];
 
-  const V = (COMPLEX_VOWEL_MAP[VChar] ?? [VChar]).slice(); // 1~2개
-  const T = TChar ? (COMPLEX_FINAL_MAP[TChar] ?? [TChar]).slice() : []; // 0~2개
+  // ⬇️ 여기서 더 이상 분해하지 않는다
+  const V = [VChar];                  // 항상 길이 1
+  const T = TChar ? [TChar] : [];     // 없으면 0, 있으면 1
 
   return { L, V, T };
 }
@@ -96,7 +95,8 @@ const METRICS = {
     vert: { xNoT: 62, yNoT: 56, xT: 60, yT: 46 },
     horizYNoT: { 'ㅗ': 44, 'ㅡ': 52, 'ㅜ': 60 } as Record<string, number>,
     horizYT:   { 'ㅗ': 42, 'ㅡ': 50, 'ㅜ': 58 } as Record<string, number>,
-    complex: { xFirst: 46, xSecond: 60, yNoT: 56, yT: 46, fsDelta: -5 },
+    // 복합모음 전용 기본치(단일 글리프지만 살짝 축소)
+    complex: { x: 58, yNoT: 54, yT: 45, fsDelta: -3 },
   },
   T:  { x: 50, y: 55, pairDx: 4, fsDeltaPair: -2 },
   LV_SPREAD: 4,
@@ -116,33 +116,34 @@ function detectPattern(jung: string, hasJong: boolean): PatternKey {
 /** ------------------------- 기본 배치 ------------------------- */
 const DEFAULTS: Record<PatternKey, [PlaygroundJamoPosition, PlaygroundJamoPosition, PlaygroundJamoPosition | null]> = {
   VERT_NOJONG: [
-    { char: "", x: METRICS.L.xNoT,      y: METRICS.L.yNoT,      fontSize: METRICS.FS.noT },
+    { char: "", x: METRICS.L.xNoT, y: METRICS.L.yNoT, fontSize: METRICS.FS.noT },
     { char: "", x: METRICS.V.vert.xNoT, y: METRICS.V.vert.yNoT, fontSize: METRICS.FS.noT },
     null,
   ],
   VERT_JONG: [
-    { char: "", x: METRICS.L.xT,      y: METRICS.L.yT,      fontSize: METRICS.FS.withT },
+    { char: "", x: METRICS.L.xT, y: METRICS.L.yT, fontSize: METRICS.FS.withT },
     { char: "", x: METRICS.V.vert.xT, y: METRICS.V.vert.yT, fontSize: METRICS.FS.withT },
-    { char: "", x: METRICS.T.x,       y: METRICS.T.y,       fontSize: METRICS.FS.withT - 4 },
+    { char: "", x: METRICS.T.x, y: METRICS.T.y, fontSize: METRICS.FS.withT - 4 },
   ],
   HORZ_NOJONG: [
     { char: "", x: METRICS.L.xNoT, y: METRICS.L.yNoT, fontSize: METRICS.FS.noT },
-    { char: "", x: 50,             y: METRICS.V.horizYNoT["ㅗ"], fontSize: METRICS.FS.noT },
+    { char: "", x: 50, y: METRICS.V.horizYNoT["ㅗ"], fontSize: METRICS.FS.noT },
     null,
   ],
   HORZ_JONG: [
     { char: "", x: METRICS.L.xT, y: METRICS.L.yT, fontSize: METRICS.FS.withT },
-    { char: "", x: 50,           y: METRICS.V.horizYT["ㅗ"], fontSize: METRICS.FS.withT },
-    { char: "", x: METRICS.T.x,  y: METRICS.T.y,  fontSize: METRICS.FS.withT - 4 },
+    { char: "", x: 50, y: METRICS.V.horizYT["ㅗ"], fontSize: METRICS.FS.withT },
+    { char: "", x: METRICS.T.x, y: METRICS.T.y, fontSize: METRICS.FS.withT - 4 },
   ],
+  // 복합모음은 단일 글리프로 배치 (약간 축소 및 상단으로)
   COMP_NOJONG: [
     { char: "", x: METRICS.L.xNoT, y: METRICS.L.yNoT, fontSize: METRICS.FS.noT },
-    { char: "", x: METRICS.V.vert.xNoT, y: METRICS.V.vert.yNoT, fontSize: METRICS.FS.noT + METRICS.V.complex.fsDelta },
+    { char: "", x: METRICS.V.complex.x, y: METRICS.V.complex.yNoT, fontSize: METRICS.FS.noT + METRICS.V.complex.fsDelta },
     null,
   ],
   COMP_JONG: [
     { char: "", x: METRICS.L.xT, y: METRICS.L.yT, fontSize: METRICS.FS.withT },
-    { char: "", x: METRICS.V.vert.xT, y: METRICS.V.vert.yT, fontSize: METRICS.FS.withT + METRICS.V.complex.fsDelta },
+    { char: "", x: METRICS.V.complex.x, y: METRICS.V.complex.yT, fontSize: METRICS.FS.withT + METRICS.V.complex.fsDelta },
     { char: "", x: METRICS.T.x, y: METRICS.T.y, fontSize: METRICS.FS.withT - 4 },
   ],
 };
@@ -165,7 +166,7 @@ export function getJamoPositions(
   const glyphSet: GlyphSet = options?.glyphSet ?? "positional";
   const lvCompatWhenNoT = options?.lvCompatWhenNoT ?? true;
 
-  // ✅ 확정 분해
+  // ✅ 확정 분해 (복합 미분해)
   const norm = decomposeSyllable(syllable);
   if (!norm) return [];
   const { L, V, T } = norm;
@@ -176,17 +177,15 @@ export function getJamoPositions(
     return glyphSet;
   };
 
-  const isComplex = V.length === 2;
-  const pat: PatternKey = isComplex ? (hasT ? "COMP_JONG" : "COMP_NOJONG")
-                                    : detectPattern(V[0], hasT);
+  const pat: PatternKey = detectPattern(V[0], hasT);
 
   const save = loadSave();
   const flat = overrides[syllable] ?? save.overrides[syllable];
 
   const allParts: { part: Part; char: string }[] = [
     { part: "L", char: L },
-    ...V.map(v => ({ part: "V" as const, char: v })),
-    ...T.map(t => ({ part: "T" as const, char: t })),
+    { part: "V", char: V[0] },
+    ...T.map(t => ({ part: "T" as const, char: t })), // 이제 최대 1개
   ];
 
   if (flat && flat.length >= 3) {
@@ -210,10 +209,11 @@ export function getJamoPositions(
   // L
   if (base[0]) positions.push({ ...base[0], char: toPositionalGlyph("L", L, effectiveGlyphSetFor("L")) });
 
-  // V
-  if (V.length === 1 && base[1]) {
+  // V (단일 글리프)
+  if (base[1]) {
     const v = V[0];
     const vt = getVowelType(v);
+
     if (vt === "vertical") {
       const spread = METRICS.LV_SPREAD;
       positions[0] = { ...positions[0], x: (positions[0].x ?? METRICS.L.xNoT) - Math.round(spread / 2) };
@@ -221,34 +221,24 @@ export function getJamoPositions(
       const baseY = base[1].y ?? (hasT ? METRICS.V.vert.yT : METRICS.V.vert.yNoT);
       const vx = baseX + spread + (VERT_X_ADJUST[v] ?? 0);
       positions.push({ ...base[1], char: toPositionalGlyph("V", v, effectiveGlyphSetFor("V")), x: vx, y: baseY });
-    } else {
+    } else if (vt === "horizontal") {
       const Vy = (hasT ? METRICS.V.horizYT : METRICS.V.horizYNoT)[v] ?? (hasT ? 50 : 52);
       const spread = METRICS.H_LV_SPREAD ?? 0;
       positions[0] = { ...positions[0], x: (positions[0].x ?? (hasT ? METRICS.L.xT : METRICS.L.xNoT)) - spread / 2 };
       positions.push({ ...base[1], char: toPositionalGlyph("V", v, effectiveGlyphSetFor("V")), x: 50 + spread / 2, y: Vy });
+    } else {
+      // complex: 단일 글리프지만 약간 축소/위치 보정
+      const x = METRICS.V.complex.x;
+      const y = hasT ? METRICS.V.complex.yT : METRICS.V.complex.yNoT;
+      const fs = (base[1].fontSize ?? (hasT ? METRICS.FS.withT : METRICS.FS.noT)) + METRICS.V.complex.fsDelta;
+      positions.push({ ...base[1], char: toPositionalGlyph("V", v, effectiveGlyphSetFor("V")), x, y, fontSize: fs });
     }
-  } else if (V.length === 2) {
-    const [Vh, Vr] = V;
-    const VyH = (hasT ? METRICS.V.horizYT : METRICS.V.horizYNoT)[Vh] ?? (hasT ? 50 : 52);
-    const VyR = hasT ? METRICS.V.complex.yT : METRICS.V.complex.yNoT;
-    const fBase = base[1]?.fontSize ?? (hasT ? METRICS.FS.withT : METRICS.FS.noT);
-    positions.push(
-      { char: toPositionalGlyph("V", Vh, effectiveGlyphSetFor("V")), x: METRICS.V.complex.xFirst,  y: VyH, fontSize: fBase + METRICS.V.complex.fsDelta },
-      { char: toPositionalGlyph("V", Vr, effectiveGlyphSetFor("V")), x: METRICS.V.complex.xSecond, y: VyR, fontSize: fBase + METRICS.V.complex.fsDelta },
-    );
   }
 
-  // T
-  if (hasT) {
-    const fT = base[2]?.fontSize ?? (hasT ? METRICS.FS.withT - 4 : METRICS.FS.noT);
-    if (T.length === 1) {
-      positions.push({ char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")), x: METRICS.T.x, y: METRICS.T.y, fontSize: fT });
-    } else if (T.length === 2) {
-      positions.push(
-        { char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")), x: METRICS.T.x - METRICS.T.pairDx, y: METRICS.T.y, fontSize: fT + METRICS.T.fsDeltaPair },
-        { char: toPositionalGlyph("T", T[1], effectiveGlyphSetFor("T")), x: METRICS.T.x + METRICS.T.pairDx, y: METRICS.T.y, fontSize: fT + METRICS.T.fsDeltaPair },
-      );
-    }
+  // T (겹받침도 단일 글리프 그대로)
+  if (hasT && base[2]) {
+    const fT = base[2].fontSize ?? (METRICS.FS.withT - 4);
+    positions.push({ char: toPositionalGlyph("T", T[0], effectiveGlyphSetFor("T")), x: METRICS.T.x, y: METRICS.T.y, fontSize: fT });
   }
 
   return positions;
@@ -436,7 +426,7 @@ export default function HangulJamoSVGPlayground() {
 
   function savePatternDefault() {
     const norm = decomposeSyllable(current)!;
-    const pat = norm ? (norm.V.length === 2 ? (norm.T.length ? "COMP_JONG" : "COMP_NOJONG") : detectPattern(norm.V[0], norm.T.length>0)) : "VERT_NOJONG";
+    const pat = norm ? detectPattern(norm.V[0], norm.T.length>0) : "VERT_NOJONG";
     const flat = flattenPositions(positions);
     const save = loadSave(); save.patterns[pat] = flat; persistSave(save);
     alert(`패턴 기본값 저장: ${pat}`);
@@ -465,7 +455,7 @@ export default function HangulJamoSVGPlayground() {
 
   function exportAll() {
     const save = loadSave();
-    const exportData = { overrides: save.overrides, meta: { version: 1, convention: "order=[L,...V,...T], triplet=(x,y,fontSize), viewBox=100", description: "가변 길이 자모 좌표 (복합 모음/받침 분리)" } };
+    const exportData = { overrides: save.overrides, meta: { version: 1, convention: "order=[L,...V,...T], triplet=(x,y,fontSize), viewBox=100", description: "가변 길이 자모 좌표 (복합 모음/받침 단일 글리프)" } };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob); const a = document.createElement("a");
     a.href = url; a.download = "overrides.json"; a.click(); URL.revokeObjectURL(url);
@@ -476,8 +466,7 @@ export default function HangulJamoSVGPlayground() {
   function patternBadge(ch: string) {
     const n = decomposeSyllable(ch);
     if (!n) return "-";
-    return n.V.length === 2 ? (n.T.length ? "COMP_JONG" : "COMP_NOJONG")
-                            : detectPattern(n.V[0], n.T.length>0);
+    return detectPattern(n.V[0], n.T.length>0);
   }
 
   function SvgPreview({ ch }: { ch: string }) {
