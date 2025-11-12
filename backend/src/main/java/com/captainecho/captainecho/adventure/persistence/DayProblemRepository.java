@@ -44,18 +44,33 @@ public interface DayProblemRepository extends JpaRepository<DayProblem, Integer>
     );
 
     /**
-     * 특정 탐험 타입과 레벨에 맞는 랜덤 문제 10개 조회 (추가 학습용)
+     * 특정 탐험 타입과 레벨에 맞는 랜덤 문제 ID 10개 조회 (추가 학습용)
+     * Native Query는 Fetch Join을 지원하지 않으므로 ID만 조회
      */
     @Query(value = """
-            SELECT dp.*
+            SELECT dp.day_problem_id
             FROM day_problem dp
             WHERE dp.adventure_type_id = :adventureTypeId
               AND dp.level = :level
             ORDER BY RANDOM()
             LIMIT 10
             """, nativeQuery = true)
-    List<DayProblem> findRandomSupplementaryProblems(
+    List<Integer> findRandomSupplementaryProblemIds(
             @Param("adventureTypeId") Integer adventureTypeId,
             @Param("level") Short level
     );
+
+    /**
+     * 문제 ID 리스트로 문제들을 연관 엔티티와 함께 조회 (Fetch Join으로 N+1 방지)
+     */
+    @Query("""
+            SELECT dp
+            FROM DayProblem dp
+            JOIN FETCH dp.student
+            JOIN FETCH dp.subInterest si
+            JOIN FETCH si.majorInterest
+            JOIN FETCH dp.adventureType
+            WHERE dp.dayProblemId IN :problemIds
+            """)
+    List<DayProblem> findByIdInWithAssociations(@Param("problemIds") List<Integer> problemIds);
 }
