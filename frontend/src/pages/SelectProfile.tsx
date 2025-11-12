@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import PINInputModal from '../components/protector/PINInputModal';
+import StudentPINInputModal from '../components/student/PINStudentModal';
 import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
 import { getStudents, verifyPin } from '../api/protectorApi';
 import { sendRecoveryCode, verifyRecoveryCode } from '../api/dashboardApi';
+import { verifyStudentPin } from '../api/studentApi';
 
 // 프로필 정보를 담당하는 인터페이스
 interface Profile {
@@ -33,6 +35,10 @@ const SelectProfile = () => {
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   // 이메일로 복구 코드 발송 관련 변수
   const [isSendingRecoveryCode, setIsSendingRecoveryCode] = useState(false);
+
+  // 학생 PIN 모달
+  const [showStudentPinModal, setShowStudentPinModal] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
 
   // PIN 인증 관련 검증 담당 코드
   const handlePinSubmit = async (pin: string) => {
@@ -207,9 +213,41 @@ const SelectProfile = () => {
 
   // 프로필 클릭 시 실행될 함수
   const handleProfileClick = (profileId: number) => {
-    // 세션 스토리지에 API에서 받아온 학생 ID 정보를 저장시키고 학생 대시보드로 이동.
-    sessionStorage.setItem('studentId', String(profileId));
-    navigate('/student');
+    setSelectedStudentId(profileId); // 클릭된 학생 ID 저장
+    setShowStudentPinModal(true);    // 학생 PIN 모달 띄우기
+  };
+
+  // 학생 PIN 모달 닫기 핸들러
+  const handleStudentPinModalClose = () => {
+    setShowStudentPinModal(false);
+    setSelectedStudentId(null); // 선택된 ID 초기화
+  };
+
+  // 학생 PIN 제출 핸들러
+  const handleStudentPinSubmit = async (pin: string) => {
+    if (!selectedStudentId) return; // selectedStudentId가 없으면 함수 종료
+
+    try {
+      // [!!] 실제 학생 PIN 검증 API를 호출하도록 수정합니다.
+      // selectedStudentId와 pin을 인자로 넘겨 API를 호출합니다.
+      const result = await verifyStudentPin(selectedStudentId, pin);
+
+      if (result.success) {
+        // PIN 검증 성공 시
+        console.log('학생 PIN 인증 성공');
+        sessionStorage.setItem('studentId', String(selectedStudentId));
+        navigate('/student');
+        handleStudentPinModalClose(); // 모달 닫기
+      } else {
+        // API는 성공했으나 PIN이 틀린 경우 (success: false)
+        console.log('학생 PIN 인증 실패');
+        throw new Error('PIN이 일치하지 않습니다.');
+      }
+
+    } catch (error) {
+      console.error('학생 PIN 검증 과정에서 에러 발생', error);
+      throw error;
+    }
   };
 
   // 로그아웃 실행 코드
@@ -220,11 +258,13 @@ const SelectProfile = () => {
     navigate('/');
   };
 
+
+
   return (
     // 배경화면 설정 관련 코드
     <div
       className="flex flex-col h-screen relative overflow-hidden font-sans text-gray-800"
-      // style={{ ... }} 속성을 제거합니다.
+    // style={{ ... }} 속성을 제거합니다.
     >
       {/* 추가된 비디오 배경 태그입니다.
         - public 폴더의 경로는 '/'로 시작합니다.
@@ -264,9 +304,8 @@ const SelectProfile = () => {
               {/* 만약 프로필이 5개 이상 있을 경우 : 페이지 네이션 기능 활성화, 좌측 페이지네이션 */}
               <button
                 onClick={handlePrevPage}
-                className={`p-2 rounded-full bg-white/60 hover:bg-white/90 transition-opacity duration-200 ${
-                  showPagination ? 'opacity-100' : 'opacity-0 invisible'
-                }`}
+                className={`p-2 rounded-full bg-white/60 hover:bg-white/90 transition-opacity duration-200 ${showPagination ? 'opacity-100' : 'opacity-0 invisible'
+                  }`}
                 disabled={!showPagination}
               >
                 <svg
@@ -298,7 +337,7 @@ const SelectProfile = () => {
                       <img
                         src={profile.imageUrl}
                         alt={profile.name}
-                        className="w-full h-full object-contain p-5" // 이미지가 잘리지 않도록 'object-contain' 사용
+                        className="w-full h-full object-contain p-5"
                       />
                     </div>
                     {/* 프로필 이름 */}
@@ -312,9 +351,8 @@ const SelectProfile = () => {
               {/* 만약 프로필이 5개 이상 있을 경우 : 페이지 네이션 기능 활성화, 우측 페이지 네이션 */}
               <button
                 onClick={handleNextPage}
-                className={`p-2 rounded-full bg-white/60 hover:bg-white/90 transition-opacity duration-200 ${
-                  showPagination ? 'opacity-100' : 'opacity-0 invisible'
-                }`}
+                className={`p-2 rounded-full bg-white/60 hover:bg-white/90 transition-opacity duration-200 ${showPagination ? 'opacity-100' : 'opacity-0 invisible'
+                  }`}
                 disabled={!showPagination}
               >
                 <svg
@@ -364,7 +402,7 @@ const SelectProfile = () => {
       </main>
 
       {/* 모달 관련 코드들 */}
-      {(showPinModal || showRecoveryModal) && (
+      {(showPinModal || showRecoveryModal || showStudentPinModal) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           {/* PIN 입력 모달 */}
           {showPinModal && (
@@ -387,6 +425,17 @@ const SelectProfile = () => {
               onCancel={handleRecoveryCancel}
             />
           )}
+
+          {/* 학생 PIN 입력 모달 (4자리) */}
+          {showStudentPinModal && (
+            <StudentPINInputModal
+              title="학생 인증"
+              subtitle={`${profiles.find(p => p.id === selectedStudentId)?.name || '학생'} PIN 번호`}
+              description="기본 비밀번호는 0000 입니다. 비밀번호를 잊어버렸다면 부모님께 알려주세요"
+              onSubmit={handleStudentPinSubmit}
+              onClose={handleStudentPinModalClose}
+            />
+          )}
         </div>
       )}
     </div>
@@ -394,5 +443,4 @@ const SelectProfile = () => {
 };
 
 export default SelectProfile;
-
 
