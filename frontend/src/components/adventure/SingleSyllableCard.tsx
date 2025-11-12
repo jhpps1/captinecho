@@ -4,6 +4,7 @@ import type { ProblemData } from '../../types/problem';
 
 type SingleSyllableCardProps = {
   problem: ProblemData;
+  isAnswered?: boolean;
 };
 
 // The 'part' property is available again on JamoPosition
@@ -13,7 +14,7 @@ const getPartForJamo = (jamo: JamoPosition): 'INITIAL' | 'MEDIAL' | 'FINAL' => {
   return 'FINAL'; // 'T'
 };
 
-export const SingleSyllableCard = ({ problem }: SingleSyllableCardProps) => {
+export const SingleSyllableCard = ({ problem, isAnswered = false }: SingleSyllableCardProps) => {
   const syllable = Hangul.assemble([problem.initial, problem.medial, problem.final].filter(Boolean) as string[]);
   const positions = getJamoPositions(syllable);
 
@@ -43,7 +44,7 @@ export const SingleSyllableCard = ({ problem }: SingleSyllableCardProps) => {
       <svg viewBox="0 0 100 100" className="w-full h-full">
         {positions.map((pos, index) => {
           const part = getPartForJamo(pos);
-          const isHidden = part === problem.hiddenTarget;
+          const isHidden = part === problem.hiddenTarget && !isAnswered;
           const charToShow = pos.char; // Always show the character
 
           return (
