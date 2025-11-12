@@ -108,7 +108,7 @@ export default function StudentDashboard() {
         const [profileResponse, countResponse, streakResponse] = await Promise.all([
           profilePromise,
           countPromise,
-          streakPromise // [추가]
+          streakPromise
         ]);
 
         // 인증 오류 처리 관련 코드
@@ -187,11 +187,10 @@ export default function StudentDashboard() {
     fetchData(studentIdFromSession);
   }, [navigate]);
 
-  // [수정됨] 아래 게임시작 타륜 버튼 클릭시 동작하는 코드
+  // 아래 게임시작 타륜 버튼 클릭시 동작하는 코드
   const handleStartGame = () => {
     setIsStartingGame(true); 
     setTimeout(() => {
-      // studentId를 URL에서 제거합니다.
       navigate(`/daily`);
     }, 2500); // 애니메이션 시간(2.5초) 후 이동
   };
