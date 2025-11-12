@@ -276,3 +276,39 @@ export function getJamoPositions(
 
   return pos;
 }
+
+/**
+ * Calculate scale factor for consistent visual size across syllables
+ * Uses the larger of y-range or maxFontSize as estimated size
+ * Caps scale at 1.0 to prevent box overflow (only allows shrinking)
+ * @param positions - Jamo positions to measure
+ * @param targetSize - Desired visual size in viewBox units
+ * @returns Scale factor to apply via SVG transform (≤ 1.0)
+ */
+export function calculateScale(
+  positions: JamoPosition[],
+  targetSize: number
+): number {
+  if (positions.length === 0) return 1.0;
+
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let maxFontSize = 0;
+
+  for (const pos of positions) {
+    minY = Math.min(minY, pos.y);
+    maxY = Math.max(maxY, pos.y);
+    maxFontSize = Math.max(maxFontSize, pos.fontSize);
+  }
+
+  const yRange = maxY - minY;
+  // Use the larger dimension as estimated size
+  const estimatedSize = Math.max(yRange, maxFontSize);
+
+  if (estimatedSize <= 0) return 1.0;
+
+  const scale = targetSize / estimatedSize;
+
+  // Cap at 1.0 to prevent overflow (only shrink, never enlarge)
+  return Math.min(scale, 1.0);
+}

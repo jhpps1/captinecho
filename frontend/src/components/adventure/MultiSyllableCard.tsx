@@ -1,6 +1,6 @@
 // 여러 음절 단어 카드 컴포넌트 (Adventure2) — SVG/JamoPosition 방식
 import Hangul from 'hangul-js';
-import { getJamoPositions, type JamoPosition } from '../../utils/hangulSVGPositions';
+import { getJamoPositions, calculateScale, type JamoPosition } from '../../utils/hangulSVGPositions';
 
 export interface SyllableData {
   initial: string;
@@ -46,6 +46,7 @@ export const MultiSyllableCard = ({
       [syllable.initial, syllable.medial, syllable.final].filter(Boolean) as string[],
     );
     const positions = getJamoPositions(syllableChar);
+    const scale = calculateScale(positions, 65);
 
     // 잘못된 입력 방어
     if (positions.length === 0) {
@@ -77,50 +78,52 @@ export const MultiSyllableCard = ({
         className="w-[26vw] max-w-28 min-w-20 h-36 sm:h-44 md:h-52 flex items-center justify-center"
       >
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          {positions.map((pos, i) => {
-            const part = getPartForJamo(pos);
-            const isHidden = syllable.hiddenTarget === part && !isAnswered;
+          <g transform={`translate(50, 50) scale(${scale}) translate(-50, -50)`}>
+            {positions.map((pos, i) => {
+              const part = getPartForJamo(pos);
+              const isHidden = syllable.hiddenTarget === part && !isAnswered;
 
-            if (isHidden && hideStyle === 'transparent') {
-              // 자리만 비우기 (좌표 절대값이라 레이아웃 영향 없음)
-              return null;
-            }
+              if (isHidden && hideStyle === 'transparent') {
+                // 자리만 비우기 (좌표 절대값이라 레이아웃 영향 없음)
+                return null;
+              }
 
-            if (isHidden && hideStyle === 'box') {
-              const box = getBoxForJamo(pos);
+              if (isHidden && hideStyle === 'box') {
+                const box = getBoxForJamo(pos);
+                return (
+                  <g key={i}>
+                    <rect
+                      x={box.x}
+                      y={box.y}
+                      width={box.width}
+                      height={box.height}
+                      rx={box.rx}
+                      fill="#FFFFFF"
+                      stroke="#000000"
+                      strokeWidth={Math.max(1.5, pos.fontSize * 0.06)}
+                    />
+                  </g>
+                );
+              }
+
+              // 일반 표시
               return (
-                <g key={i}>
-                  <rect
-                    x={box.x}
-                    y={box.y}
-                    width={box.width}
-                    height={box.height}
-                    rx={box.rx}
-                    fill="#FFFFFF"
-                    stroke="#000000"
-                    strokeWidth={Math.max(1.5, pos.fontSize * 0.06)}
-                  />
-                </g>
+                <text
+                  key={i}
+                  x={pos.x}
+                  y={pos.y}
+                  fontSize={pos.fontSize}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="#18181B"
+                  fontFamily="'Noto Sans KR', sans-serif"
+                >
+                  {pos.char}
+                </text>
               );
-            }
-
-            // 일반 표시
-            return (
-              <text
-                key={i}
-                x={pos.x}
-                y={pos.y}
-                fontSize={pos.fontSize}
-                fontWeight="bold"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#18181B"
-                fontFamily="'Noto Sans KR', sans-serif"
-              >
-                {pos.char}
-              </text>
-            );
-          })}
+            })}
+          </g>
         </svg>
       </div>
     );
