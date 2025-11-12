@@ -25,9 +25,6 @@ public record RegisterStudentRequest(
         @NotNull(message = "학년은 필수입니다")
         Grade grade,
 
-        @NotNull(message = "학생 PIN은 필수입니다")
-        String pin,
-
         @Size(max = 5, message = "관심사는 최대 5개까지 등록 가능합니다")
         @Valid
         List<Interest> interests
@@ -50,7 +47,6 @@ public record RegisterStudentRequest(
                 gender,
                 birth,
                 grade,
-                pin,
                 interestIds
         );
     }

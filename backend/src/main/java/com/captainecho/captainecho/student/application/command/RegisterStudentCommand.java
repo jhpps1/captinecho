@@ -12,7 +12,6 @@ public record RegisterStudentCommand(
         Gender gender,
         LocalDate birth,
         Grade grade,
-        String studentPin,
         List<Long> interestIds
 ) {
 }
