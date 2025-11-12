@@ -309,6 +309,6 @@ export function calculateScale(
 
   const scale = targetSize / estimatedSize;
 
-  // Cap at 1.0 to prevent overflow (only shrink, never enlarge)
-  return Math.min(scale, 1.0);
+  // Cap at 1.1 to prevent overflow (allow up to 10% enlargement)
+  return Math.min(scale, 1.1);
 }

@@ -46,14 +46,14 @@ export const MultiSyllableCard = ({
       [syllable.initial, syllable.medial, syllable.final].filter(Boolean) as string[],
     );
     const positions = getJamoPositions(syllableChar);
-    const scale = calculateScale(positions, 65);
+    const scale = calculateScale(positions, 68);
 
     // 잘못된 입력 방어
     if (positions.length === 0) {
       return (
         <div
           key={key}
-          className="w-[26vw] max-w-28 min-w-20 h-36 sm:h-44 md:h-52 flex items-center justify-center"
+          className="w-[28vw] max-w-32 min-w-22 h-40 sm:h-48 md:h-56 flex items-center justify-center"
         >
           <svg viewBox="0 0 100 100" className="w-full h-full">
             <text
@@ -75,7 +75,7 @@ export const MultiSyllableCard = ({
     return (
       <div
         key={key}
-        className="w-[26vw] max-w-28 min-w-20 h-36 sm:h-44 md:h-52 flex items-center justify-center"
+        className="w-[28vw] max-w-32 min-w-22 h-40 sm:h-48 md:h-56 flex items-center justify-center"
       >
         <svg viewBox="0 0 100 100" className="w-full h-full">
           <g transform={`translate(50, 50) scale(${scale}) translate(-50, -50)`}>
@@ -130,7 +130,7 @@ export const MultiSyllableCard = ({
   };
 
   return (
-    <div className="w-[90vw] max-w-3xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 px-4">
+    <div className="w-[95vw] max-w-4xl h-48 sm:h-56 md:h-64 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 px-4">
       <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8">
         {syllables.map((syllable, idx) => renderSyllableSVG(syllable, idx))}
       </div>

@@ -17,12 +17,12 @@ const getPartForJamo = (jamo: JamoPosition): 'INITIAL' | 'MEDIAL' | 'FINAL' => {
 export const SingleSyllableCard = ({ problem, isAnswered = false }: SingleSyllableCardProps) => {
   const syllable = Hangul.assemble([problem.initial, problem.medial, problem.final].filter(Boolean) as string[]);
   const positions = getJamoPositions(syllable);
-  const scale = calculateScale(positions, 70);
+  const scale = calculateScale(positions, 73);
 
   // Handle case where syllable might be empty or invalid
   if (positions.length === 0) {
     return (
-      <div className="w-[85vw] max-w-2xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 p-4">
+      <div className="w-[90vw] max-w-3xl h-48 sm:h-56 md:h-64 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 p-4">
         <svg viewBox="0 0 100 100" className="w-full h-full">
           <text
             x="50"
@@ -41,7 +41,7 @@ export const SingleSyllableCard = ({ problem, isAnswered = false }: SingleSyllab
   }
 
   return (
-    <div className="w-[85vw] max-w-2xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 p-4">
+    <div className="w-[90vw] max-w-3xl h-48 sm:h-56 md:h-64 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 p-4">
       <svg viewBox="0 0 100 100" className="w-full h-full">
         <g transform={`translate(50, 50) scale(${scale}) translate(-50, -50)`}>
           {positions.map((pos, index) => {
