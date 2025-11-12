@@ -369,6 +369,10 @@ export default function HangulJamoSVGPlayground() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{done:number; total:number}>({done:0,total:0});
 
+  // 그룹 편집 모드
+  const [groupEditMode, setGroupEditMode] = useState(false);
+  const [sampleSyllables, setSampleSyllables] = useState<string[]>([]);
+
   const dragRef = useRef({ isDragging: false, targetIdx: -1 });
   const leftRef = useRef<HTMLCanvasElement | null>(null);
   const rightRef = useRef<HTMLCanvasElement | null>(null);
@@ -380,6 +384,16 @@ export default function HangulJamoSVGPlayground() {
     const p = getJamoPositions(current, patternDefaults, overrides, { glyphSet: 'positional', lvCompatWhenNoT: true });
     setPositions(p);
   }, [current, patternDefaults, overrides]);
+
+  // 그룹 편집 모드 활성화 시 샘플 생성
+  useEffect(() => {
+    if (groupEditMode && current) {
+      const samples = getSamePatternSamples(current, 12);
+      setSampleSyllables(samples);
+    } else {
+      setSampleSyllables([]);
+    }
+  }, [groupEditMode, current]);
 
   useEffect(() => {
     (async () => {
@@ -434,6 +448,31 @@ export default function HangulJamoSVGPlayground() {
   function saveOverride() {
     const save = loadSave(); save.overrides[current] = flattenPositions(positions); persistSave(save);
     setOverrides({ ...overrides, [current]: save.overrides[current] }); alert(`개별 저장: ${current}`);
+  }
+  function applyToPattern() {
+    const norm = decomposeSyllable(current);
+    if (!norm) return;
+    const pat = detectPattern(norm.V[0], norm.T.length > 0);
+    const flat = flattenPositions(positions);
+    const save = loadSave();
+
+    // 1. 패턴 기본값 저장
+    save.patterns[pat] = flat;
+
+    // 2. 샘플 음절들에도 개별 오버라이드로 저장
+    const newOverrides = { ...overrides };
+    sampleSyllables.forEach(s => {
+      newOverrides[s] = [...flat]; // 각 샘플에 동일한 좌표 개별 저장
+    });
+
+    // 3. save.overrides 업데이트 및 저장
+    save.overrides = { ...save.overrides, ...newOverrides };
+    persistSave(save);
+
+    // 4. 상태 업데이트
+    setOverrides(newOverrides);
+
+    alert(`패턴 ${pat}과 샘플 음절 ${sampleSyllables.length}개에 개별 적용 완료!\n\nJSON 내보내기 시 각 음절별로 좌표가 표시됩니다.`);
   }
 
   async function handleAutoFitCurrent() {
@@ -493,15 +532,19 @@ export default function HangulJamoSVGPlayground() {
         title="드래그로 이동, Shift+휠로 크기 조절"
       >
         <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 pointer-events-none">
-          {Array.from({ length: 100 }).map((_, i) => <div key={i} className="border border-gray-100" />)}
+          {Array.from({ length: 100 }).map((_, i) => <div key={i} className="border border-gray-50" />)}
         </div>
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200 pointer-events-none" />
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-200 pointer-events-none" />
+        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-blue-100 pointer-events-none" />
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-blue-100 pointer-events-none" />
         {children}
         {positions.map((p, i) => (
           <div key={i}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border ${i === selectedIdx ? "border-green-600 bg-green-200/50" : "border-gray-400 bg-white/70"}`}
-            style={{ left: `${p.x}%`, top: `${p.y}%`, width: 16, height: 16 }}
+            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 cursor-pointer transition-all ${
+              i === selectedIdx
+                ? "border-green-500 bg-green-400 shadow-lg w-5 h-5"
+                : "border-gray-300 bg-white shadow-md w-4 h-4 hover:border-blue-400 hover:bg-blue-50"
+            }`}
+            style={{ left: `${p.x}%`, top: `${p.y}%` }}
           />
         ))}
       </div>
@@ -509,48 +552,159 @@ export default function HangulJamoSVGPlayground() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">한글 자모 분해 SVG 플레이그라운드</h1>
-      <p className="text-sm text-gray-600">카드 클릭 → 우측 편집. 드래그 이동, <b>Shift+휠</b> 크기 조절.</p>
-
-      <div className="flex items-center gap-2">
-        <input className="px-3 py-2 border rounded w-60" placeholder="검색 (예: 각, 공, 곽)"
-          value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="px-3 py-2 border rounded" onClick={() => setCount((c) => c + 200)}>더 보기 +200</button>
-        <button className="px-3 py-2 border rounded" onClick={() => setCount(11172)}>전체 보기</button>
-        <button className="px-3 py-2 border rounded" onClick={exportAll}>📤 전체 내보내기</button>
+    <div className="min-h-screen bg-gray-50 p-6 space-y-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h1 className="text-3xl font-bold text-gray-900">한글 자모 분해 SVG 플레이그라운드</h1>
+        <p className="text-sm text-gray-500 mt-2">
+          카드 클릭 → 우측 편집. 드래그로 이동, <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-semibold">Shift</kbd>+휠로 크기 조절.
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <div className="grid grid-cols-10 gap-2">
-            {filtered.map((ch) => (
-              <button key={ch} onClick={() => openEditor(ch)}
-                className={`border rounded p-2 flex flex-col items-center gap-1 hover:bg-gray-50 ${ch === current ? "ring-2 ring-blue-500" : ""}`}
-                title={patternBadge(ch)}>
-                <div className="text-lg font-bold">{ch}</div>
-                <SvgPreview ch={ch} />
-                <div className="text-[10px] text-gray-500">{patternBadge(ch)}</div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center gap-3">
+          <input
+            className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="검색 (예: 각, 공, 곽)"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <button
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors"
+            onClick={() => setCount((c) => c + 200)}
+          >
+            더 보기 +200
+          </button>
+          <button
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors"
+            onClick={() => setCount(11172)}
+          >
+            전체 보기
+          </button>
+          <button
+            className="px-4 py-2 bg-blue-500 border border-blue-500 rounded-lg hover:bg-blue-600 text-white font-medium transition-colors"
+            onClick={exportAll}
+          >
+            📤 전체 내보내기
+          </button>
+        </div>
+      </div>
+
+      {/* 위: 음절 목록 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">음절 목록 ({filtered.length}개)</h2>
+        <div className="grid grid-cols-15 gap-2 max-h-[400px] overflow-y-auto pr-2">
+          {filtered.map((ch) => (
+            <button key={ch} onClick={() => openEditor(ch)}
+              className={`border rounded-lg p-2 flex flex-col items-center gap-1 transition-all duration-200 ${
+                ch === current
+                  ? "bg-blue-50 border-blue-400 shadow-md"
+                  : "bg-white border-gray-200 shadow-sm hover:shadow-md hover:scale-105 hover:border-gray-300"
+              }`}
+              title={patternBadge(ch)}>
+              <div className="text-base font-bold text-gray-900">{ch}</div>
+              <SvgPreview ch={ch} />
+              <div className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
+                {patternBadge(ch)}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 아래: 편집 영역 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+        <div className="pb-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">편집: <span className="text-blue-600">{current}</span></h2>
+
+          {/* 버튼 그룹 1: 그룹 편집 */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="text-sm font-medium text-gray-600 w-24">그룹 편집:</div>
+            <button
+              className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                groupEditMode
+                  ? 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+              onClick={() => setGroupEditMode(!groupEditMode)}
+            >
+              🔗 그룹 편집 모드
+            </button>
+            {groupEditMode && (
+              <button className="px-4 py-2 bg-green-500 text-white border border-green-500 rounded-lg hover:bg-green-600 font-medium" onClick={applyToPattern}>
+                ✅ 패턴 + 샘플에 적용
               </button>
-            ))}
+            )}
+          </div>
+
+          {/* 버튼 그룹 2: 저장 */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="text-sm font-medium text-gray-600 w-24">저장:</div>
+            <button className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium" onClick={savePatternDefault}>
+              💾 패턴 기본값
+            </button>
+            <button className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium" onClick={saveOverride}>
+              🎯 이 글자만
+            </button>
+          </div>
+
+          {/* 버튼 그룹 3: Auto-fit */}
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-medium text-gray-600 w-24">자동 조정:</div>
+            <button className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50 disabled:cursor-not-allowed" disabled={busy} onClick={handleAutoFitCurrent}>
+              🧪 현재 음절
+            </button>
+            <button className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50 disabled:cursor-not-allowed" disabled={busy} onClick={handleAutoFixFiltered}>
+              ⚡ 전체 목록
+            </button>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xl font-semibold">편집: {current}</div>
-            <div className="flex items-center gap-2">
-              <button className="px-2 py-1 border rounded" onClick={savePatternDefault}>💾 패턴 기본값 저장</button>
-              <button className="px-2 py-1 border rounded" onClick={saveOverride}>🎯 이 글자만 저장</button>
-              <button className="px-2 py-1 border rounded" disabled={busy} onClick={handleAutoFitCurrent}>🧪 Auto-fit(현재)</button>
-              <button className="px-2 py-1 border rounded" disabled={busy} onClick={handleAutoFixFiltered}>⚡ Auto-fix(이 목록)</button>
+        {busy && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="text-sm text-blue-700 font-medium">
+              ⏳ 작업 중… <span className="font-bold">{progress.done}</span> / {progress.total}
             </div>
           </div>
+        )}
 
-          {busy && <div className="text-sm text-blue-600">작업 중… {progress.done} / {progress.total}</div>}
+        {groupEditMode && sampleSyllables.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="text-sm font-medium text-gray-700 mb-3">
+              같은 패턴의 샘플 ({sampleSyllables.length}개) - 실시간 미리보기
+              <span className="ml-2 text-xs text-gray-500">(현재 편집이 모든 샘플에 실시간 반영됩니다)</span>
+            </div>
+            <div className="grid grid-cols-8 gap-3">
+              {sampleSyllables.map((sample) => {
+                const samplePos = getJamoPositions(sample, patternDefaults, {}, { glyphSet: 'positional', lvCompatWhenNoT: true });
+                // 현재 편집 중인 좌표를 같은 패턴에 적용
+                const adjustedPos = samplePos.map((p, i) =>
+                  i < positions.length ? { ...p, x: positions[i].x, y: positions[i].y, fontSize: positions[i].fontSize } : p
+                );
+                return (
+                  <div key={sample} className="bg-white border border-gray-200 rounded p-2 flex flex-col items-center">
+                    <div className="text-xs font-bold text-gray-700 mb-1">{sample}</div>
+                    <svg viewBox="0 0 100 100" className="w-16 h-16">
+                      {adjustedPos.map((p, i) => (
+                        <text key={i} x={p.x} y={p.y} fontSize={p.fontSize} fontWeight={700}
+                          textAnchor="middle" dominantBaseline="middle" fill="#000"
+                          fontFamily="'Noto Sans KR', sans-serif">
+                          {p.char}
+                        </text>
+                      ))}
+                    </svg>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="border rounded aspect-square relative overflow-hidden">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-700">편집기</h3>
+            </div>
+            <div className="aspect-square relative">
               <EditorOverlay>
                 <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
                   {positions.map((p, i) => (
@@ -563,24 +717,38 @@ export default function HangulJamoSVGPlayground() {
                 </svg>
               </EditorOverlay>
             </div>
+          </div>
 
-            <div className="border rounded p-2 space-y-2">
-              <div className="text-sm text-gray-600">원본 vs 조합 비교</div>
-              <div className="flex items-center gap-2">
-                <canvas ref={leftRef} width={W} height={H} className="border rounded" />
-                <div className="text-gray-400">→</div>
-                <canvas ref={rightRef} width={W} height={H} className="border rounded" />
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-700">원본 vs 조합 비교</h3>
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-xs text-gray-500">원본</div>
+                <canvas ref={leftRef} width={W} height={H} className="border border-gray-200 rounded" />
               </div>
-              <div className="text-sm">유사도: <b>{score}%</b></div>
-              <button className="px-2 py-1 border rounded" onClick={redraw}>↻ 재계산</button>
+              <div className="text-gray-400 text-xl">→</div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-xs text-gray-500">조합</div>
+                <canvas ref={rightRef} width={W} height={H} className="border border-gray-200 rounded" />
+              </div>
             </div>
+            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+              <div className="text-sm">
+                유사도: <span className="font-bold text-blue-600">{score}%</span>
+              </div>
+              <button className="px-3 py-1 bg-gray-100 text-gray-700 border border-gray-200 rounded hover:bg-gray-200 text-sm" onClick={redraw}>
+                ↻ 재계산
+              </button>
+            </div>
+          </div>
 
-            <div className="border rounded p-2">
-              <div className="text-sm font-medium mb-1">현재 좌표</div>
-              <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto max-h-48">
-                {JSON.stringify(positions, null, 2)}
-              </pre>
-              <div className="text-xs text-gray-500 mt-2">드래그로 이동, Shift+휠로 크기 조절.</div>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 space-y-2">
+            <h3 className="text-sm font-semibold text-gray-700">현재 좌표</h3>
+            <pre className="text-xs bg-gray-50 p-3 rounded border border-gray-100 overflow-auto max-h-48 font-mono">
+              {JSON.stringify(positions, null, 2)}
+            </pre>
+            <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+              💡 드래그로 이동, <kbd className="px-1 py-0.5 bg-gray-200 rounded text-[10px]">Shift</kbd>+휠로 크기 조절
             </div>
           </div>
         </div>
@@ -599,4 +767,33 @@ function flattenPositions(pos: PlaygroundJamoPosition[]): number[] {
   const out: number[] = [];
   for (const p of pos) out.push(p.x, p.y, p.fontSize);
   return out;
+}
+
+/** 같은 패턴의 샘플 음절 생성 (초성 다양성 확보) */
+function getSamePatternSamples(syllable: string, count: number = 12): string[] {
+  const norm = decomposeSyllable(syllable);
+  if (!norm) return [];
+
+  const { V, T } = norm;
+  const hasT = T.length > 0;
+  const pat = detectPattern(V[0], hasT);
+
+  const samples: string[] = [];
+  const targetChoseongIndices = [0, 2, 5, 6, 7, 11, 12, 15, 17]; // ㄱ, ㄴ, ㄹ, ㅁ, ㅂ, ㅇ, ㅈ, ㅌ, ㅎ
+
+  // 현재 음절과 같은 중성, 종성 인덱스 찾기
+  const VIndex = V_TABLE.indexOf(V[0]);
+  const TIndex = hasT ? T_TABLE.indexOf(T[0]) : 0;
+
+  for (const LIndex of targetChoseongIndices) {
+    if (samples.length >= count) break;
+
+    const code = 0xAC00 + (LIndex * 588) + (VIndex * 28) + TIndex;
+    if (code >= 0xAC00 && code <= 0xD7A3) {
+      const sample = String.fromCharCode(code);
+      samples.push(sample);
+    }
+  }
+
+  return samples;
 }
