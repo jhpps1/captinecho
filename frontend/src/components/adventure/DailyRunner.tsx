@@ -9,16 +9,21 @@ import { AdventureLayout } from './AdventureLayout';
  * DailyRunner - 일일탐험 문제 관리 컴포넌트
  *
  * @description
- * - URL에서 studentId 추출
+ * - URL에서 idx 추출
+ * - Session Storage에서 studentId 추출
  * - 일일탐험 문제 10개 fetch (혼합 타입)
- * - 로딩/에러 처리
+ * - 로딩/에러/세션 복원 처리
  * - ProblemRunner에 데이터 전달
  *
- * @route /daily/:studentId/:idx?
+ * @route /daily/:idx?
  */
 export const DailyRunner = () => {
   const navigate = useNavigate();
-  const { studentId, idx } = useParams<{ studentId: string; idx?: string }>();
+  // [수정됨] studentId 제거, idx만 가져옴
+  const { idx } = useParams<{ idx?: string }>();
+
+  // [추가됨] studentId를 state로 관리
+  const [studentId, setStudentId] = useState<number | null>(null);
 
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,12 +48,14 @@ export const DailyRunner = () => {
   // localStorage 키 생성 헬퍼 함수들
   const getTodayString = () => new Date().toISOString().split('T')[0];
 
+  // [수정됨] studentId state를 사용
   const getCompletionKey = () => {
-    return `daily_completed_${parsedStudentId}_${getTodayString()}`;
+    return `daily_completed_${studentId}_${getTodayString()}`;
   };
 
+  // [수정됨] studentId state를 사용
   const getSessionKey = () => {
-    return `daily_session_${parsedStudentId}_${getTodayString()}`;
+    return `daily_session_${studentId}_${getTodayString()}`;
   };
 
   // TODO: API 개발되면 수정 예정
@@ -98,18 +105,18 @@ export const DailyRunner = () => {
     saveSessionToStorage(session, problems);
   };
 
-  // studentId 검증
-  const parsedStudentId = studentId ? parseInt(studentId, 10) : null;
+  // [제거됨] 최상위 스코프의 parsedStudentId 변수
 
   // 페이지 이탈 시 세션 종료
   useEffect(() => {
-    if (!parsedStudentId || !session.isActive) return;
+    // [수정됨] studentId state 사용
+    if (!studentId || !session.isActive) return;
 
     // 컴포넌트 언마운트 시 세션 종료 (다른 페이지로 이동)
     const cleanup = async () => {
       try {
         console.log('🚪 페이지 이탈 감지, 세션 종료 중...');
-        await endAdventure(parsedStudentId);
+        await endAdventure(studentId); // [수정됨]
       } catch (err) {
         console.error('❌ 페이지 이탈 시 세션 종료 실패:', err);
       }
@@ -119,7 +126,7 @@ export const DailyRunner = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (session.isActive) {
         // 세션이 활성화되어 있으면 동기적으로 종료 시도
-        navigator.sendBeacon(`/api/student/${parsedStudentId}/adventure/end`);
+        navigator.sendBeacon(`/api/student/${studentId}/adventure/end`); // [수정됨]
       }
     };
 
@@ -129,22 +136,38 @@ export const DailyRunner = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanup(); // 언마운트 시 세션 종료
     };
-  }, [session.isActive, parsedStudentId]);
+    // [수정됨] 의존성 배열 변경
+  }, [session.isActive, studentId]);
 
-// studentId 검증 및 세션 복원
+  // [수정됨] 1. studentId 검증 (Session Storage)
   useEffect(() => {
+    const storedStudentId = sessionStorage.getItem('studentId'); // "studentId" 키로 가정
+    const parsedStudentId = storedStudentId ? parseInt(storedStudentId, 10) : null;
+
     if (!parsedStudentId || isNaN(parsedStudentId)) {
-      setError('유효하지 않은 학생 ID입니다.');
+      setError('학생 정보를 불러올 수 없습니다. 다시 로그인해주세요.');
       setIsLoading(false);
       return;
     }
 
+    setStudentId(parsedStudentId); // State 설정
+    // 로딩 상태는 아직 true로 둡니다. 세션 복원 로직이 완료되어야 false로 변경됩니다.
+  }, []); // 마운트 시 한 번만 실행
+
+  // [추가됨] 2. 세션 복원 (studentId가 설정된 후 실행)
+  useEffect(() => {
+    // studentId가 아직 설정되지 않았으면 (null) 실행하지 않음
+    if (!studentId) {
+      return;
+    }
+
+    // --- 기존 세션 복원 로직 시작 ---
     // TODO: API 개발되면 수정 예정
     // 임시: localStorage에서 오늘의 세션 정보 및 완료 여부 확인
     // 추후 백엔드 API (GET /api/student/{studentId}/adventure/daily/status)로 대체
 
     // 1. 완료 여부 확인
-    const completionKey = getCompletionKey();
+    const completionKey = getCompletionKey(); // studentId state 사용
     const completed = localStorage.getItem(completionKey);
     if (completed === 'true') {
       console.log('✅ 오늘의 일일문제 이미 완료됨');
@@ -154,12 +177,12 @@ export const DailyRunner = () => {
     }
 
     // 2. 진행 중인 세션 복원 시도
-    const savedData = loadSessionFromStorage();
+    const savedData = loadSessionFromStorage(); // studentId state 사용
     if (savedData && savedData.session && savedData.problems) {
       console.log('🔄 진행 중인 세션 발견, 새 세션으로 이어하기 시작');
 
       // 새로운 세션 생성 (이전 세션은 종료되었으므로)
-      startAdventure(parsedStudentId, 'DAILY')
+      startAdventure(studentId, 'DAILY') // studentId state 사용
         .then((sessionId) => {
           const newSession = {
             sessionId,
@@ -172,7 +195,7 @@ export const DailyRunner = () => {
           setProblems(savedData.problems); // 문제는 복원
 
           // localStorage 업데이트 (새 세션 ID로)
-          saveSessionToStorage(newSession, savedData.problems);
+          saveSessionToStorage(newSession, savedData.problems); // studentId state 사용
 
           console.log(`✅ 새 세션으로 이어하기 완료 - Session ID: ${sessionId}`);
           setIsLoading(false);
@@ -184,13 +207,15 @@ export const DailyRunner = () => {
         });
     } else {
       console.log('📝 새로운 세션 시작 대기');
-      setIsLoading(false);
+      setIsLoading(false); // ID 검증 통과, 세션 복원할 것 없음 -> 시작 대기 화면으로
     }
-  }, [parsedStudentId]);
+    // [수정됨] 의존성 배열에 studentId 추가
+  }, [studentId]);
 
   // 세션 시작 핸들러
   const handleStartAdventure = async () => {
-    if (!parsedStudentId) {
+    // [수정됨] studentId state 사용
+    if (!studentId) {
       setError('유효하지 않은 학생 ID입니다.');
       return;
     }
@@ -202,7 +227,7 @@ export const DailyRunner = () => {
       console.log('🚀 일일탐험 세션 시작 중...');
 
       // 1. 세션 생성
-      const sessionId = await startAdventure(parsedStudentId, 'DAILY');
+      const sessionId = await startAdventure(studentId, 'DAILY'); // [수정됨]
 
       setSession({
         sessionId,
@@ -214,7 +239,7 @@ export const DailyRunner = () => {
       console.log(`✅ 세션 시작됨 - Session ID: ${sessionId}`);
 
       // 2. 문제 불러오기
-      const data = await getDailyProblems(parsedStudentId);
+      const data = await getDailyProblems(studentId); // [수정됨]
 
       if (!data.problems || data.problems.length === 0) {
         setError('오늘의 문제가 없습니다.');
@@ -232,7 +257,7 @@ export const DailyRunner = () => {
         isActive: true,
         startedAt: new Date().toISOString(),
       };
-      saveSessionToStorage(sessionData, data.problems);
+      saveSessionToStorage(sessionData, data.problems); // [수정됨] (내부적으로 studentId state 사용)
 
     } catch (err) {
       console.error('❌ 세션 시작 실패:', err);
@@ -244,11 +269,12 @@ export const DailyRunner = () => {
 
   // 세션 종료 핸들러
   const handleEndAdventure = async () => {
-    if (!parsedStudentId || !session.isActive) return;
+    // [수정됨] studentId state 사용
+    if (!studentId || !session.isActive) return;
 
     try {
       console.log('🏁 세션 종료 중...');
-      const success = await endAdventure(parsedStudentId);
+      const success = await endAdventure(studentId); // [수정됨]
 
       if (success) {
         console.log('✅ 세션 종료 성공');
@@ -261,9 +287,9 @@ export const DailyRunner = () => {
 
         // TODO: API 개발되면 수정 예정
         // 임시: localStorage에 완료 표시 및 세션 정보 삭제
-        const completionKey = getCompletionKey();
+        const completionKey = getCompletionKey(); // [수정됨]
         localStorage.setItem(completionKey, 'true');
-        clearSessionFromStorage(); // 진행 중인 세션 정보 삭제
+        clearSessionFromStorage(); // 진행 중인 세션 정보 삭제 // [수정됨]
         setIsCompleted(true);
       }
     } catch (err) {
@@ -304,15 +330,15 @@ export const DailyRunner = () => {
         >
           Your browser does not support the video tag.
         </video>
-        <div 
-          className="relative text-center p-25 rounded-2xl z-10" 
-          style={{ 
-            backgroundImage: `url('/adventurepage/layoutmap.png')`, 
-            backgroundSize: 'cover', 
+        <div
+          className="relative text-center p-25 rounded-2xl z-10"
+          style={{
+            backgroundImage: `url('/adventurepage/layoutmap.png')`,
+            backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             // Tailwind bg-white 대신 투명 배경으로
-            backgroundColor: 'transparent' 
+            backgroundColor: 'transparent'
           }}
         > {/* z-index를 줘서 동영상 위에 오도록 */}
           <h1 className="text-4xl font-bold text-blue-900 mb-4">일일탐험</h1>
@@ -355,7 +381,6 @@ export const DailyRunner = () => {
       </div>
     );
   }
-
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   return (
     <AdventureLayout
@@ -366,11 +391,12 @@ export const DailyRunner = () => {
         <ProblemRunner
           problems={problems}
           mode="daily"
-          studentId={parsedStudentId!}
+          // [수정됨] studentId state 사용 (null이 아님을 보장)
+          studentId={studentId!}
           onAdventureTypeChange={setCurrentAdventureTypeId}
           isTutorialMode={isTutorialMode}
           onComplete={handleEndAdventure}
-          onProblemComplete={handleProblemComplete}  // TODO: API 개발되면 수정 예정
+          onProblemComplete={handleProblemComplete}  // TODO: API 개발되면 수정 예정
         />
       )}
     </AdventureLayout>
