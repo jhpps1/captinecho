@@ -15,6 +15,7 @@ import FirstTestPage from '../pages/FirstTestPage.tsx';
 import FirstTestResult from '../pages/FirstTestResult.tsx';
 import ParrotStore from '../pages/ParrotStore.tsx';
 import { InitialAssessmentPage } from '../pages/InitialAssessmentPage.tsx';
+import HangulJamoSVGPlayground from '../pages/hangul_jamo_svgplayground.tsx'; 
 
 
 // Adventure 관련 컴포넌트 (새 구조)
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
   {
     path: '/adventure/:typeId',
     element: <SuppleRunner />,
+  },
+  {
+    path: '/dev/hangul-svg',
+    element: <HangulJamoSVGPlayground />,
   },
 ]);
 
