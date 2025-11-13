@@ -137,15 +137,13 @@ const ParrotStore = () => {
     fetchStudentData();
   }, [navigate]);
 
-  // === BGM 로직 (SelectProfile에서 복사 및 수정) ===
-
-  // BGM 로드 및 자동재생 (음소거 상태로)
+  // BGM 로드 및 자동재생
   useEffect(() => {
-    // [!!] 경로 수정
+    // 경로 수정
     audioRef.current = new Audio('/parrotstore/backgroundmusic.mp3');
     audioRef.current.loop = true;
     audioRef.current.volume = volume;
-    audioRef.current.muted = true; // [!!] 자동 재생 정책을 위해 음소거로 시작
+    audioRef.current.muted = false;
 
     const playPromise = audioRef.current.play();
 
