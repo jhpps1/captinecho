@@ -34,12 +34,8 @@ interface DailyCountResponse {
     completedCount: number;
 }
 
-// *** API 변경 ***
-// 주간 스트릭 API 응답 (boolean 배열) -> (객체)
-// type DailyStreakResponse = boolean[]; // 기존 타입
 interface DailyStreakApiResponse { // 새 인터페이스
     weeklyAttendance: boolean[];
-    // currentStreak: number; // 예시 응답에 있었지만 현재 사용 안함
 }
 
 
