@@ -133,10 +133,10 @@ export default function StudentDashboard() {
         // 학생의 이름과 프로필 사진 정보를 가져오는 코드
 
         // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
-//         if (foundStudent && foundStudent.level === null) {
-//           navigate("/initial-assessment");
-//           return;
-//         }
+        if (foundStudent && foundStudent.level === null) {
+          navigate("/initial-assessment");
+          return;
+        }
 
         if (foundStudent) {
           setProfile({
