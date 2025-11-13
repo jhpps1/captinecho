@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Problem } from '../../types/adventure';
 import { WordCard } from './WordCard';
 import { MicrophoneButton } from './MicrophoneButton';
@@ -34,6 +34,26 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(false);
 
+  // 🔽 새로 추가: 방금 녹음한 파일을 들을 수 있는 URL
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  // 🔽 녹음 관련 ref들
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  // 컴포넌트 언마운트 시 녹음/스트림 정리
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
   // 스피커 버튼: 단어 음성 재생
   const handlePlayWordAudio = () => {
     if (problem.soundUrl) {
@@ -57,15 +77,12 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       setTimeout(() => {
         setShowFeedback(false);
         setIsSpeaking(false);
-        onSubmit('voice-answer', attemptCount);
+        // onSubmit('voice-answer', attemptCount);
       }, 2000);
     } else {
       // 오답
       setShowFeedback(true);
       setIsCorrectAnswer(false);
-
-      // Adventure4(말하기)는 오답 패턴을 수집하지 않음
-      // is_completed만 ProblemRunner에서 처리됨
 
       setAttemptCount(prev => {
         const newCount = prev + 1;
@@ -77,27 +94,93 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
     }
   };
 
-  // 마이크 버튼 클릭
-  const handleMicClick = async () => {
-    if (isRecording) {
-      // 녹음 종료
-      setIsRecording(false);
-      setIsAnalyzing(true);
+  // 🔽 녹음 시작 로직
+  const startRecording = async () => {
+    try {
+      // 1) 마이크 권한 요청 → 이때 브라우저 허용/차단 팝업
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
 
-      // TODO: 실제 음성 인식 API 연동
-      // const result = await sendAudioToBackend(audioBlob, problem.questionText);
-      // handleAnswer(result.isCorrect, result.similarity);
+      // 2) MediaRecorder 생성 (WebM 형식)
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm',
+      });
+      mediaRecorderRef.current = mediaRecorder;
 
-      // 임시: 2초 후 랜덤 결과
-      setTimeout(() => {
-        setIsAnalyzing(false);
-        const randomCorrect = Math.random() > 0.5;
-        handleAnswer(randomCorrect, randomCorrect ? 90 : 60);
-      }, 2000);
-    } else {
-      // 녹음 시작
+      // 3) 이전 녹음 조각 초기화
+      chunksRef.current = [];
+
+      // 4) 녹음 중 생기는 데이터 모으기
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      // 5) 녹음 종료 후(WebM 파일 생성 + 미리듣기 URL 설정)
+      mediaRecorder.onstop = () => {
+        // 지금까지 모은 조각들로 Blob 생성
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+
+        // Blob → WebM File 생성
+        const file = new File([blob], 'recording.webm', {
+          type: 'audio/webm',
+        });
+
+        console.log('생성된 WebM 파일:', file);
+
+        // 🔊 미리 듣기용 URL 생성 (문제마다, 녹음할 때마다 최신 걸로 바뀜)
+        const previewUrl = URL.createObjectURL(file);
+        setAudioUrl(previewUrl);
+
+        // 👉 여기서부터는 file을 백엔드로 보내면 됨 (지금은 랜덤 정답 처리 유지)
+        setIsAnalyzing(true);
+
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          const randomCorrect = Math.random() > 0.5;
+          handleAnswer(randomCorrect, randomCorrect ? 90 : 60);
+        }, 2000);
+
+        // 마이크 스트림 정리
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
+      };
+
+      // 6) 실제 녹음 시작
+      mediaRecorder.start();
       setIsRecording(true);
-      // TODO: 실제 녹음 시작
+      // 새 녹음 시작할 때 이전 분석 상태는 끄기
+      setIsAnalyzing(false);
+    } catch (error) {
+      console.error('마이크 권한 또는 녹음 시작 실패:', error);
+      alert('마이크 권한을 허용했는지 확인해주세요.');
+      setIsRecording(false);
+    }
+  };
+
+  // 🔽 녹음 종료 로직
+  const stopRecording = () => {
+    const mediaRecorder = mediaRecorderRef.current;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop(); // → onstop 콜백에서 WebM 파일 생성 + audioUrl 설정
+    }
+    setIsRecording(false);
+  };
+
+  // 마이크 버튼 클릭 (녹음 시작/종료 토글)
+  const handleMicClick = () => {
+    // 분석 중일 때는 버튼 무시 (원하면 제거 가능)
+    if (isAnalyzing) return;
+
+    if (isRecording) {
+      // 단어 다 읽고 다시 누르면 녹음 종료
+      stopRecording();
+    } else {
+      // 첫 클릭 → 녹음 시작
+      startRecording();
     }
   };
 
@@ -129,6 +212,15 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
         isAnalyzing={isAnalyzing}
         onClick={handleMicClick}
       />
+
+      {/* 🔊 방금 녹음한 음성 미리듣기 */}
+      {audioUrl && (
+        <div className="mt-4 w-full max-w-xs">
+          <audio controls src={audioUrl} className="w-full">
+            브라우저가 audio 태그를 지원하지 않습니다.
+          </audio>
+        </div>
+      )}
 
       {/* 피드백 캐릭터 */}
       <FeedbackCharacter
