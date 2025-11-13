@@ -334,12 +334,12 @@ export default function StudentDashboard() {
         <aside 
           className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
                       transition-transform duration-500 ease-in-out
-                      ${isMenuOpen ? 'translate-x-0' : '-translate-x-64'}`} 
+                      ${isMenuOpen ? 'translate-x-0' : '-translate-x-[196px]'}`} 
         >
           {/* 메뉴 버튼 컨테이너 */}
-          <div
-            className="w-64 h-full flex flex-col justify-around items-center py-5 ms-15"
-          >
+            <div
+            className="w-64 h-full flex flex-col justify-around items-center py-5"
+            >
             {/* 버튼 관련 정보들 */}
             {woodenButtons.map((button) => (
               <button
