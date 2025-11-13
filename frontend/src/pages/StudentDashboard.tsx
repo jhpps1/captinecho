@@ -541,7 +541,7 @@ export default function StudentDashboard() {
                             <div className="flex justify-around items-center px-1">
                                 {weeklyStreak.map((isCompleted, index) => (
                                     <img
-                                        key={`week-${index}`}
+                                        key={`weeklyAttendance-${index}`}
                                         // 값이 True 라면 파랑색 스탬프, 값이 False라면 회색 스탬프
                                         // 배열의 True/False 값을 인식하여 판단한다.
                                         src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
