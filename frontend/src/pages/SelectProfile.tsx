@@ -264,12 +264,9 @@ const SelectProfile = () => {
     // 배경화면 설정 관련 코드
     <div
       className="flex flex-col h-screen relative overflow-hidden font-sans text-gray-800"
-    // style={{ ... }} 속성을 제거합니다.
+
     >
-      {/* 추가된 비디오 배경 태그입니다.
-        - public 폴더의 경로는 '/'로 시작합니다.
-        - z-0을 주어 다른 z-10, z-20 요소들보다 뒤에 배치합니다.
-      */}
+      {/* Background 비디오 */}
       <video
         autoPlay
         loop

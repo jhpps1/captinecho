@@ -229,7 +229,7 @@ export default function StudentDashboard() {
           loop
           muted
           playsInline 
-          className="absolute z-0 w-auto h-auto min-w-full min-h-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
+          className="absolute inset-0 w-full h-full object-cover z-0" 
         >
           <source src="/studentboard/background.mp4" type="video/mp4" />
           브라우저가 비디오 태그를 지원하지 않습니다.
