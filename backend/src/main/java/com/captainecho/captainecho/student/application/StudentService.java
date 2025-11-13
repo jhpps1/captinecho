@@ -20,6 +20,7 @@ import com.captainecho.captainecho.student.application.command.DeleteStudentComm
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
+import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
@@ -34,6 +35,7 @@ import com.captainecho.captainecho.student.application.result.AddStudentInterest
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
+import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
@@ -56,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -553,6 +556,115 @@ public class StudentService {
         student.updateStudentPin(command.newPin());
 
         return new UpdatePinResult(true);
+    }
+
+    /**
+     * 일일 연속 학습 기록 조회
+     *
+     * @param command 일일 연속 학습 기록 조회 명령 (protectorId, studentId)
+     * @return 이번 주 월~금 학습 여부 및 현재 연속 학습일 수
+     * @throws EchoException 학생을 찾을 수 없거나, 접근 권한이 없는 경우
+     */
+    @Transactional(readOnly = true)
+    public GetDailyStreakResult getDailyStreak(GetDailyStreakCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 이번 주 월요일 ~ 금요일 날짜 계산 (KST 기준)
+        LocalDate today = LocalDate.now();
+        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        // 4. 월~금 각 날짜의 학습 여부 확인
+        List<Boolean> weeklyAttendance = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {  // 월~금 5일
+            LocalDate targetDate = monday.plusDays(i);
+
+            // 해당 날짜에 할당된 전체 문제 수
+            Integer totalCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDate(
+                    command.studentId(),
+                    targetDate
+            );
+
+            // 해당 날짜에 완료된 문제 수
+            Integer completedCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDateAndIsCompleted(
+                    command.studentId(),
+                    targetDate,
+                    true
+            );
+
+            log.info("Daily Streak - Student: {}, Date: {}, Total: {}, Completed: {}",
+                    command.studentId(), targetDate, totalCount, completedCount);
+
+            // 할당된 문제가 있고, 모든 문제를 완료했으면 학습 완료
+            boolean isDayCompleted = totalCount > 0 && totalCount.equals(completedCount);
+            weeklyAttendance.add(isDayCompleted);
+        }
+
+        // 5. 현재 연속 학습일 수 계산 (오늘부터 거슬러 올라가며 확인)
+        Integer currentStreak = calculateCurrentStreak(command.studentId(), today);
+
+        log.info("일일 연속 학습 기록 조회 완료 - Student ID: {}, Weekly Attendance: {}, Current Streak: {}",
+                command.studentId(), weeklyAttendance, currentStreak);
+
+        return GetDailyStreakResult.of(weeklyAttendance, currentStreak);
+    }
+
+    /**
+     * 현재 연속 학습일 수 계산 (주말 제외)
+     *
+     * @param studentId 학생 ID
+     * @param startDate 시작 날짜 (보통 오늘)
+     * @return 연속 학습일 수
+     */
+    private Integer calculateCurrentStreak(Integer studentId, LocalDate startDate) {
+        int streak = 0;
+        LocalDate currentDate = startDate;
+
+        // 오늘부터 거슬러 올라가며 연속 학습일 계산
+        while (true) {
+            // 주말(토, 일)은 건너뛰기
+            DayOfWeek dayOfWeek = currentDate.getDayOfWeek();
+            if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+                currentDate = currentDate.minusDays(1);
+                continue;
+            }
+
+            // 해당 날짜에 할당된 전체 문제 수
+            Integer totalCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDate(
+                    studentId,
+                    currentDate
+            );
+
+            // 해당 날짜에 완료된 문제 수
+            Integer completedCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDateAndIsCompleted(
+                    studentId,
+                    currentDate,
+                    true
+            );
+
+            log.info("Current Streak Calculation - Date: {}, Total: {}, Completed: {}",
+                    currentDate, totalCount, completedCount);
+
+            // 할당된 문제가 있고, 모든 문제를 완료했으면 연속 학습
+            boolean isDayCompleted = totalCount > 0 && totalCount.equals(completedCount);
+
+            if (isDayCompleted) {
+                streak++;
+                currentDate = currentDate.minusDays(1);
+            } else {
+                // 학습하지 않은 날이면 중단
+                break;
+            }
+        }
+
+        return streak;
     }
 
 }
