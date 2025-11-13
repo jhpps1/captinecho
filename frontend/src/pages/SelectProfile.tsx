@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import PINInputModal from '../components/protector/PINInputModal';
@@ -17,6 +17,20 @@ interface Profile {
 
 // 페이지네이션 시 한 페이지에 표시될 정보를 설정하는 칸. Default는 4개로 설정.
 const PROFILES_PER_PAGE = 4;
+
+// BGM 아이콘
+const SpeakerWaveIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+    </svg>
+);
+
+// 음소거 아이콘
+const SpeakerXMarkIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+    </svg>
+);
 
 // 프로필 선택창 관련 기능들
 const SelectProfile = () => {
@@ -40,6 +54,64 @@ const SelectProfile = () => {
   const [showStudentPinModal, setShowStudentPinModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
 
+  // --- BGM 관련 State 및 Ref ---
+  const [volume, setVolume] = useState(0.5); // 볼륨 상태 (0.0 ~ 1.0)
+  const [lastVolume, setLastVolume] = useState(0.5); // 음소거 해제 시 복원할 볼륨
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // BGM 재생 로직
+  useEffect(() => {
+    audioRef.current = new Audio('/selectpage/backgroundmusic.mp3');
+    audioRef.current.loop = true; // 반복 재생
+    audioRef.current.volume = volume; // 초기 볼륨 적용
+    audioRef.current.muted = false; // 초기 재생 상태 적용
+
+    // 자동 재생 시도
+    const playPromise = audioRef.current.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        console.warn("BGM 자동 재생 실패. 사용자 상호작용이 필요합니다.", error);
+      });
+    }
+
+    // 컴포넌트 언마운트 시 BGM 정리
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []); // [] 빈 배열: 컴포넌트 마운트 시 1회만 실행
+
+  // volume 상태가 변경될 때마다 오디오 객체에 적용
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+      if (volume > 0) {
+        setLastVolume(volume); // 0보다 큰 마지막 볼륨 저장
+        audioRef.current.muted = false; // 볼륨이 있으면 음소거 해제
+      } else {
+        audioRef.current.muted = true; // 볼륨이 0이면 음소거
+      }
+    }
+  }, [volume]);
+
+  // 음소거 토글 핸들러
+  const toggleMute = () => {
+    if (volume > 0) {
+      setVolume(0); // 음소거 (볼륨 0)
+    } else {
+      // 음소거 해제 (이전 볼륨으로 복원, 0이었으면 0.5로)
+      setVolume(lastVolume > 0 ? lastVolume : 0.5);
+    }
+
+    // 사용자가 음소거 버튼을 눌러 상호작용했으므로,
+    // 만약 오디오가 멈춰있었다면(자동재생 실패시) 다시 재생 시도
+    if (audioRef.current && audioRef.current.paused) {
+      audioRef.current.play().catch(e => console.error("음소거 해제 후 재생 시도 실패:", e));
+    }
+  };
   // PIN 인증 관련 검증 담당 코드
   const handlePinSubmit = async (pin: string) => {
     try {
@@ -276,12 +348,48 @@ const SelectProfile = () => {
         src="/selectpage/background.mp4"
       />
 
-      {/* 헤더 (기존 z-20 유지) */}
-      <header className="absolute top-0 right-0 p-6 z-20">
+      {/* 헤더*/}
+      <header className="absolute top-0 right-0 p-6 z-20 flex items-center space-x-4">
+        {/* === BGM 컨트롤러 === */}
+        <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="w-72 h-2 bg-white/50 rounded-full cursor-pointer appearance-none
+                       [&::-webkit-slider-thumb]:appearance-none
+                       [&::-webkit-slider-thumb]:h-5
+                       [&::-webkit-slider-thumb]:w-5
+                       [&::-webkit-slider-thumb]:rounded-full
+                       [&::-webkit-slider-thumb]:bg-white
+                       [&::-moz-range-thumb]:h-5
+                       [&::-moz-range-thumb]:w-5
+                       [&::-moz-range-thumb]:rounded-full
+                       [&::-moz-range-thumb]:bg-white
+                       [&::-moz-range-thumb]:border-none
+                       [&::-moz-range-track]:h-2
+                       [&::-moz-range-track]:bg-white/50
+                       [&::-moz-range-track]:rounded-full"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }} // Fallback for moz
+        />
+        <button
+            onClick={toggleMute}
+            className="w-14 h-14 bg-white rounded-lg shadow-md flex items-center justify-center transition-all active:scale-95 hover:bg-gray-100"
+        >
+            {volume === 0 ? (
+                <SpeakerXMarkIcon className="w-8 h-8 text-gray-700" />
+            ) : (
+                <SpeakerWaveIcon className="w-8 h-8 text-gray-700" />
+            )}
+        </button>
+        {/* === BGM 컨트롤러 끝 === */}
+
         {/* '보호자' 버튼 */}
         <button
           onClick={() => setShowPinModal(true)}
-          className="bg-white text-gray-700 px-6 py-2 rounded-lg shadow-md font-semibold hover:bg-gray-100 transition-colors duration-200"
+          className="bg-white text-gray-700 px-6 py-2 rounded-lg shadow-md font-semibold hover:bg-gray-100 transition-colors duration-200 h-14" // 높이 h-14 (3.5rem) 통일
         >
           보호자
         </button>
