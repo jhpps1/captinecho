@@ -192,7 +192,7 @@ export default function StudentDashboard() {
     setIsStartingGame(true); 
     setTimeout(() => {
       navigate(`/daily`);
-    }, 1800); // 애니메이션 시간(2.5초) 후 이동
+    }, 1800); // 애니메이션 시간(1.8초) 후 이동
   };
 
   // 배(캐릭터) 클릭 시 오늘 몇 문제 풀었는지 출력하게 도와주는 코드
