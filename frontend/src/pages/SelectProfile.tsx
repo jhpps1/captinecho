@@ -397,7 +397,7 @@ const SelectProfile = () => {
       <main className="flex-grow flex flex-col justify-center items-center z-10 text-center px-4">
         {/* 프로필이 존재하는 경우에 출력되는 부분 */}
         {profiles.length > 0 ? (
-          <>
+          <div className="flex flex-col items-center bg-white/70 rounded-3xl p-20">
             <h1 className="text-5xl font-bold text-gray-900 mb-12">
               누군지 알려주세요
             </h1>
@@ -483,7 +483,7 @@ const SelectProfile = () => {
             >
               로그아웃
             </button>
-          </>
+          </div>
         ) : (
           // 프로필이 없을 경우 출력되는 코드
           <div>
