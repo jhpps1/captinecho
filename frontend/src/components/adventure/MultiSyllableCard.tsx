@@ -1,123 +1,138 @@
-// 여러 음절 단어 카드 컴포넌트 (Adventure2)
-// 2-3개 음절로 구성된 단어를 표시하며, 하나의 음소가 빈칸으로 표시됨
+// 여러 음절 단어 카드 컴포넌트 (Adventure2) — SVG/JamoPosition 방식
+import Hangul from 'hangul-js';
+import { getJamoPositions, calculateScale, type JamoPosition } from '../../utils/hangulSVGPositions';
 
-import {
-  splitVowelForLayout,
-  getVowelLayoutType,
-  getTopBlockClass,
-  bottomMostLineClass,
-} from '../../utils/hangulUtils';
-
-// 단일 음절 데이터 타입
 export interface SyllableData {
-  initial: string;      // 초성
-  medial: string;       // 중성
-  final?: string;       // 종성 (선택적)
-  hiddenTarget?: 'INITIAL' | 'MEDIAL' | 'FINAL';  // 빈칸으로 표시할 부분
+  initial: string;
+  medial: string;
+  final?: string;
+  hiddenTarget?: 'INITIAL' | 'MEDIAL' | 'FINAL';
 }
 
-// 컴포넌트 Props 타입
 interface MultiSyllableCardProps {
-  syllables: SyllableData[];  // 음절 배열 (2-3개)
-  isAnswered: boolean;        // 정답을 맞췄는지 여부
+  syllables: SyllableData[];   // 2~3개 음절
+  isAnswered: boolean;         // 정답 여부
+  /** 'transparent' = 감추기, 'box' = 사각형 표시 */
+  hideStyle?: 'transparent' | 'box';
 }
+
+const getPartForJamo = (j: JamoPosition): 'INITIAL' | 'MEDIAL' | 'FINAL' => {
+  if (j.part === 'L') return 'INITIAL';
+  if (j.part === 'V') return 'MEDIAL';
+  return 'FINAL'; // 'T'
+};
+
+// SVG 글자 주변 박스 근사치
+const getBoxForJamo = (pos: JamoPosition) => {
+  const w = pos.fontSize * 0.78;
+  const h = pos.fontSize * 0.98;
+  return {
+    x: pos.x - w / 2,
+    y: pos.y - h / 2,
+    width: w,
+    height: h,
+    rx: Math.max(2, pos.fontSize * 0.08),
+  };
+};
 
 export const MultiSyllableCard = ({
   syllables,
   isAnswered,
+  hideStyle = 'transparent',
 }: MultiSyllableCardProps) => {
-  // 각 음절의 음소 색상 결정 함수
-  const getColorClassForPart = (
-    syllable: SyllableData,
-    partName: 'initial' | 'medialTop' | 'medialBottom' | 'final'
-  ) => {
-    if (!syllable.hiddenTarget) {
-      return 'text-gray-800'; // 빈칸이 없는 음절은 모두 검정
+  // syllable 하나를 SVG로 렌더
+  const renderSyllableSVG = (syllable: SyllableData, key: number) => {
+    const syllableChar = Hangul.assemble(
+      [syllable.initial, syllable.medial, syllable.final].filter(Boolean) as string[],
+    );
+    const positions = getJamoPositions(syllableChar);
+    const scale = calculateScale(positions, 68);
+
+    // 잘못된 입력 방어
+    if (positions.length === 0) {
+      return (
+        <div
+          key={key}
+          className="w-[28vw] max-w-32 min-w-22 h-40 sm:h-48 md:h-56 flex items-center justify-center"
+        >
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            <text
+              x="50"
+              y="50"
+              fontSize="80"
+              fontWeight="bold"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#A1A1AA"
+            >
+              _
+            </text>
+          </svg>
+        </div>
+      );
     }
 
-    const isTargetInitial =
-      syllable.hiddenTarget === 'INITIAL' && partName === 'initial';
-    const isTargetFinal =
-      syllable.hiddenTarget === 'FINAL' && partName === 'final';
-    const isTargetMedial =
-      syllable.hiddenTarget === 'MEDIAL' &&
-      (partName === 'medialTop' || partName === 'medialBottom');
+    return (
+      <div
+        key={key}
+        className="w-[28vw] max-w-32 min-w-22 h-40 sm:h-48 md:h-56 flex items-center justify-center"
+      >
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <g transform={`translate(50, 50) scale(${scale}) translate(-50, -50)`}>
+            {positions.map((pos, i) => {
+              const part = getPartForJamo(pos);
+              const isHidden = syllable.hiddenTarget === part && !isAnswered;
 
-    const isTarget = isTargetInitial || isTargetFinal || isTargetMedial;
+              if (isHidden && hideStyle === 'transparent') {
+                // 자리만 비우기 (좌표 절대값이라 레이아웃 영향 없음)
+                return null;
+              }
 
-    // 정답 맞추기 전이면 검은 테두리 사각형, 맞춘 뒤면 검정
-    if (isTarget && !isAnswered) {
-      return 'text-white border-4 border-black bg-white px-2 py-1 rounded';
-    }
-    return 'text-gray-800';
+              if (isHidden && hideStyle === 'box') {
+                const box = getBoxForJamo(pos);
+                return (
+                  <g key={i}>
+                    <rect
+                      x={box.x}
+                      y={box.y}
+                      width={box.width}
+                      height={box.height}
+                      rx={box.rx}
+                      fill="#FFFFFF"
+                      stroke="#000000"
+                      strokeWidth={Math.max(1.5, pos.fontSize * 0.06)}
+                    />
+                  </g>
+                );
+              }
+
+              // 일반 표시
+              return (
+                <text
+                  key={i}
+                  x={pos.x}
+                  y={pos.y}
+                  fontSize={pos.fontSize}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="#18181B"
+                  fontFamily="'Noto Sans KR', sans-serif"
+                >
+                  {pos.char}
+                </text>
+              );
+            })}
+          </g>
+        </svg>
+      </div>
+    );
   };
 
   return (
-    <div className="w-[90vw] max-w-3xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 px-4">
-      {/* 음절들을 가로로 배치 */}
+    <div className="w-[95vw] max-w-4xl h-48 sm:h-56 md:h-64 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 px-4">
       <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-8">
-        {syllables.map((syllable, syllableIndex) => {
-          // 각 음절의 모음 레이아웃 정보 계산
-          const vowelLayoutType = getVowelLayoutType(syllable.medial);
-          const vowelParts = splitVowelForLayout(syllable.medial);
-
-          return (
-            <div
-              key={syllableIndex}
-              className="flex flex-col items-center justify-center m-0 p-0 gap-0 transition-all duration-300"
-            >
-              {/* 줄 1: 초성 + 모음 top/single */}
-              <div className={getTopBlockClass(vowelLayoutType)}>
-                <span
-                  className={`text-6xl sm:text-7xl md:text-8xl font-bold ${getColorClassForPart(
-                    syllable,
-                    'initial'
-                  )}`}
-                >
-                  {syllable.initial}
-                </span>
-                {vowelParts.top && (
-                  <span
-                    className={`text-6xl sm:text-7xl md:text-8xl font-bold ${getColorClassForPart(
-                      syllable,
-                      'medialTop'
-                    )}`}
-                  >
-                    {vowelParts.top}
-                  </span>
-                )}
-              </div>
-
-              {/* 줄 2: 복합 모음의 아래 파트 */}
-              {vowelParts.bottom && (
-                <div className="flex items-center justify-center m-0 p-0 gap-0 translate-y-0">
-                  <span
-                    className={`text-6xl sm:text-7xl md:text-8xl font-bold ${getColorClassForPart(
-                      syllable,
-                      'medialBottom'
-                    )}`}
-                  >
-                    {vowelParts.bottom}
-                  </span>
-                </div>
-              )}
-
-              {/* 줄 3: 받침(종성) */}
-              {syllable.final && (
-                <div className={bottomMostLineClass}>
-                  <span
-                    className={`text-6xl sm:text-7xl md:text-8xl font-bold ${getColorClassForPart(
-                      syllable,
-                      'final'
-                    )}`}
-                  >
-                    {syllable.final}
-                  </span>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {syllables.map((syllable, idx) => renderSyllableSVG(syllable, idx))}
       </div>
     </div>
   );
