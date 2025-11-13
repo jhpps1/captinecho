@@ -34,8 +34,14 @@ interface DailyCountResponse {
     completedCount: number;
 }
 
-// 주간 스트릭 API 응답 (boolean 배열)
-type DailyStreakResponse = boolean[];
+// *** API 변경 ***
+// 주간 스트릭 API 응답 (boolean 배열) -> (객체)
+// type DailyStreakResponse = boolean[]; // 기존 타입
+interface DailyStreakApiResponse { // 새 인터페이스
+    weeklyAttendance: boolean[];
+    // currentStreak: number; // 예시 응답에 있었지만 현재 사용 안함
+}
+
 
 // 로그아웃 버튼
 const ExitIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -246,9 +252,8 @@ export default function StudentDashboard() {
                     setWeeklyStreak(Array(5).fill(false)); // 에러 발생 시 5개 빈 스탬프로 설정
                 } else {
                     // 정상적으로 실행될 경우
-                    const streakData: DailyStreakResponse = await streakResponse.json();
-                    // API가 5개 미만의 데이터를 줄 경우를 대비해 5개로 맞춤
-                    const paddedStreak = [...streakData, ...Array(5).fill(false)].slice(0, 5);
+                    const streakData: DailyStreakApiResponse = await streakResponse.json(); // 1. DailyStreakApiResponse로 변경
+                    const paddedStreak = [...streakData.weeklyAttendance, ...Array(5).fill(false)].slice(0, 5); 
                     setWeeklyStreak(paddedStreak);
                 }
             } catch (error) {
@@ -369,19 +374,19 @@ export default function StudentDashboard() {
                         value={volume}
                         onChange={(e) => setVolume(parseFloat(e.target.value))}
                         className="w-72 h-2 bg-white/50 rounded-full cursor-pointer appearance-none
-                                   [&::-webkit-slider-thumb]:appearance-none
-                                   [&::-webkit-slider-thumb]:h-5
-                                   [&::-webkit-slider-thumb]:w-5
-                                   [&::-webkit-slider-thumb]:rounded-full
-                                   [&::-webkit-slider-thumb]:bg-white
-                                   [&::-moz-range-thumb]:h-5
-                                   [&::-moz-range-thumb]:w-5
-                                   [&::-moz-range-thumb]:rounded-full
-                                   [&::-moz-range-thumb]:bg-white
-                                   [&::-moz-range-thumb]:border-none
-                                   [&::-moz-range-track]:h-2
-                                   [&::-moz-range-track]:bg-white/50
-                                   [&::-moz-range-track]:rounded-full"
+                                [&::-webkit-slider-thumb]:appearance-none
+                                [&::-webkit-slider-thumb]:h-5
+                                [&::-webkit-slider-thumb]:w-5
+                                [&::-webkit-slider-thumb]:rounded-full
+                                [&::-webkit-slider-thumb]:bg-white
+                                [&::-moz-range-thumb]:h-5
+                                [&::-moz-range-thumb]:w-5
+                                [&::-moz-range-thumb]:rounded-full
+                                [&::-moz-range-thumb]:bg-white
+                                [&::-moz-range-thumb]:border-none
+                                [&::-moz-range-track]:h-2
+                                [&::-moz-range-track]:bg-white/50
+                                [&::-moz-range-track]:rounded-full"
                         style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }} // Fallback for moz
                     />
 
@@ -422,7 +427,7 @@ export default function StudentDashboard() {
                 {/* 중앙 아래쪽의 배(+캐릭터) 상호작용 관련 이미지 */}
                 <div
                     className={`absolute bottom-[-20px] left-1/2 w-[450px] h-[525px]
-                       transition-transform duration-[2000ms] ease-in-out z-20`
+                            transition-transform duration-[2000ms] ease-in-out z-20`
                     }
                     style={{
                         transform: isStartingGame
@@ -433,9 +438,9 @@ export default function StudentDashboard() {
                     {/* 말풍선 */}
                     <div
                         className={`absolute top-[60px] left-1/2 -translate-x-1/2 w-max max-w-xs
-                       bg-white rounded-xl shadow-lg p-4 z-30
-                       transition-all duration-300 ease-in-out
-                       ${isBubbleVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
+                        bg-white rounded-xl shadow-lg p-4 z-30
+                        transition-all duration-300 ease-in-out
+                        ${isBubbleVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
                     >
                         <span className="text-gray-800 font-semibold text-lg">
                             지금 {solvedProblemCount}개의 문제를 해결했어!
@@ -443,9 +448,9 @@ export default function StudentDashboard() {
                         {/* 말풍선 꼬리 */}
                         <div
                             className="absolute left-1/2 -translate-x-1/2 top-full 
-                       w-0 h-0 border-[10px] border-solid
-                       border-t-white border-l-transparent
-                       border-r-transparent border-b-transparent"
+                            w-0 h-0 border-[10px] border-solid
+                            border-t-white border-l-transparent
+                            border-r-transparent border-b-transparent"
                         ></div>
                     </div>
 
@@ -462,9 +467,9 @@ export default function StudentDashboard() {
                         onClick={isDailyComplete ? handleShowCompletionMessage : handleStartGame}
                         disabled={isStartingGame}
                         className={`absolute bottom-[30px] left-1/2 -translate-x-1/2 w-42 h-42 z-20
-                       transition-all duration-500 ease-out
-                       hover:scale-110 active:scale-100
-                       ${isStartingGame ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
+                        transition-all duration-500 ease-out
+                        hover:scale-110 active:scale-100
+                        ${isStartingGame ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
                     >
                         {/* 완료 여부에 따라 이미지 변경 */}
                         <img
@@ -477,8 +482,8 @@ export default function StudentDashboard() {
                 {/* 왼쪽 게임시작 관련 사이드 바 */}
                 <aside
                     className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
-                         transition-transform duration-500 ease-in-out
-                         ${isMenuOpen ? 'translate-x-0' : '-translate-x-48'}`}
+                            transition-transform duration-500 ease-in-out
+                            ${isMenuOpen ? 'translate-x-0' : '-translate-x-48'}`}
                 >
                     {/* 메뉴 버튼 컨테이너 */}
                     <div
@@ -560,7 +565,7 @@ export default function StudentDashboard() {
                                         key={`today-${index}`}
                                         // 풀이 문제 수 만큼 파랑 스탬프가 찍히게 한다. 위의 streak과 다르게 순서대로 찍힌다.
                                         src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
-                                        alt={isCompleted ? "완료 스M프" : "미완료 스탬프"}
+                                        alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
                                         className="w-9 h-9"
                                     />
                                 ))}
@@ -571,10 +576,10 @@ export default function StudentDashboard() {
 
                 <div
                     className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                       bg-white/95 rounded-2xl shadow-xl p-8 max-w-sm w-11/12
-                       text-center text-gray-800 text-2xl font-semibold z-[60]
-                       transition-all duration-300 ease-in-out
-                       ${isCompletionMessageVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
+                            bg-white/95 rounded-2xl shadow-xl p-8 max-w-sm w-11/12
+                            text-center text-gray-800 text-2xl font-semibold z-[60]
+                            transition-all duration-300 ease-in-out
+                            ${isCompletionMessageVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
                 >
                     오늘 탐험은 완료했어요. <br />
                     더 탐험하고 싶으면 <br />
@@ -584,7 +589,7 @@ export default function StudentDashboard() {
                 {/* 게임 시작 시 페이드 아웃 오버레이 */}
                 <div
                     className={`absolute inset-0 bg-sky-600 transition-opacity duration-1500 z-40
-                  ${isStartingGame ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                    ${isStartingGame ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 />
             </div>
         </>
