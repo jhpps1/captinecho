@@ -133,10 +133,10 @@ export default function StudentDashboard() {
         // 학생의 이름과 프로필 사진 정보를 가져오는 코드
 
         // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
-        if (foundStudent && foundStudent.level === null) {
-          navigate("/initial-assessment");
-          return;
-        }
+//         if (foundStudent && foundStudent.level === null) {
+//           navigate("/initial-assessment");
+//           return;
+//         }
 
         if (foundStudent) {
           setProfile({
@@ -334,7 +334,7 @@ export default function StudentDashboard() {
         <aside 
           className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
                       transition-transform duration-500 ease-in-out
-                      ${isMenuOpen ? 'translate-x-0' : '-translate-x-[196px]'}`} 
+                      ${isMenuOpen ? 'translate-x-0' : '-translate-x-48'}`} 
         >
           {/* 메뉴 버튼 컨테이너 */}
             <div
@@ -344,12 +344,10 @@ export default function StudentDashboard() {
             {woodenButtons.map((button) => (
               <button
                 key={button.id}
-                // [수정됨] onClick 핸들러에서 studentId 제거
                 onClick={() => {
                   navigate(`/adventure/${button.typeId}`);
                 }}
                 className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white hover:scale-105 transition-transform"
-                // 버튼 이미지 정보가 저장되는 공간
                 style={{
                   backgroundImage: `url('/studentboard/button.png')`,
                   textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'

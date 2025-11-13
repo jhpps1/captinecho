@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-// 학생용 Props
+// 학생용 PIN 인터페이스
 interface StudentPINInputModalProps {
   title?: string;
   subtitle?: string;
@@ -10,6 +10,7 @@ interface StudentPINInputModalProps {
 }
 
 export default function PINStudentModal({
+  // 해당 부분은 디폴트 데이터로 외부에서 재설정 시 변경 가능합니다.
   title = "학생 인증",
   subtitle = "학생 PIN 번호",
   description = "비밀번호를 잊어버렸다면 부모님께 알려주세요.",
@@ -19,20 +20,18 @@ export default function PINStudentModal({
   const [pin, setPin] = useState('');
   const [isError, setIsError] = useState(false);
 
+  // PIN 입력 설정 관련
   const handleNumberClick = async (num: string) => {
-    // [수정] 4자리로 변경
     if (pin.length < 4) {
       const newPin = pin + num;
       setPin(newPin);
 
-      // [수정] 4자리 입력 완료 시 자동 제출
       if (newPin.length === 4) {
         setTimeout(async () => {
           try {
             await Promise.resolve(onSubmit(newPin));
           } catch (error) {
-            // 에러 발생 시 에러 상태 표시
-            console.log('PIN 검증 실패 - 에러 애니메이션 표시');
+            // 에러 이벤트
             setIsError(true);
 
             // 600ms 후 에러 상태 해제 및 PIN 초기화
@@ -46,26 +45,29 @@ export default function PINStudentModal({
     }
   };
 
+  // 지우기 옵션
   const handleBackspace = () => {
     setPin(pin.slice(0, -1));
   };
 
+  // 뒤로가기 설정(끄기)
   const handleClose = () => {
     if (onClose) {
       onClose();
     }
   };
 
+  // 모달창 바깥을 클릭하면 꺼지도록 하는 기능 부여 스크립트
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && onClose) {
       onClose();
     }
   };
 
+  // 비밀번호 구현 스크립트
   const renderPinDots = () => {
     return (
       <div className="flex gap-4 justify-center mb-8">
-        {/* [수정] 4자리로 변경 */}
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
@@ -82,13 +84,16 @@ export default function PINStudentModal({
     );
   };
 
+  // 숫자 패드
   const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
   return (
+    // PIN 입력
     <div
       className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 font-pretendard"
       onClick={handleBackdropClick}
     >
+      {/* 에러 발생 시 애니메이션 */}
       <div
         className={`bg-white rounded-2xl p-8 shadow-xl w-[480px] relative transition-all ${
           isError
@@ -112,7 +117,7 @@ export default function PINStudentModal({
           {renderPinDots()}
         </div>
 
-        {/* 숫자 패드 */}
+        {/* 숫자 패드 1~9 */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {numbers.map((num) => (
             <button
@@ -126,6 +131,7 @@ export default function PINStudentModal({
               {num}
             </button>
           ))}
+          {/* 지우기 버튼 */}
           <button
             onClick={handleBackspace}
             className="w-16 h-16 mx-auto bg-neutral-100 rounded-xl
@@ -135,6 +141,7 @@ export default function PINStudentModal({
           >
             ←
           </button>
+          {/* 숫자 버튼 0 */}
           <button
             onClick={() => handleNumberClick('0')}
             className="w-16 h-16 mx-auto bg-neutral-100 rounded-xl
@@ -144,6 +151,7 @@ export default function PINStudentModal({
           >
             0
           </button>
+          {/* 뒤로가기 버튼 */}
           {onClose ? (
             <button
               onClick={handleClose}
@@ -158,8 +166,6 @@ export default function PINStudentModal({
             <div className="w-16 h-16 mx-auto"></div>
           )}
         </div>
-        
-        {/* PIN 찾기 링크 없음 */}
       </div>
     </div>
   );
