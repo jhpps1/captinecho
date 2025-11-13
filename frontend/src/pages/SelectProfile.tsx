@@ -358,21 +358,21 @@ const SelectProfile = () => {
           step="0.01"
           value={volume}
           onChange={(e) => setVolume(parseFloat(e.target.value))}
-          className="w-72 h-2 bg-white/50 rounded-full cursor-pointer appearance-none
+          className="w-72 h-2 bg-black/50 rounded-full cursor-pointer appearance-none
                        [&::-webkit-slider-thumb]:appearance-none
                        [&::-webkit-slider-thumb]:h-5
                        [&::-webkit-slider-thumb]:w-5
                        [&::-webkit-slider-thumb]:rounded-full
-                       [&::-webkit-slider-thumb]:bg-white
+                       [&::-webkit-slider-thumb]:bg-black
                        [&::-moz-range-thumb]:h-5
                        [&::-moz-range-thumb]:w-5
                        [&::-moz-range-thumb]:rounded-full
-                       [&::-moz-range-thumb]:bg-white
+                       [&::-moz-range-thumb]:bg-black
                        [&::-moz-range-thumb]:border-none
                        [&::-moz-range-track]:h-2
-                       [&::-moz-range-track]:bg-white/50
+                       [&::-moz-range-track]:bg-black/50
                        [&::-moz-range-track]:rounded-full"
-          style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }} // Fallback for moz
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} // Fallback for moz
         />
         <button
           onClick={toggleMute}

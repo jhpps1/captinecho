@@ -266,7 +266,7 @@ const ParrotStore = () => {
             step="0.01"
             value={volume}
             onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-128 h-2 bg-white/50 rounded-full cursor-pointer appearance-none
+            className="w-64 h-2 bg-white/50 rounded-full cursor-pointer appearance-none
                        [&::-webkit-slider-thumb]:appearance-none
                        [&::-webkit-slider-thumb]:h-5
                        [&::-webkit-slider-thumb]:w-5
