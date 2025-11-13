@@ -133,10 +133,10 @@ export default function StudentDashboard() {
         // 학생의 이름과 프로필 사진 정보를 가져오는 코드
 
         // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
-        if (foundStudent && foundStudent.level === null) {
-          navigate("/initial-assessment");
-          return;
-        }
+//         if (foundStudent && foundStudent.level === null) {
+//           navigate("/initial-assessment");
+//           return;
+//         }
 
         if (foundStudent) {
           setProfile({
@@ -192,7 +192,7 @@ export default function StudentDashboard() {
     setIsStartingGame(true); 
     setTimeout(() => {
       navigate(`/daily`);
-    }, 2500); // 애니메이션 시간(2.5초) 후 이동
+    }, 1800); // 애니메이션 시간(1.8초) 후 이동
   };
 
   // 배(캐릭터) 클릭 시 오늘 몇 문제 풀었는지 출력하게 도와주는 코드
