@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from app.src.core.config import settings
 # from app.src.api.scheduler.batch_scheduler import start_scheduler, stop_scheduler  # Spring 스케줄러로 이전
 from app.src.api import main_api
+from app.src.api.stt_api import router as stt_router  # develop 브랜치에서 추가된 STT API
 
 # ============================================
 # 로깅 설정
@@ -86,6 +87,11 @@ app.include_router(
     main_api.router,
     prefix="/api",
     tags=["AI Service"]
+)
+app.include_router(
+    stt_router,
+    prefix="/api",
+    tags=["STT Service"]
 )
 
 # ============================================

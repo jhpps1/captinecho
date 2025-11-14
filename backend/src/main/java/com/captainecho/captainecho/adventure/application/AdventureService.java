@@ -172,15 +172,23 @@ public class AdventureService {
         Short level = student.getLevel();
         log.info("Student level: {}", level);
 
-        // 4. 탐험 타입과 레벨에 맞는 랜덤 문제 10개 조회
-        List<DayProblem> dayProblems = dayProblemRepository.findRandomSupplementaryProblems(
+        // 4. 탐험 타입과 레벨에 맞는 랜덤 문제 ID 10개 조회 (1개 쿼리)
+        List<Integer> problemIds = dayProblemRepository.findRandomSupplementaryProblemIds(
                 command.adventureTypeId(),
                 level
         );
 
+        if (problemIds.isEmpty()) {
+            log.info("No supplementary problems found");
+            return GetSupplementaryProblemsResult.of(List.of());
+        }
+
+        // 5. 문제 ID로 문제들을 연관 엔티티와 함께 조회 (1개 쿼리, Fetch Join으로 N+1 방지)
+        List<DayProblem> dayProblems = dayProblemRepository.findByIdInWithAssociations(problemIds);
+
         log.info("Found {} supplementary problems", dayProblems.size());
 
-        // 5. DayProblem -> ProblemInfo 변환
+        // 6. DayProblem -> ProblemInfo 변환
         List<GetSupplementaryProblemsResult.ProblemInfo> problemInfos = dayProblems.stream()
                 .map(dp -> {
                     // Null-safe array to list conversion

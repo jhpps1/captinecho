@@ -2,8 +2,6 @@ package com.captainecho.captainecho.student.application;
 
 import com.captainecho.captainecho.adventure.persistence.DayProblemRepository;
 import com.captainecho.captainecho.common.domain.PhonemeFeature;
-import com.captainecho.captainecho.common.mail.EmailService;
-import com.captainecho.captainecho.common.mail.RecoveryCodeService;
 import com.captainecho.captainecho.common.persistence.PhonemeFeatureRepository;
 import com.captainecho.captainecho.common.storage.FileStorageService;
 import com.captainecho.captainecho.config.FileStorageProperties;
@@ -22,6 +20,7 @@ import com.captainecho.captainecho.student.application.command.DeleteStudentComm
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
+import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
@@ -36,6 +35,7 @@ import com.captainecho.captainecho.student.application.result.AddStudentInterest
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
+import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
@@ -58,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -77,8 +78,6 @@ public class StudentService {
     private final FileStorageProperties fileStorageProperties;
     private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
-    private final EmailService emailService;
-    private final RecoveryCodeService recoveryCodeService;
 
     @Transactional
     public RegisterStudentResult registerStudent(RegisterStudentCommand command) {
@@ -112,14 +111,13 @@ public class StudentService {
             }
         }
 
-        // 5. Student 엔티티 생성 및 저장 (level=null for initial diagnosis, coin=0)
+        // 5. Student 엔티티 생성 및 저장 (level=null for initial diagnosis, coin=0, studentPin=0000은 엔티티 기본값)
         Student student = Student.builder()
                 .protector(protector)
                 .name(command.studentName())
                 .gender(command.gender())
                 .birth(command.birth())
                 .grade(command.grade())
-                .studentPin(command.studentPin())
                 .level(null)  // null로 설정하여 초기진단 필요 표시
                 .build();
 
@@ -561,58 +559,112 @@ public class StudentService {
     }
 
     /**
-     * 학생 PIN 복구 인증 코드 전송
-     * 학생의 보호자 이메일로 복구 코드를 전송합니다.
+     * 일일 연속 학습 기록 조회
      *
-     * @param studentId 학생 ID
-     * @throws EchoException 학생을 찾을 수 없거나, 보호자 이메일이 없는 경우
+     * @param command 일일 연속 학습 기록 조회 명령 (protectorId, studentId)
+     * @return 이번 주 월~금 학습 여부 및 현재 연속 학습일 수
+     * @throws EchoException 학생을 찾을 수 없거나, 접근 권한이 없는 경우
      */
-    @Transactional
-    public void sendRecoveryCode(Integer studentId) {
-        // 1. Student 조회
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
-
-        // 2. 보호자 이메일 확인
-        Protector protector = student.getProtector();
-        String email = protector.getEmail();
-
-        if (email == null || email.isEmpty()) {
-            throw new EchoException(StudentErrorCode.EMAIL_NOT_FOUND);
+    @Transactional(readOnly = true)
+    public GetDailyStreakResult getDailyStreak(GetDailyStreakCommand command) {
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
         }
 
-        // 3. 인증 코드 생성 및 Redis 저장 (studentId를 키로 사용)
-        String code = recoveryCodeService.generateAndSaveCode(studentId);
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
 
-        // 4. 이메일 발송
-        emailService.sendPinRecoveryCode(email, code);
+        // 3. 이번 주 월요일 ~ 금요일 날짜 계산 (KST 기준)
+        LocalDate today = LocalDate.now();
+        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 
-        log.info("학생 PIN 복구 인증 코드 전송 완료 - Student ID: {}, Protector Email: {}", studentId, email);
+        // 4. 월~금 각 날짜의 학습 여부 확인
+        List<Boolean> weeklyAttendance = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {  // 월~금 5일
+            LocalDate targetDate = monday.plusDays(i);
+
+            // 해당 날짜에 할당된 전체 문제 수
+            Integer totalCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDate(
+                    command.studentId(),
+                    targetDate
+            );
+
+            // 해당 날짜에 완료된 문제 수
+            Integer completedCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDateAndIsCompleted(
+                    command.studentId(),
+                    targetDate,
+                    true
+            );
+
+            log.info("Daily Streak - Student: {}, Date: {}, Total: {}, Completed: {}",
+                    command.studentId(), targetDate, totalCount, completedCount);
+
+            // 할당된 문제가 있고, 모든 문제를 완료했으면 학습 완료
+            boolean isDayCompleted = totalCount > 0 && totalCount.equals(completedCount);
+            weeklyAttendance.add(isDayCompleted);
+        }
+
+        // 5. 현재 연속 학습일 수 계산 (오늘부터 거슬러 올라가며 확인)
+        Integer currentStreak = calculateCurrentStreak(command.studentId(), today);
+
+        log.info("일일 연속 학습 기록 조회 완료 - Student ID: {}, Weekly Attendance: {}, Current Streak: {}",
+                command.studentId(), weeklyAttendance, currentStreak);
+
+        return GetDailyStreakResult.of(weeklyAttendance, currentStreak);
     }
 
     /**
-     * 학생 PIN 복구 인증 코드 검증 및 PIN 초기화
+     * 현재 연속 학습일 수 계산 (주말 제외)
      *
      * @param studentId 학생 ID
-     * @param code 인증 코드
-     * @throws EchoException 학생을 찾을 수 없거나, 인증 코드가 유효하지 않은 경우
+     * @param startDate 시작 날짜 (보통 오늘)
+     * @return 연속 학습일 수
      */
-    @Transactional
-    public void verifyRecoveryCodeAndResetPin(Integer studentId, String code) {
-        // 1. Student 조회
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+    private Integer calculateCurrentStreak(Integer studentId, LocalDate startDate) {
+        int streak = 0;
+        LocalDate currentDate = startDate;
 
-        // 2. 인증 코드 검증
-        boolean isValid = recoveryCodeService.verifyCode(studentId, code);
+        // 오늘부터 거슬러 올라가며 연속 학습일 계산
+        while (true) {
+            // 주말(토, 일)은 건너뛰기
+            DayOfWeek dayOfWeek = currentDate.getDayOfWeek();
+            if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+                currentDate = currentDate.minusDays(1);
+                continue;
+            }
 
-        if (!isValid) {
-            throw new EchoException(StudentErrorCode.INVALID_RECOVERY_CODE);
+            // 해당 날짜에 할당된 전체 문제 수
+            Integer totalCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDate(
+                    studentId,
+                    currentDate
+            );
+
+            // 해당 날짜에 완료된 문제 수
+            Integer completedCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDateAndIsCompleted(
+                    studentId,
+                    currentDate,
+                    true
+            );
+
+            log.info("Current Streak Calculation - Date: {}, Total: {}, Completed: {}",
+                    currentDate, totalCount, completedCount);
+
+            // 할당된 문제가 있고, 모든 문제를 완료했으면 연속 학습
+            boolean isDayCompleted = totalCount > 0 && totalCount.equals(completedCount);
+
+            if (isDayCompleted) {
+                streak++;
+                currentDate = currentDate.minusDays(1);
+            } else {
+                // 학습하지 않은 날이면 중단
+                break;
+            }
         }
 
-        // 3. PIN 초기화 (기본값 "000000"으로 리셋)
-        student.updateStudentPin("000000");
-
-        log.info("학생 PIN 초기화 완료 - Student ID: {}", studentId);
+        return streak;
     }
+
 }

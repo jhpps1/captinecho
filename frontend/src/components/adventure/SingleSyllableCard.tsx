@@ -1,54 +1,72 @@
-// 단일 음절 카드 컴포넌트 (Adventure1)
-// 초성/중성/종성을 분리하여 표시하며, 하나의 음소를 빈칸으로 표시
+import Hangul from 'hangul-js';
+import { getJamoPositions, calculateScale, type JamoPosition } from '../../utils/hangulSVGPositions';
 import type { ProblemData } from '../../types/problem';
-import { bottomMostLineClass, getTopBlockClass } from '../../utils/hangulUtils';
 
 type SingleSyllableCardProps = {
   problem: ProblemData;
-  vowelLayoutType: string;
-  vowelParts: { type: string; top: string; bottom: string | null };
-  getColorClassForPart: (part: 'initial' | 'medialTop' | 'medialBottom' | 'final') => string;
+  isAnswered?: boolean;
 };
 
-export const SingleSyllableCard = ({
-  problem,
-  vowelLayoutType,
-  vowelParts,
-  getColorClassForPart
-}: SingleSyllableCardProps) => {
-  return (
-    <div className="w-[85vw] max-w-2xl h-40 sm:h-48 md:h-56 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800">
-      <div className="flex flex-col items-center justify-center m-0 p-0 gap-0 transition-all duration-300">
-        {/* 줄 1: 초성 + 모음 top/single */}
-        <div className={getTopBlockClass(vowelLayoutType)}>
-          <span className={`text-7xl sm:text-8xl md:text-9xl font-bold ${getColorClassForPart('initial')}`}>
-            {problem.initial}
-          </span>
-          {vowelParts.top && (
-            <span className={`text-7xl sm:text-8xl md:text-9xl font-bold ${getColorClassForPart('medialTop')}`}>
-              {vowelParts.top}
-            </span>
-          )}
-        </div>
+// The 'part' property is available again on JamoPosition
+const getPartForJamo = (jamo: JamoPosition): 'INITIAL' | 'MEDIAL' | 'FINAL' => {
+  if (jamo.part === 'L') return 'INITIAL';
+  if (jamo.part === 'V') return 'MEDIAL';
+  return 'FINAL'; // 'T'
+};
 
-        {/* 줄 2: 복합 모음의 아래 파트 */}
-        {vowelParts.bottom && (
-          <div className="flex items-center justify-center m-0 p-0 gap-0 translate-y-0">
-            <span className={`text-7xl sm:text-8xl md:text-9xl font-bold ${getColorClassForPart('medialBottom')}`}>
-              {vowelParts.bottom}
-            </span>
-          </div>
-        )}
+export const SingleSyllableCard = ({ problem, isAnswered = false }: SingleSyllableCardProps) => {
+  const syllable = Hangul.assemble([problem.initial, problem.medial, problem.final].filter(Boolean) as string[]);
+  const positions = getJamoPositions(syllable);
+  const scale = calculateScale(positions, 73);
 
-        {/* 줄 3: 받침(종성) */}
-        {problem.final && (
-          <div className={bottomMostLineClass}>
-            <span className={`text-7xl sm:text-8xl md:text-9xl font-bold ${getColorClassForPart('final')}`}>
-              {problem.final}
-            </span>
-          </div>
-        )}
+  // Handle case where syllable might be empty or invalid
+  if (positions.length === 0) {
+    return (
+      <div className="w-[90vw] max-w-3xl h-48 sm:h-56 md:h-64 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 p-4">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <text
+            x="50"
+            y="55"
+            fontSize="80"
+            fontWeight="bold"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#A1A1AA" // zinc-500
+          >
+            _
+          </text>
+        </svg>
       </div>
+    );
+  }
+
+  return (
+    <div className="w-[90vw] max-w-3xl h-48 sm:h-56 md:h-64 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 sm:border-6 border-gray-800 p-4">
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <g transform={`translate(50, 50) scale(${scale}) translate(-50, -50)`}>
+          {positions.map((pos, index) => {
+            const part = getPartForJamo(pos);
+            const isHidden = part === problem.hiddenTarget && !isAnswered;
+            const charToShow = pos.char; // Always show the character
+
+            return (
+              <text
+                key={index}
+                x={pos.x}
+                y={pos.y}
+                fontSize={pos.fontSize}
+                fontWeight="bold"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill={isHidden ? '#A1A1AA' : '#18181B'} // zinc-500 for hidden, zinc-900 for visible
+                fontFamily="'Noto Sans KR', sans-serif"
+              >
+                {charToShow}
+              </text>
+            );
+          })}
+        </g>
+      </svg>
     </div>
   );
 };

@@ -49,6 +49,10 @@ export interface VerifyPinResponse {
   success: boolean;
 }
 
+export interface VerifyStudentPinResponse {
+  success: boolean;
+}
+
 export interface UpdatePinRequest {
   currentPin: string;
   newPin: string;

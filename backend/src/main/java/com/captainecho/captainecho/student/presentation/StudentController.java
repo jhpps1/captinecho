@@ -7,6 +7,7 @@ import com.captainecho.captainecho.student.application.StudentService;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
@@ -15,6 +16,7 @@ import com.captainecho.captainecho.student.application.command.UpdateStudentComm
 import com.captainecho.captainecho.student.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
@@ -29,6 +31,7 @@ import com.captainecho.captainecho.student.presentation.request.UpdateStudentReq
 import com.captainecho.captainecho.student.presentation.request.VerifyPinRequest;
 import com.captainecho.captainecho.student.presentation.request.VerifyRecoveryCodeRequest;
 import com.captainecho.captainecho.student.presentation.response.AddStudentInterestResponse;
+import com.captainecho.captainecho.student.presentation.response.DailyStreakResponse;
 import com.captainecho.captainecho.student.presentation.response.DeleteStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
@@ -316,42 +319,35 @@ public class StudentController {
     }
 
     /**
-     * 학생 PIN 복구 인증 코드 전송 API
+     * 일일 연속 학습 기록 조회 API
      *
+     * @param principal 인증된 보호자 정보
      * @param studentId 학생 ID
-     * @return 성공 여부
+     * @return 이번 주 월~금 학습 여부 및 현재 연속 학습일 수
      */
-    @PostMapping("/{student-id}/pin/send-recovery-code")
+    @GetMapping("/{student-id}/dashboard/daily-streak")
     @Operation(
-            summary = "학생 PIN 복구 인증 코드 전송",
-            description = "학생의 보호자 이메일로 PIN 복구 인증 코드를 전송합니다"
+            summary = "일일 연속 학습 기록 조회",
+            description = "이번 주 월~금 학습 여부와 현재 연속 학습일 수를 조회합니다"
     )
-    public ResponseEntity<RecoveryCodeResponse> sendRecoveryCode(
+    public ResponseEntity<DailyStreakResponse> getDailyStreak(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable("student-id") Integer studentId
     ) {
-        studentService.sendRecoveryCode(studentId);
+        // 인증 확인
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
 
-        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
-    }
+        Integer protectorId = principal.getProtectorId();
 
-    /**
-     * 학생 PIN 복구 인증 코드 검증 및 PIN 초기화 API
-     *
-     * @param studentId 학생 ID
-     * @param request 인증 코드 검증 요청 (code)
-     * @return 성공 여부
-     */
-    @PostMapping("/{student-id}/pin/verify-recovery-code")
-    @Operation(
-            summary = "학생 PIN 복구 인증 코드 검증 및 PIN 초기화",
-            description = "인증 코드를 검증하고 학생 PIN을 000000으로 초기화합니다"
-    )
-    public ResponseEntity<RecoveryCodeResponse> verifyRecoveryCode(
-            @PathVariable("student-id") Integer studentId,
-            @Valid @RequestBody VerifyRecoveryCodeRequest request
-    ) {
-        studentService.verifyRecoveryCodeAndResetPin(studentId, request.code());
+        // Command 생성 및 서비스 호출
+        GetDailyStreakCommand command = new GetDailyStreakCommand(protectorId, studentId);
+        GetDailyStreakResult result = studentService.getDailyStreak(command);
 
-        return ResponseEntity.ok(RecoveryCodeResponse.of(true));
+        // Response 생성 및 반환
+        DailyStreakResponse response = DailyStreakResponse.from(result);
+
+        return ResponseEntity.ok(response);
     }
 }

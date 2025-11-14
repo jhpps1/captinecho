@@ -103,9 +103,9 @@ export default function InterestSelectionModal({
         </div>
 
         {/* 관심사 선택 영역 */}
-        <div className="grid grid-cols-2 gap-8 mb-6 min-h-[300px]">
+        <div className="grid grid-cols-2 gap-8 mb-6"> {/* ⬅️ min-h-[300px] 제거 */}
           {/* 대분류 */}
-          <div className="space-y-3">
+          <div className="space-y-3 h-[300px] overflow-y-auto pr-2"> {/* ⬅️ 높이 고정 및 스크롤 추가 */}
             {isLoadingMajor ? (
               <div className="text-center text-gray-500">로딩 중...</div>
             ) : (
@@ -126,7 +126,7 @@ export default function InterestSelectionModal({
           </div>
 
           {/* 소분류 */}
-          <div className="space-y-3">
+          <div className="space-y-3 h-[300px] overflow-y-auto pr-2"> {/* ⬅️ 높이 고정 및 스크롤 추가 */}
             {!selectedMajor ? (
               <div className="text-center text-gray-500">왼쪽에서 대분류를 선택하세요</div>
             ) : isLoadingSub ? (

@@ -69,6 +69,11 @@ export interface VerifyRecoveryCodeResponse {
   success: boolean;
 }
 
+export interface DailyStreakResponse {
+  weeklyAttendance: boolean[];
+  currentStreak: number;
+}
+
 // ===== API 함수 =====
 
 /**
@@ -184,6 +189,17 @@ export const verifyRecoveryCode = async (code: string): Promise<VerifyRecoveryCo
   const response = await axiosInstance.post<VerifyRecoveryCodeResponse>(
     `/protector/pin/verify-recovery-code`,
     { code }
+  );
+  return response.data;
+};
+
+/**
+ * 주간 학습 현황 (Daily Streak) 조회
+ * GET /api/student/{studentId}/dashboard/daily-streak
+ */
+export const getDailyStreak = async (studentId: number): Promise<DailyStreakResponse> => {
+  const response = await axiosInstance.get<DailyStreakResponse>(
+    `/student/${studentId}/dashboard/daily-streak`
   );
   return response.data;
 };
