@@ -479,7 +479,7 @@ const SelectProfile = () => {
             {/* 프로필이 있을 경우 : 로그아웃 버튼 */}
             <button
               onClick={handleLogout}
-              className="mt-12 bg-gray-100 text-gray-600 px-6 py-2 rounded-lg shadow-md font-semibold hover:bg-gray-200 transition-colors duration-200"
+              className="mt-12 bg-gray-300 text-gray-600 px-6 py-2 rounded-lg shadow-md font-semibold hover:bg-gray-400 transition-colors duration-200"
             >
               로그아웃
             </button>
