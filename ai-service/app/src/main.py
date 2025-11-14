@@ -10,9 +10,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 import logging
 import requests
-from app.src.api.scheduler.batch_scheduler import start_scheduler
-
-start_scheduler()
+# Batch scheduler는 Spring Boot에서 관리 (매주 일요일 23:00)
 
 
 # --------------- 기본 환경 로딩 ------------------------------

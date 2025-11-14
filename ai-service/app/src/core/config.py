@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     # 서버 설정
     PORT: int = Field(default=8000)
+    API_PORT: int = Field(default=8000)  # .env 호환성
     HOST: str = Field(default="0.0.0.0")
     WORKERS: int = Field(default=1)
 
@@ -84,6 +85,19 @@ class Settings(BaseSettings):
 
     # 백엔드 서비스 URL
     BACKEND_URL: str = Field(default="http://localhost:8080")
+
+    # AWS & S3 설정
+    AWS_ACCESS_KEY_ID: Optional[str] = Field(default=None)
+    AWS_SECRET_ACCESS_KEY: Optional[str] = Field(default=None)
+    AWS_REGION: str = Field(default="ap-northeast-2")
+    S3_BUCKET_NAME: str = Field(default="captain-echo-files")
+
+    # Loki 로깅 설정
+    LOKI_URL: Optional[str] = Field(default=None)
+
+    # CrewAI 추가 설정
+    CREW_VERBOSE: bool = Field(default=False)  # emoji 로깅 비활성화 (Windows cp949 에러 방지)
+    CREW_MEMORY: bool = Field(default=True)
 
     # 캐시 설정
     CACHE_TTL: int = Field(default=3600)  # 1시간

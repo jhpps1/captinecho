@@ -40,9 +40,9 @@ class Protector(Base):
     social_id = Column(String(255), nullable=False)
     email = Column(String(500), nullable=True)
     max_student_count = Column(SmallInteger, default=2)
-    terms_agreed = Column(SmallInteger, default=False, nullable=False)
+    terms_agreed = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, nullable=False)
-    is_deleted = Column(SmallInteger, default=False, nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
     deleted_at = Column(DateTime, nullable=True)
 
 class Student(Base):
@@ -168,4 +168,4 @@ class DayProblem(Base):
     choices = Column(ARRAY(String), nullable=True)  # PostgreSQL TEXT[] (Python list)
     correct_answer = Column(String(100), nullable=True)
     created_at = Column(DateTime, nullable=False)
-    is_completed = Column(SmallInteger, default=False, nullable=False)
+    is_completed = Column(Boolean, default=False, nullable=False)

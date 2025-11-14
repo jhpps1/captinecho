@@ -21,10 +21,10 @@ def build_hierarchical_crew(student_data: dict):
 
     # Manager LLM (gpt-4o) - CrewAI 1.x LLM 초기화
     manager_llm = LLM(
-        model="gpt-4o",
-        base_url="https://gms.ssafy.io/gmsapi/api.openai.com/v1",
+        model=settings.OPENAI_MODEL,
+        base_url=settings.OPENAI_BASE_URL,
         api_key=settings.OPENAI_API_KEY,
-        temperature=0.7
+        temperature=settings.OPENAI_TEMPERATURE
     )
 
     # ============================================
@@ -41,7 +41,7 @@ def build_hierarchical_crew(student_data: dict):
             "데이터 기반의 객관적 진단을 제공하며, 학습 성과를 최우선으로 고려합니다."
         ),
         allow_delegation=False,
-        verbose=True
+        verbose=settings.CREW_VERBOSE
     )
 
     wellbeing_agent = Agent(
@@ -54,7 +54,7 @@ def build_hierarchical_crew(student_data: dict):
             "난이도가 너무 높거나 문제 수가 많으면 적극적으로 조정을 요청합니다."
         ),
         allow_delegation=False,
-        verbose=True
+        verbose=settings.CREW_VERBOSE
     )
 
     parent_agent = Agent(
@@ -69,7 +69,7 @@ def build_hierarchical_crew(student_data: dict):
             f"아이의 성장과 자신감을 우선시하며, 무리한 학습보다는 꾸준한 발전을 원합니다."
         ),
         allow_delegation=False,
-        verbose=True
+        verbose=settings.CREW_VERBOSE
     )
 
     # ============================================
@@ -179,8 +179,8 @@ def build_hierarchical_crew(student_data: dict):
         tasks=[curriculum_task],
         process=Process.hierarchical,  # 계층형 프로세스 (진짜 A2A!)
         manager_llm=manager_llm,
-        memory=True,
-        verbose=2
+        memory=settings.CREW_MEMORY,
+        verbose=settings.CREW_VERBOSE  # emoji 로깅 제어 (Windows cp949 에러 방지)
     )
 
     return crew

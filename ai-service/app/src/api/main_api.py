@@ -1,5 +1,6 @@
 import re
 import json
+import os
 from datetime import datetime, timedelta
 from fastapi import FastAPI, APIRouter, Depends
 from pydantic import BaseModel
@@ -14,6 +15,9 @@ from app.src.core.models import (
 from app.src.tasks.statistics.statistics import fill_reset_and_make_weekly_report
 from app.src.utils.hangul import decompose_word
 from app.src.utils.llm import llm
+from app.src.utils.normalization import normalize_blank_position
+from app.src.core.config import settings
+from app.src.api.gemini_api import generate_image_with_gemini_flash
 
 router = APIRouter()
 
@@ -179,6 +183,14 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
         discussion_summary = curriculum_output.get("discussion_summary", "")
         curriculum_structure = curriculum_output.get("curriculum_structure", {})
 
+        # Manager가 생성한 dialogue가 비어있으면 기본 메시지 추가
+        if not dialogue:
+            dialogue = [{
+                "role": "매니저",
+                "message": "전문가들과 협의하여 최적의 커리큘럼을 설계했습니다.",
+                "timestamp": datetime.now().isoformat()
+            }]
+
         # 사람이 읽을 curriculum 텍스트 생성
         curriculum_text = f"""
 ======================== 협의 대화 ========================
@@ -195,10 +207,10 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
         for day, adventures in curriculum_structure.items():
             curriculum_text += f"{day}: {adventures}\n"
 
-        # 11. DB 저장
+        # 11. DB 저장 (Manager 생성 dialogue 사용)
         if latest_report:
             latest_report.curriculum = curriculum_text
-            latest_report.discussion_log = dialogue  # JSON (list)
+            latest_report.discussion_log = dialogue  # Manager가 생성한 A2A 대화 로그 저장
             latest_report.curriculum_structure = curriculum_structure  # JSON (dict)
             db.commit()
             db.refresh(latest_report)
@@ -207,7 +219,7 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
             new_report = WeeklyPersonalReport(
                 student_id=student_id,
                 curriculum=curriculum_text,
-                discussion_log=dialogue,
+                discussion_log=dialogue,  # Manager가 생성한 A2A 대화 로그 저장
                 curriculum_structure=curriculum_structure,
                 protector_goal=ProtectorGoalType.FOCUS_ON_WEAKNESS,
                 created_at=datetime.now()
@@ -225,7 +237,7 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
             "level_changed": level_changed,
             "level_adjustment": curriculum_output.get("level_adjustment"),
             "curriculum_structure": curriculum_structure,
-            "dialogue_count": len(dialogue),
+            "dialogue_count": len(dialogue),  # Manager 생성 A2A 대화 개수
             "student_data": student_data
         }
 
@@ -305,8 +317,37 @@ def generate_problems(student_id: int, db: Session = Depends(get_db)):
                 interest_id = interest_ids[interest_idx % len(interest_ids)]
                 interest_idx += 1
 
-                # problem_phonemes 변환
-                problem_phonemes = decompose_word(problem_data['problem_text'])
+                # problem_phonemes 변환 (2D → 1D 평탄화)
+                problem_phonemes_2d = decompose_word(problem_data['problem_text'])
+                problem_phonemes = [phoneme for syllable in problem_phonemes_2d for phoneme in syllable]
+
+                # [필수] blank_position 정규화 (소문자 → 대문자, 숫자 → 문자열 변환)
+                blank_pos = normalize_blank_position(
+                    problem_data.get('blank_position'),
+                    adventure_type_id=adventure_type_id
+                )
+                print(f"[DEBUG] blank_position 정규화 결과: {blank_pos}")  # DEBUG
+
+                # [이미지 생성] 탐험 2, 3일 경우 Gemini API 호출
+                generated_image_url = ""
+                if adventure_type_id in [2, 3] and problem_data.get('problem_text'):
+                    problem_text = problem_data['problem_text']
+                    print(f"[IMAGE] Gemini API call started: '{problem_text}'")
+
+                    if settings.GEMINI_API_KEY:
+                        try:
+                            generated_image_url = generate_image_with_gemini_flash(problem_text, settings.GEMINI_API_KEY)
+                            if generated_image_url:
+                                print(f"[IMAGE] Success! URL: {generated_image_url}")
+                            else:
+                                print(f"[IMAGE] Failed! Empty URL returned")
+                        except Exception as e:
+                            # CP949 encoding 에러 방지: 예외 메시지를 ASCII로 변환
+                            error_msg = str(e).encode('ascii', errors='replace').decode('ascii')
+                            print(f"[IMAGE] Error occurred: {error_msg}")
+                            generated_image_url = ""
+                    else:
+                        print("[IMAGE] GEMINI_API_KEY is not set")
 
                 day_problem = DayProblem(
                     student_id=student_id,
@@ -316,10 +357,10 @@ def generate_problems(student_id: int, db: Session = Depends(get_db)):
                     seq_no=seq_no,
                     level=student.level or 1,
                     problem_text=problem_data['problem_text'],
-                    image_url=problem_data.get('image_url'),
+                    image_url=generated_image_url or problem_data.get('image_url') or "",
                     sound_url=problem_data.get('sound_url'),
                     problem_phonemes=problem_phonemes,
-                    blank_position=problem_data.get('blank_position'),
+                    blank_position=blank_pos,
                     blank_phoneme=problem_data.get('blank_phoneme'),
                     choices=problem_data.get('choices'),
                     correct_answer=problem_data.get('correct_answer'),
@@ -382,12 +423,19 @@ def generate_problems_with_openai(
 2. 레벨에 맞는 난이도 (레벨이 낮을수록 쉬운 단어)
 3. 각 문제는 JSON 형식으로 반환
 
+**중요: blank_position 필드 규칙 (반드시 준수!)**
+- 탐험1, 탐험2: blank_position은 반드시 대문자 문자열만 사용
+  - 허용: "INITIAL", "MEDIAL", "FINAL" (대문자만!)
+  - 금지: "initial", "medial", "final" (소문자 절대 금지!)
+  - 금지: 0, 1, 2, 3 (숫자 절대 금지!)
+- 탐험3, 탐험4: blank_position 필드를 JSON에 포함하지 마세요 (null도 포함하지 말 것)
+
 JSON 형식 (탐험 유형별):
 
 탐험1 (자모 맞추기):
 {{
   "problem_text": "사과",
-  "blank_position": "medial",
+  "blank_position": "MEDIAL",
   "blank_phoneme": "ㄱ",
   "choices": ["ㄱ", "ㄴ", "ㄷ"]
 }}
@@ -396,7 +444,7 @@ JSON 형식 (탐험 유형별):
 {{
   "problem_text": "사과",
   "image_url": "apple.jpg",
-  "blank_position": 1,
+  "blank_position": "MEDIAL",
   "blank_phoneme": "과",
   "choices": ["과", "가", "놔"]
 }}
@@ -417,8 +465,9 @@ JSON 형식 (탐험 유형별):
 반드시 JSON 배열로 {problem_count}개 문제를 반환하세요. 다른 설명 없이 JSON만 반환하세요."""
 
     try:
-        response = llm.invoke(prompt)
-        content = response.content.strip()
+        response = llm.call(prompt)
+        # CrewAI LLM.call()은 문자열을 직접 반환합니다
+        content = response.strip() if isinstance(response, str) else str(response).strip()
 
         # JSON 추출 (```json ... ``` 형태로 올 수 있음)
         if "```json" in content:
@@ -442,14 +491,14 @@ def generate_fallback_problems(adventure_type_id: int, problem_count: int) -> li
     """
     fallback_data = {
         1: [  # 자모(음소) 맞추기
-            {"problem_text": "사과", "blank_position": "medial", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
-            {"problem_text": "고양이", "blank_position": "initial", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
-            {"problem_text": "토끼", "blank_position": "initial", "blank_phoneme": "ㅌ", "choices": ["ㅌ", "ㄷ", "ㅈ"]},
+            {"problem_text": "사과", "blank_position": "MEDIAL", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
+            {"problem_text": "고양이", "blank_position": "INITIAL", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
+            {"problem_text": "토끼", "blank_position": "INITIAL", "blank_phoneme": "ㅌ", "choices": ["ㅌ", "ㄷ", "ㅈ"]},
         ],
         2: [  # 빈칸 맞추기
-            {"problem_text": "사과", "image_url": "apple.jpg", "blank_position": 1, "blank_phoneme": "과", "choices": ["과", "가", "놔"]},
-            {"problem_text": "나무", "image_url": "tree.jpg", "blank_position": 0, "blank_phoneme": "나", "choices": ["나", "다", "마"]},
-            {"problem_text": "별", "image_url": "star.jpg", "blank_position": 0, "blank_phoneme": "별", "choices": ["별", "볼", "벌"]},
+            {"problem_text": "사과", "image_url": "apple.jpg", "blank_position": "MEDIAL", "blank_phoneme": "ㅘ", "choices": ["ㅘ", "ㅏ", "ㅗ"]},
+            {"problem_text": "나무", "image_url": "tree.jpg", "blank_position": "INITIAL", "blank_phoneme": "ㄴ", "choices": ["ㄴ", "ㄷ", "ㅁ"]},
+            {"problem_text": "별", "image_url": "star.jpg", "blank_position": "FINAL", "blank_phoneme": "ㄹ", "choices": ["ㄹ", "ㅁ", "ㄴ"]},
         ],
         3: [  # 단어 맞추기
             {"problem_text": "사과", "image_url": "apple.jpg", "choices": ["사과", "수박", "포도"], "correct_answer": "사과"},
