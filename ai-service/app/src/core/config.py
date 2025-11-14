@@ -51,10 +51,13 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY") # Field(..., env="OPENAI_API_KEY")는 그대로 유지
     OPENAI_MODEL: str = Field(default="gpt-4o")
     # env 이름이 OPENAI_MODEL2인 경우, alias를 사용하여 Python 변수명을 명확하게 합니다.
-    OPENAI_MODEL_2: str = Field(default="gpt-5", alias="OPENAI_MODEL2") 
+    OPENAI_MODEL_2: str = Field(default="gpt-5", alias="OPENAI_MODEL2")
     OPENAI_BASE_URL: Optional[str] = Field(default=None)
     OPENAI_TEMPERATURE: float = Field(default=0.3)
     OPENAI_MAX_TOKENS: int = Field(default=2048)
+
+    # OpenAI Whisper API 설정 (STT 전용)
+    OPENAI_WHISPER_API_KEY: str = Field(..., env="OPENAI_WHISPER_API_KEY")
     
     # 🚨 [추가]: GEMINI API Key 필드 추가 (Validation 오류 해결)
     GEMINI_API_KEY: Optional[str] = Field(default="")
