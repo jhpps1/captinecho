@@ -10,7 +10,7 @@ public record GetWeeklyJamoStatResponse(
 ) {
     public static GetWeeklyJamoStatResponse from(GetWeeklyJamoStatResult result) {
         List<AccuracyRate> accuracyRates = result.accuracyRates().stream()
-                .map(ar -> new AccuracyRate(ar.jamo(), ar.accuracyRate()))
+                .map(ar -> new AccuracyRate(ar.jamo(), ar.accuracyRate(), ar.count()))
                 .collect(Collectors.toList());
 
         return new GetWeeklyJamoStatResponse(accuracyRates);
@@ -18,7 +18,8 @@ public record GetWeeklyJamoStatResponse(
 
     public record AccuracyRate(
             String jamo,
-            Integer accuracyRate
+            Integer accuracyRate,
+            Integer count
     ) {
     }
 }
