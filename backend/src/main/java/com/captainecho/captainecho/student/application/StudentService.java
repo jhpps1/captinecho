@@ -234,7 +234,7 @@ public class StudentService {
             percent = Math.round((completedCount.floatValue() / totalCount.floatValue()) * 100);
         }
 
-        return GetWeeklyGoalPercentResult.from(percent);
+        return GetWeeklyGoalPercentResult.from(percent, totalCount, completedCount);
     }
 
     @Transactional
