@@ -7,7 +7,7 @@ import { AdventureLayout } from '../components/adventure/AdventureLayout';
 import { CompletionModal } from '../components/adventure/modals/CompletionModal';
 
 /**
- * SuppleRunner - 추가학습 문제 관리 컴포넌트
+ * SuppleRunner - 추가학습 문제 관리 페이지
  *
  * @description
  * - URL에서 studentId, typeId 추출
