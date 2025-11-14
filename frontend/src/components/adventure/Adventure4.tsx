@@ -4,7 +4,7 @@ import { WordCard } from './WordCard';
 import { MicrophoneButton } from './MicrophoneButton';
 import { FeedbackCharacter } from './FeedbackCharacter';
 import { TutorialBubble } from './TutorialBubble';
-import { submitSessionCorrect } from '../../api/adventureApi';
+import { submitSessionCorrect, evaluatePronunciation } from '../../api/adventureApi';
 
 interface Adventure4Props {
   problem: Problem;
@@ -118,7 +118,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       };
 
       // 5) 녹음 종료 후(WebM 파일 생성 + 미리듣기 URL 설정)
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         // 지금까지 모은 조각들로 Blob 생성
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
 
@@ -133,14 +133,21 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
         const previewUrl = URL.createObjectURL(file);
         setAudioUrl(previewUrl);
 
-        // 👉 여기서부터는 file을 백엔드로 보내면 됨 (지금은 랜덤 정답 처리 유지)
+        // 실제 발음 평가 API 호출
         setIsAnalyzing(true);
 
-        setTimeout(() => {
+        try {
+          const result = await evaluatePronunciation(file, problem.dayProblemId, studentId);
+          console.log('발음 평가 결과:', result);
+
+          const isCorrect = result.accuracy >= 80; // 80% 이상 정답
+          handleAnswer(isCorrect, result.accuracy);
+        } catch (error) {
+          console.error('발음 평가 오류:', error);
+          alert('발음 평가 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
           setIsAnalyzing(false);
-          const randomCorrect = Math.random() > 0.5;
-          handleAnswer(randomCorrect, randomCorrect ? 90 : 60);
-        }, 2000);
+        }
 
         // 마이크 스트림 정리
         if (streamRef.current) {
