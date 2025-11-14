@@ -48,44 +48,43 @@ def generate_image_with_gemini_flash(problem_text: str, api_key: str) -> str:
         str: S3 Public URL (DB 저장용) 또는 실패 시 빈 문자열.
     """
     if not api_key:
-        print("❌ Gemini API Key가 제공되지 않았습니다.")
+        print("[ERROR] Gemini API Key가 제공되지 않았습니다.")
         return ""
-    
+
     # 1. GenAI Client 초기화
     try:
         client = genai.Client(api_key=api_key)
     except Exception as e:
-        print(f"❌ Gemini 클라이언트 초기화 오류: {e}")
+        print(f"[ERROR] Gemini 클라이언트 초기화 오류: {e}")
         return ""
 
     # 2. 이미지 생성 설정 및 프롬프트 구성
-    model_name = 'imagen-3.0-generate-002'
-    
-    # 상세 스타일을 반영한 프롬프트 템플릿
+    model_name = 'imagen-4.0-generate-001'
+
+    # 상세 스타일을 반영한 프롬프트 템플릿 (이모지 사용 금지 명시)
     full_prompt_template = (
         f"Subject: {problem_text}\n"
-        "style : simple background, bright colors "
+        "Style: simple background, bright colors\n"
+        "IMPORTANT: Do not use any emoji or special unicode characters in your response. Use plain text only."
     )
-    # print(f"✨ Gemini 이미지 생성 요청 프롬프트: '{full_prompt}'")
+    full_prompt = full_prompt_template.format(problem_text=problem_text)
 
-    full_prompt = full_prompt_template.format(problem_text=problem_text) 
-    
-    print(f"✨ Gemini 이미지 생성 요청 프롬프트: '{full_prompt}'") 
-    
+    print(f"[INFO] Gemini 이미지 생성 요청 프롬프트: '{full_prompt}'")
+
     try:
         # 3. 이미지 생성 API 호출
         result = client.models.generate_images(
             model=model_name,
-            prompt=full_prompt, 
+            prompt=full_prompt,
             config={
                 'number_of_images': 1,
-                'output_mime_type': 'image/png', 
+                'output_mime_type': 'image/png',
                 'aspect_ratio': '1:1'
             }
         )
 
         if not result.generated_images:
-            print("❌ Gemini 이미지 생성 결과가 비어 있습니다.")
+            print("[ERROR] Gemini 이미지 생성 결과가 비어 있습니다.")
             return ""
 
         # 4. 생성된 이미지 처리 및 바이트 변환 (🚨 핵심 수정 로직)
@@ -122,20 +121,20 @@ def generate_image_with_gemini_flash(problem_text: str, api_key: str) -> str:
             )
 
             if s3_url:
-                print(f"✅ Gemini 이미지 S3 업로드 성공: {s3_url}")
+                print(f"[SUCCESS] Gemini 이미지 S3 업로드 성공: {s3_url}")
                 return s3_url
             else:
-                print("❌ Gemini 이미지 S3 업로드 실패")
+                print("[ERROR] Gemini 이미지 S3 업로드 실패")
                 return ""
 
         except Exception as upload_error:
-            print(f"❌ S3 업로드 중 오류 발생: {upload_error}")
+            print(f"[ERROR] S3 업로드 중 오류 발생: {upload_error}")
             return ""
 
     except APIError as e:
-        # 🚨 결제 문제(400 INVALID_ARGUMENT) 포함 모든 API 오류 처리
-        print(f"❌ Gemini API 호출 실패 (HTTP 오류): {e}")
+        # 결제 문제(400 INVALID_ARGUMENT) 포함 모든 API 오류 처리
+        print(f"[ERROR] Gemini API 호출 실패 (HTTP 오류): {e}")
         return ""
     except Exception as e:
-        print(f"❌ 이미지 생성 중 예상치 못한 오류 발생: {e}")
+        print(f"[ERROR] 이미지 생성 중 예상치 못한 오류 발생: {e}")
         return ""
