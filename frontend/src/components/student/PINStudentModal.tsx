@@ -4,7 +4,7 @@ import { useState } from 'react';
 interface StudentPINInputModalProps {
   title?: string;
   subtitle?: string;
-  description?: string;
+  description?: React.ReactNode;
   onSubmit: (pin: string) => Promise<void> | void;
   onClose?: () => void;
 }
