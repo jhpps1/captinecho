@@ -18,9 +18,9 @@ import { InitialAssessmentPage } from '../pages/InitialAssessmentPage.tsx';
 import HangulJamoSVGPlayground from '../pages/hangul_jamo_svgplayground.tsx'; 
 
 
-// Adventure 관련 컴포넌트 (새 구조)
-import { DailyRunner } from '../components/adventure/DailyRunner.tsx';
-import { SuppleRunner } from '../components/adventure/SuppleRunner.tsx';
+// Adventure 관련 페이지
+import { DailyRunner } from '../pages/DailyRunner.tsx';
+import { SuppleRunner } from '../pages/SuppleRunner.tsx';
 
 const router = createBrowserRouter([
   {
