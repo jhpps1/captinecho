@@ -24,6 +24,7 @@ import com.captainecho.captainecho.student.application.command.GetDailyCompleted
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.event.FileDeleteEvent;
@@ -39,6 +40,7 @@ import com.captainecho.captainecho.student.application.result.GetDailyCompletedC
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
@@ -61,7 +63,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -433,6 +437,64 @@ public class StudentService {
         log.info("지난주 학습 분석 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), accuracyRates.size());
 
         return GetWeeklyJamoStatResult.of(accuracyRates);
+    }
+
+    /**
+     * 전체 학습 분석 조회 (모든 주차 합산)
+     */
+    @Transactional(readOnly = true)
+    public GetTotalJamoStatResult getTotalJamoStat(GetTotalJamoStatCommand command) {
+        log.info("전체 학습 분석 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 해당 학생의 모든 주차 자모 통계 조회
+        List<WeeklyJamoStat> allWeeklyStats = weeklyJamoStatRepository.findAllWeeklyStatsByStudentId(command.studentId());
+
+        if (allWeeklyStats.isEmpty()) {
+            log.info("전체 학습 분석 데이터 없음 - Student ID: {}", command.studentId());
+            return GetTotalJamoStatResult.of(List.of());
+        }
+
+        // 4. 자모별로 그룹핑하여 합산
+        Map<String, List<WeeklyJamoStat>> statsByJamo = allWeeklyStats.stream()
+                .collect(Collectors.groupingBy(WeeklyJamoStat::getJamo));
+
+        // 5. 각 자모별로 총 시도 횟수와 평균 정확도 계산
+        List<GetTotalJamoStatResult.AccuracyRate> accuracyRates = statsByJamo.entrySet().stream()
+                .map(entry -> {
+                    String jamo = entry.getKey();
+                    List<WeeklyJamoStat> stats = entry.getValue();
+
+                    // 총 시도 횟수
+                    int totalCount = stats.stream()
+                            .mapToInt(stat -> stat.getTotalAttempts().intValue())
+                            .sum();
+
+                    // 총 실패 횟수
+                    int totalFails = stats.stream()
+                            .mapToInt(stat -> stat.getFailCount().intValue())
+                            .sum();
+
+                    // 평균 정확도 = ((총 시도 - 총 실패) / 총 시도) * 100
+                    int averageAccuracy = totalCount > 0 ? (int) Math.round((totalCount - totalFails) * 100.0 / totalCount) : 0;
+
+                    return new GetTotalJamoStatResult.AccuracyRate(jamo, averageAccuracy, totalCount);
+                })
+                .sorted(Comparator.comparing(GetTotalJamoStatResult.AccuracyRate::jamo))
+                .collect(Collectors.toList());
+
+        log.info("전체 학습 분석 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), accuracyRates.size());
+
+        return GetTotalJamoStatResult.of(accuracyRates);
     }
 
     /**
