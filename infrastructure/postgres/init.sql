@@ -49,7 +49,7 @@ CREATE TYPE study_type AS ENUM ('DAILY', 'SUPPLE');
 CREATE TABLE protector (
     protector_id SERIAL PRIMARY KEY,
     id VARCHAR(50),
-    password VARCHAR(50),
+    password VARCHAR(250),
     protector_pin CHAR(100),
     provider provider_type NOT NULL,
     social_id VARCHAR(255),
