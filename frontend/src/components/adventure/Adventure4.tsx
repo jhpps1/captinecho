@@ -71,8 +71,11 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
   };
 
   // 메아리 효과로 녹음 음성 재생
-  const playAudioWithEcho = async () => {
-    if (!audioUrl) return;
+  const playAudioWithEcho = async (url: string) => {
+    if (!url) {
+      console.warn('메아리 재생 실패: URL이 없습니다');
+      return;
+    }
 
     try {
       // AudioContext 생성 (재사용)
@@ -81,8 +84,16 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       }
       const audioContext = audioContextRef.current;
 
+      // AudioContext가 suspended 상태면 resume
+      if (audioContext.state === 'suspended') {
+        console.log('AudioContext suspended 상태, resume 시도');
+        await audioContext.resume();
+      }
+
+      console.log('AudioContext 상태:', audioContext.state);
+
       // 오디오 데이터 가져오기
-      const response = await fetch(audioUrl);
+      const response = await fetch(url);
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
@@ -100,17 +111,21 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
         source.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        source.start(audioContext.currentTime + delay);
-      });
+        // 재생 완료 이벤트 리스너
+        source.onended = () => {
+          console.log('메아리 효과 재생 완료');
+        };
 
-      console.log('메아리 효과 재생 완료');
+        source.start(audioContext.currentTime + delay);
+        console.log(`메아리 효과 재생 시작 (delay: ${delay}s, gain: ${echoGains[index]})`);
+      });
     } catch (error) {
       console.error('메아리 효과 재생 실패:', error);
     }
   };
 
   // 답변 처리
-  const handleAnswer = (isCorrect: boolean, similarity?: number) => {
+  const handleAnswer = (isCorrect: boolean, recordedAudioUrl?: string, similarity?: number) => {
     console.log(`답변 처리: ${isCorrect ? '정답' : '오답'}, 유사도: ${similarity}%`);
 
     if (isCorrect) {
@@ -124,7 +139,9 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       setShowImageHint(false);
 
       // 🔊 메아리 효과로 녹음 음성 재생
-      playAudioWithEcho();
+      if (recordedAudioUrl) {
+        playAudioWithEcho(recordedAudioUrl);
+      }
 
       setTimeout(() => {
         setShowFeedback(false);
@@ -209,7 +226,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
           console.log('발음 평가 결과:', result);
 
           const isCorrect = result.accuracy >= 80; // 80% 이상 정답
-          handleAnswer(isCorrect, result.accuracy);
+          handleAnswer(isCorrect, previewUrl, result.accuracy);
         } catch (error) {
           console.error('발음 평가 오류:', error);
           alert('발음 평가 중 오류가 발생했습니다. 다시 시도해주세요.');
