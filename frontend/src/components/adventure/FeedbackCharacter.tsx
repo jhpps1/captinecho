@@ -12,6 +12,7 @@ export const FeedbackCharacter = ({ visible, isCorrect, message }: FeedbackChara
 
   useEffect(() => {
     if (visible) {
+      // 등장 애니메이션: 팝 효과 유지
       setShow(true);
       setAnimationState('hidden');
 
@@ -25,26 +26,22 @@ export const FeedbackCharacter = ({ visible, isCorrect, message }: FeedbackChara
         setAnimationState('stable');
       }, 400);
 
-      // 4초 후: 페이드아웃 시작
-      const fadeTimer = setTimeout(() => {
-        setAnimationState('fadeOut');
-      }, 4000);
-
-      // 4.5초 후: 완전히 제거
-      const hideTimer = setTimeout(() => {
-        setShow(false);
-        setAnimationState('hidden');
-      }, 4500);
-
       return () => {
         clearTimeout(popTimer);
         clearTimeout(stableTimer);
-        clearTimeout(fadeTimer);
-        clearTimeout(hideTimer);
       };
     } else {
-      setShow(false);
-      setAnimationState('hidden');
+      // 사라지기: 부드러운 페이드아웃 후 제거
+      setAnimationState('fadeOut');
+
+      const hideTimer = setTimeout(() => {
+        setShow(false);
+        setAnimationState('hidden');
+      }, 300); // 0.3초 페이드아웃
+
+      return () => {
+        clearTimeout(hideTimer);
+      };
     }
   }, [visible]);
 
