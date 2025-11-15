@@ -21,8 +21,10 @@ import com.captainecho.captainecho.exception.code.DiagnosisErrorCode;
 import com.captainecho.captainecho.exception.code.StudentErrorCode;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
+import com.captainecho.captainecho.ai.application.AiService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class DiagnosisService {
@@ -40,6 +43,7 @@ public class DiagnosisService {
     private final DiagnosisSessionRepository diagnosisSessionRepository;
     private final InitialDiagnosisProblemRepository initialDiagnosisProblemRepository;
     private final InitialDiagnosisResultRepository initialDiagnosisResultRepository;
+    private final AiService aiService;
 
     @Transactional
     public StartInitialDiagnosisResult startInitialDiagnosis(StartInitialDiagnosisCommand command) {
@@ -95,6 +99,10 @@ public class DiagnosisService {
         // 5. 학생 level을 1로 업데이트 (초기진단 완료)
         student.updateLevel((short) 1);
         studentRepository.save(student);
+
+        // 6. AI Service 비동기 호출 (커리큘럼 및 문제 생성)
+        aiService.generateCurriculumAndProblemsAsync(student.getStudentId().longValue());
+        log.info("[초기진단 완료] AI Service 백그라운드 처리 시작 - studentId: {}", student.getStudentId());
 
         return new EndInitialDiagnosisResult(
                 session.getStudentId(),

@@ -11,4 +11,12 @@ public interface ProtectorRepository extends JpaRepository<Protector, Integer> {
     Optional<Protector> findByProviderAndSocialId(Provider provider, String socialId);
 
     boolean existsByProviderAndSocialId(Provider provider, String socialId);
+
+    Optional<Protector> findById(String id);
+
+    Optional<Protector> findByEmail(String email);
+
+    boolean existsById(String id);
+
+    boolean existsByEmail(String email);
 }

@@ -25,7 +25,7 @@ CREATE TYPE gender_type AS ENUM ('MALE', 'FEMALE');
 CREATE TYPE grade_type AS ENUM ('PRE_SCHOOL', 'GRADE_1', 'GRADE_2', 'GRADE_3', 'GRADE_4', 'GRADE_5', 'GRADE_6');
 
 -- 소셜 로그인 제공자
-CREATE TYPE provider_type AS ENUM ('GOOGLE', 'KAKAO');
+CREATE TYPE provider_type AS ENUM ('GOOGLE', 'KAKAO', 'LOCAL');
 
 -- 초기 진단 문제 유형
 CREATE TYPE diagnosis_type AS ENUM (
@@ -48,15 +48,17 @@ CREATE TYPE study_type AS ENUM ('DAILY', 'SUPPLE');
 
 CREATE TABLE protector (
     protector_id SERIAL PRIMARY KEY,
+    id VARCHAR(50),
+    password VARCHAR(250),
     protector_pin CHAR(100),
     provider provider_type NOT NULL,
-    social_id VARCHAR(255) NOT NULL,
-    email VARCHAR(500),
+    social_id VARCHAR(255),
     max_student_count SMALLINT DEFAULT 2,
-    terms_agreed BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     is_deleted BOOLEAN DEFAULT false NOT NULL,
     deleted_at TIMESTAMP,
+    email VARCHAR(500),
+    terms_agreed BOOLEAN DEFAULT false NOT NULL,
     UNIQUE(provider, social_id)
 );
 

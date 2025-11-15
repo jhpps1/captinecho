@@ -21,6 +21,12 @@ public class Protector {
     @Column(name = "protector_id")
     private Integer protectorId;
 
+    @Column(name = "id", length = 50)
+    private String id;
+
+    @Column(name = "password", length = 250)
+    private String password;
+
     @Column(name = "protector_pin", length = 100)
     private String protectorPin;
 
@@ -28,7 +34,7 @@ public class Protector {
     @Enumerated(EnumType.STRING)
     private Provider provider;
 
-    @Column(name = "social_id", nullable = false, length = 255)
+    @Column(name = "social_id", length = 255)
     private String socialId;
 
     @Column(name = "email", length = 500)
@@ -54,7 +60,9 @@ public class Protector {
     private LocalDateTime deletedAt;
 
     @Builder
-    public Protector(String protectorPin, Provider provider, String socialId, String email, Short maxStudentCount) {
+    public Protector(String id, String password, String protectorPin, Provider provider, String socialId, String email, Short maxStudentCount) {
+        this.id = id;
+        this.password = password;
         this.protectorPin = protectorPin;
         this.provider = provider;
         this.socialId = socialId;
@@ -84,5 +92,13 @@ public class Protector {
 
     public void updateTermsAgreed(Boolean termsAgreed) {
         this.termsAgreed = termsAgreed;
+    }
+
+    public void updateId(String id) {
+        this.id = id;
+    }
+
+    public void updatePassword(String password) {
+        this.password = password;
     }
 }
