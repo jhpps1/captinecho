@@ -204,7 +204,6 @@ public class StudentController {
     }
 
     @GetMapping("/{studentId}/dashboard/total/jamo/stat")
-    @Operation(summary = "전체 학습 분석 조회", description = "특정 아동의 전체 학습 분석(자모별 정답률, 모든 주차 합산)을 조회합니다")
     public ResponseEntity<TotalJamoStatResponse> getTotalJamoStat(
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable Integer studentId
