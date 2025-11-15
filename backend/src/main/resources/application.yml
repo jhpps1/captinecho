@@ -126,3 +126,7 @@ cloud:
       secret-key: ${AWS_SECRET_KEY:}
     region:
       static: ${AWS_REGION:ap-northeast-2}
+
+# AI Service 설정
+ai-service:
+  url: ${AI_SERVICE_URL:http://k13d101.p.ssafy.io:8000}
