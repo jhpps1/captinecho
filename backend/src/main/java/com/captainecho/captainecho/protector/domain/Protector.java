@@ -24,7 +24,7 @@ public class Protector {
     @Column(name = "id", length = 50)
     private String id;
 
-    @Column(name = "password", length = 50)
+    @Column(name = "password", length = 250)
     private String password;
 
     @Column(name = "protector_pin", length = 100)
