@@ -5,6 +5,7 @@ import com.captainecho.captainecho.common.util.GoogleTokenVerifier;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.AuthErrorCode;
 import com.captainecho.captainecho.jwt.util.JwtUtil;
+import com.captainecho.captainecho.auth.application.command.LocalSignupCommand;
 import com.captainecho.captainecho.auth.application.command.LoginCommand;
 import com.captainecho.captainecho.auth.application.result.LoginResult;
 import com.captainecho.captainecho.protector.domain.Protector;
@@ -13,6 +14,7 @@ import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ public class AuthService {
     private final ProtectorRepository protectorRepository;
     private final GoogleTokenVerifier googleTokenVerifier;
     private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public LoginResult login(LoginCommand command) {
@@ -64,5 +67,39 @@ public class AuthService {
                 .build();
 
         return protectorRepository.save(newProtector);
+    }
+
+    @Transactional
+    public LoginResult localSignup(LocalSignupCommand command) {
+        // 1. 아이디 중복 체크
+        if (protectorRepository.existsById(command.username())) {
+            throw new EchoException(AuthErrorCode.DUPLICATE_USERNAME);
+        }
+
+        // 2. 이메일 중복 체크
+        if (protectorRepository.existsByEmail(command.email())) {
+            throw new EchoException(AuthErrorCode.DUPLICATE_EMAIL);
+        }
+
+        // 3. 비밀번호 해싱
+        String hashedPassword = passwordEncoder.encode(command.password());
+
+        // 4. Protector 엔티티 생성 (Provider.LOCAL, socialId=null)
+        Protector newProtector = Protector.builder()
+                .id(command.username())
+                .password(hashedPassword)
+                .email(command.email())
+                .protectorPin("000000")
+                .provider(Provider.LOCAL)
+                .socialId(null)
+                .build();
+
+        Protector savedProtector = protectorRepository.save(newProtector);
+        log.info("일반 회원가입 완료 - Protector ID: {}, Username: {}", savedProtector.getProtectorId(), savedProtector.getId());
+
+        // 5. JWT 토큰 생성
+        String accessToken = jwtUtil.generateAccessToken(savedProtector.getProtectorId());
+
+        return new LoginResult(savedProtector.getProtectorId(), accessToken, true);
     }
 }
