@@ -14,7 +14,9 @@ import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.stats.domain.JamoStat;
+import com.captainecho.captainecho.stats.domain.WeeklyJamoStat;
 import com.captainecho.captainecho.stats.persistence.JamoStatRepository;
+import com.captainecho.captainecho.stats.persistence.WeeklyJamoStatRepository;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
@@ -75,6 +77,7 @@ public class StudentService {
     private final DayProblemRepository dayProblemRepository;
     private final PhonemeFeatureRepository phonemeFeatureRepository;
     private final JamoStatRepository jamoStatRepository;
+    private final WeeklyJamoStatRepository weeklyJamoStatRepository;
     private final FileStorageProperties fileStorageProperties;
     private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
@@ -407,18 +410,27 @@ public class StudentService {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 학생의 모든 자모 통계 조회
-        List<JamoStat> jamoStats = jamoStatRepository.findAllByStudent_StudentId(command.studentId());
+        // 3. 학생의 가장 최근 주간 자모 통계 조회 (지난주 데이터)
+        List<WeeklyJamoStat> weeklyJamoStats = weeklyJamoStatRepository.findLatestWeeklyStatsByStudentId(command.studentId());
 
-        // 4. AccuracyRate 리스트로 변환 및 자모 순서대로 정렬 (정답률은 weeklyAccuracyRate를 정수로 변환)
-        List<GetWeeklyJamoStatResult.AccuracyRate> accuracyRates = jamoStats.stream()
+        log.info("WeeklyJamoStat 조회 결과 - Student ID: {}, 조회된 데이터 개수: {}", command.studentId(), weeklyJamoStats.size());
+
+        // 데이터 샘플 로그 (첫 3개)
+        weeklyJamoStats.stream().limit(3).forEach(stat ->
+            log.info("Sample - Jamo: {}, Accuracy: {}, TotalAttempts: {}",
+                stat.getJamo(), stat.getWeeklyAccuracyRate(), stat.getTotalAttempts())
+        );
+
+        // 4. AccuracyRate 리스트로 변환 (이미 자모 순서대로 정렬됨)
+        List<GetWeeklyJamoStatResult.AccuracyRate> accuracyRates = weeklyJamoStats.stream()
                 .map(stat -> new GetWeeklyJamoStatResult.AccuracyRate(
                         stat.getJamo(),
                         stat.getWeeklyAccuracyRate().intValue(),
                         stat.getTotalAttempts().intValue()
                 ))
-                .sorted((a, b) -> a.jamo().compareTo(b.jamo()))
                 .collect(Collectors.toList());
+
+        log.info("지난주 학습 분석 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), accuracyRates.size());
 
         return GetWeeklyJamoStatResult.of(accuracyRates);
     }
