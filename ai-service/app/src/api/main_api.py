@@ -18,11 +18,52 @@ from app.src.utils.llm import llm
 from app.src.utils.normalization import normalize_blank_position
 from app.src.core.config import settings
 from app.src.api.gemini_api import generate_image_with_gemini_flash
+from app.src.service.question_service import generate_problems_for_one_week
 
 router = APIRouter()
 
 def to_dict(obj):
     return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+
+# [여기에 함수와 role_map 추가]
+role_map = {
+    "Manager": "매니저",
+    "난독증 치료 전문가": "난독증 치료 전문가",
+    "아동 심리 전문가": "아동 심리 전문가",
+    "학부모 대리인": "학부모 대리인",
+    "치료사": "난독증 치료 전문가",
+    "심리코치": "아동 심리 전문가",
+    "부모": "학부모 대리인",
+}
+# 1. 파일 상단의 함수 수정 (유니코드 이스케이프를 한글로 변환)
+import ast
+
+def decode_dialogue_list_for_db_v2(dialogue: list) -> list:
+    """discussion_log의 유니코드 이스케이프를 한글로 변환한 리스트를 반환합니다. (DB 저장용)"""
+    decoded_dialogue = []
+    for msg in dialogue:
+        new_msg = msg.copy()
+        raw_message = new_msg.get("message", "")
+        
+        # 유니코드 이스케이프 시퀀스를 한글로 변환
+        try:
+            # 문자열을 파이썬 리터럴로 평가하여 올바르게 디코딩
+            # ast.literal_eval은 문자열을 평가할 때 \uXXXX 시퀀스를 실제 문자로 변환합니다.
+            message = ast.literal_eval(f"'{raw_message}'")
+        except Exception:
+            # ast.literal_eval이 실패하는 경우 (예: 큰따옴표가 포함된 경우 등)
+            # 기존의 encode/decode 방식 사용
+            try:
+                message_bytes = raw_message.encode('latin1')
+                message = message_bytes.decode('unicode_escape')
+            except Exception:
+                message = raw_message  # 최종 실패 시 원본 사용
+
+        new_msg["message"] = message  # 디코딩된 한글 메시지 저장
+        decoded_dialogue.append(new_msg)
+        
+    return decoded_dialogue
+
 
 # 1. 학생ID로 모든 데이터 조회(API)
 @router.get("/student-full/{student_id}")
@@ -191,21 +232,39 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
                 "timestamp": datetime.now().isoformat()
             }]
 
-        # 사람이 읽을 curriculum 텍스트 생성
+
+
+    # curriculum_text는 오로지 '협의 대화/요약'만 포함!
+        def render_discussion_log_to_korean_internal(dialogue: list) -> str:
+            result = ""
+            for msg in dialogue:
+                role_kor = role_map.get(msg.get("role"), msg.get("role"))
+                raw_message = msg.get("message", "")
+                
+                # 유니코드 -> 한글 디코딩 로직 보강
+                try:
+                    # raw_message를 'latin1'로 인코딩하여 바이트화 한 후, 'unicode_escape'로 디코딩
+                    message_bytes = raw_message.encode('latin1')
+                    message = message_bytes.decode('unicode_escape')
+                except Exception:
+                    message = raw_message # 이미 디코드된 경우는 그대로
+                
+                result += f"{role_kor}: {message}\n\n"
+            return result.strip()
+        
+        # 수정된 함수를 호출하여 실제 한글 대화 내용을 가져옴
+        discussion_log_korean = render_discussion_log_to_korean_internal(dialogue)
+        
         curriculum_text = f"""
-======================== 협의 대화 ========================
-"""
-        for msg in dialogue:
-            curriculum_text += f"{msg.get('role', '참여자')}: {msg.get('message', '')}\n"
+    ======================== 협의 대화 ========================
 
-        curriculum_text += f"""
-================= 협의 요약 ======================
-{discussion_summary}
+    {discussion_log_korean}
 
-================= 주간 커리큘럼 구조 ======================
-"""
-        for day, adventures in curriculum_structure.items():
-            curriculum_text += f"{day}: {adventures}\n"
+    ================= 협의 요약 ======================
+
+        {discussion_summary}
+""".strip()
+
 
         # 11. DB 저장 (Manager 생성 dialogue 사용)
         if latest_report:
@@ -251,272 +310,27 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
 def generate_problems(student_id: int, db: Session = Depends(get_db)):
     """
     커리큘럼 기반으로 주간 문제 생성 (월~금, 하루 10문제)
+    문제 생성 및 DB 저장은 question_service.py의 generate_problems_for_one_week로 위임합니다.
     """
-    # 1. 학생 및 커리큘럼 조회
-    student = db.query(Student).filter(Student.student_id == student_id).first()
-    if not student:
-        return {"error": "학생을 찾을 수 없습니다"}
-
-    latest_report = db.query(WeeklyPersonalReport).filter_by(student_id=student_id).order_by(
-        WeeklyPersonalReport.created_at.desc()
-    ).first()
-
-    if not latest_report or not latest_report.curriculum_structure:
-        return {"error": "커리큘럼이 없습니다. 먼저 커리큘럼을 생성해주세요."}
-
-    # 2. curriculum_structure JSON 직접 읽기 (파싱 불필요)
-    curriculum_structure = latest_report.curriculum_structure
-
-    if not curriculum_structure or not isinstance(curriculum_structure, dict):
-        return {"error": "커리큘럼 구조가 올바르지 않습니다."}
-
-    # 3. 학생 관심사 조회
-    student_interests = db.query(StudentInterest).filter_by(student_id=student_id).all()
-    if not student_interests:
-        return {"error": "학생 관심사가 없습니다. 관심사를 먼저 설정해주세요."}
-
-    interest_ids = [si.interest_id for si in student_interests if si.interest_id]
-    if not interest_ids:
-        return {"error": "학생에게 등록된 관심사가 없습니다."}
-
-    interests_info = db.query(SubInterest).filter(SubInterest.sub_interest_id.in_(interest_ids)).all()
-    interest_names = [i.small_interest_name for i in interests_info]
-
-    # 4. 다음 주 월요일부터 금요일까지 날짜 계산
-    today = datetime.now().date()
-    days_until_monday = (7 - today.weekday()) % 7
-    if days_until_monday == 0:
-        days_until_monday = 7  # 오늘이 월요일이면 다음 주 월요일
-
-    next_monday = today + timedelta(days=days_until_monday)
-    week_dates = [next_monday + timedelta(days=i) for i in range(5)]  # 월~금
-
-    # 5. 문제 생성
-    generated_problems = []
-    interest_idx = 0  # 관심사 로테이션 인덱스
-
-    for day_idx, (day_name, adventures) in enumerate(curriculum_structure.items()):
-        assigned_date = week_dates[day_idx]
-        seq_no = 1
-
-        for adventure_info in adventures:
-            adventure_type_id = adventure_info['type_id']
-            problem_count = adventure_info['count']
-
-            # OpenAI로 문제 생성
-            problems = generate_problems_with_openai(
-                student_level=student.level or 1,
-                adventure_type_id=adventure_type_id,
-                problem_count=problem_count,
-                interest_names=interest_names,
-                student_name=student.name
-            )
-
-            # DB 저장
-            for problem_data in problems:
-                interest_id = interest_ids[interest_idx % len(interest_ids)]
-                interest_idx += 1
-
-                # problem_phonemes 변환 (2D → 1D 평탄화)
-                problem_phonemes_2d = decompose_word(problem_data['problem_text'])
-                problem_phonemes = [phoneme for syllable in problem_phonemes_2d for phoneme in syllable]
-
-                # [필수] blank_position 정규화 (소문자 → 대문자, 숫자 → 문자열 변환)
-                blank_pos = normalize_blank_position(
-                    problem_data.get('blank_position'),
-                    adventure_type_id=adventure_type_id
-                )
-                print(f"[DEBUG] blank_position 정규화 결과: {blank_pos}")  # DEBUG
-
-                # [이미지 생성] 탐험 2, 3일 경우 Gemini API 호출
-                generated_image_url = ""
-                if adventure_type_id in [2, 3] and problem_data.get('problem_text'):
-                    problem_text = problem_data['problem_text']
-                    print(f"[IMAGE] Gemini API call started: '{problem_text}'")
-
-                    if settings.GEMINI_API_KEY:
-                        try:
-                            generated_image_url = generate_image_with_gemini_flash(problem_text, settings.GEMINI_API_KEY)
-                            if generated_image_url:
-                                print(f"[IMAGE] Success! URL: {generated_image_url}")
-                            else:
-                                print(f"[IMAGE] Failed! Empty URL returned")
-                        except Exception as e:
-                            # CP949 encoding 에러 방지: 예외 메시지를 ASCII로 변환
-                            error_msg = str(e).encode('ascii', errors='replace').decode('ascii')
-                            print(f"[IMAGE] Error occurred: {error_msg}")
-                            generated_image_url = ""
-                    else:
-                        print("[IMAGE] GEMINI_API_KEY is not set")
-
-                day_problem = DayProblem(
-                    student_id=student_id,
-                    interest_id=interest_id,
-                    adventure_type_id=adventure_type_id,
-                    assigned_date=assigned_date,
-                    seq_no=seq_no,
-                    level=student.level or 1,
-                    problem_text=problem_data['problem_text'],
-                    image_url=generated_image_url or problem_data.get('image_url') or "",
-                    sound_url=problem_data.get('sound_url'),
-                    problem_phonemes=problem_phonemes,
-                    blank_position=blank_pos,
-                    blank_phoneme=problem_data.get('blank_phoneme'),
-                    choices=problem_data.get('choices'),
-                    correct_answer=problem_data.get('correct_answer'),
-                    created_at=datetime.now(),
-                    is_completed=False
-                )
-
-                db.add(day_problem)
-                generated_problems.append({
-                    "date": str(assigned_date),
-                    "seq_no": seq_no,
-                    "adventure_type": adventure_type_id,
-                    "problem": problem_data['problem_text']
-                })
-                seq_no += 1
-
-    db.commit()
-
-    return {
-        "status": "success",
-        "student_id": student_id,
-        "generated_count": len(generated_problems),
-        "week_dates": [str(d) for d in week_dates],
-        "problems": generated_problems
-    }
-
-
-def generate_problems_with_openai(
-    student_level: int,
-    adventure_type_id: int,
-    problem_count: int,
-    interest_names: list,
-    student_name: str
-) -> list:
-    """
-    OpenAI를 사용해 탐험 유형별 문제 생성
-    """
-    adventure_descriptions = {
-        1: "자모(음소) 맞추기 - 한 음절 단어 제시, 회색 표시된 음소를 선택지 3개 중에서 선택",
-        2: "빈칸 맞추기 - 이미지와 단어 제시, 빠진 음소를 선택지 3개 중에서 선택",
-        3: "단어 맞추기 - 이미지만 제시, 알맞은 단어를 선택지 3개 중에서 선택",
-        4: "단어 읽기 - 단어 제시, 마이크로 발음하여 STT로 정확도 평가"
-    }
-
-    # 관심사 문자열 생성
-    interests_str = ", ".join(interest_names)
-
-    prompt = f"""당신은 난독증 어린이를 위한 학습 문제를 생성하는 전문가입니다.
-
-학생 정보:
-- 이름: {student_name}
-- 레벨: {student_level}
-- 관심사: {interests_str}
-
-문제 유형: {adventure_descriptions[adventure_type_id]}
-생성할 문제 수: {problem_count}개
-
-요구사항:
-1. 학생의 관심사를 활용하여 흥미로운 단어/문장 선택
-2. 레벨에 맞는 난이도 (레벨이 낮을수록 쉬운 단어)
-3. 각 문제는 JSON 형식으로 반환
-
-**중요: blank_position 필드 규칙 (반드시 준수!)**
-- 탐험1, 탐험2: blank_position은 반드시 대문자 문자열만 사용
-  - 허용: "INITIAL", "MEDIAL", "FINAL" (대문자만!)
-  - 금지: "initial", "medial", "final" (소문자 절대 금지!)
-  - 금지: 0, 1, 2, 3 (숫자 절대 금지!)
-- 탐험3, 탐험4: blank_position 필드를 JSON에 포함하지 마세요 (null도 포함하지 말 것)
-
-JSON 형식 (탐험 유형별):
-
-탐험1 (자모 맞추기):
-{{
-  "problem_text": "사과",
-  "blank_position": "MEDIAL",
-  "blank_phoneme": "ㄱ",
-  "choices": ["ㄱ", "ㄴ", "ㄷ"]
-}}
-
-탐험2 (빈칸 맞추기):
-{{
-  "problem_text": "사과",
-  "image_url": "apple.jpg",
-  "blank_position": "MEDIAL",
-  "blank_phoneme": "과",
-  "choices": ["과", "가", "놔"]
-}}
-
-탐험3 (단어 맞추기):
-{{
-  "problem_text": "사과",
-  "image_url": "apple.jpg",
-  "choices": ["사과", "수박", "포도"],
-  "correct_answer": "사과"
-}}
-
-탐험4 (단어 읽기):
-{{
-  "problem_text": "강아지"
-}}
-
-반드시 JSON 배열로 {problem_count}개 문제를 반환하세요. 다른 설명 없이 JSON만 반환하세요."""
-
     try:
-        response = llm.call(prompt)
-        # CrewAI LLM.call()은 문자열을 직접 반환합니다
-        content = response.strip() if isinstance(response, str) else str(response).strip()
+        # 💡 서비스 함수 호출. 이 함수는 DB 저장까지 완료합니다.
+        result = generate_problems_for_one_week(db, student_id)
 
-        # JSON 추출 (```json ... ``` 형태로 올 수 있음)
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
+        # generate_problems_for_one_week 함수가 반환한 결과를 처리
+        if "error" in result:
+             # 오류가 발생한 경우를 대비
+            return {"status": "failed", "student_id": student_id, "generated_count": 0, "week_dates": [], "problems": [], "error": result["error"]}
 
-        problems = json.loads(content)
-
-        return problems if isinstance(problems, list) else [problems]
-
+        # 성공적으로 문제 생성이 완료되면 (generated_count는 서비스 함수가 반환)
+        return {
+            "status": "success",
+            "student_id": student_id,
+            "generated_count": result.get("generated_count", 0),
+            "week_dates": result.get("week_dates", []),
+            "problems": result.get("problems", [])
+        }
+        
     except Exception as e:
-        # 에러 발생 시 기본 문제 반환
-        print(f"OpenAI 문제 생성 실패: {e}")
-        return generate_fallback_problems(adventure_type_id, problem_count)
-
-
-def generate_fallback_problems(adventure_type_id: int, problem_count: int) -> list:
-    """
-    OpenAI 실패 시 기본 문제 생성
-    """
-    fallback_data = {
-        1: [  # 자모(음소) 맞추기
-            {"problem_text": "사과", "blank_position": "MEDIAL", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
-            {"problem_text": "고양이", "blank_position": "INITIAL", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
-            {"problem_text": "토끼", "blank_position": "INITIAL", "blank_phoneme": "ㅌ", "choices": ["ㅌ", "ㄷ", "ㅈ"]},
-        ],
-        2: [  # 빈칸 맞추기
-            {"problem_text": "사과", "image_url": "apple.jpg", "blank_position": "MEDIAL", "blank_phoneme": "ㅘ", "choices": ["ㅘ", "ㅏ", "ㅗ"]},
-            {"problem_text": "나무", "image_url": "tree.jpg", "blank_position": "INITIAL", "blank_phoneme": "ㄴ", "choices": ["ㄴ", "ㄷ", "ㅁ"]},
-            {"problem_text": "별", "image_url": "star.jpg", "blank_position": "FINAL", "blank_phoneme": "ㄹ", "choices": ["ㄹ", "ㅁ", "ㄴ"]},
-        ],
-        3: [  # 단어 맞추기
-            {"problem_text": "사과", "image_url": "apple.jpg", "choices": ["사과", "수박", "포도"], "correct_answer": "사과"},
-            {"problem_text": "바다", "image_url": "sea.jpg", "choices": ["바다", "산", "강"], "correct_answer": "바다"},
-            {"problem_text": "하늘", "image_url": "sky.jpg", "choices": ["하늘", "땅", "구름"], "correct_answer": "하늘"},
-        ],
-        4: [  # 단어 읽기
-            {"problem_text": "강아지"},
-            {"problem_text": "고양이"},
-            {"problem_text": "토끼"},
-        ]
-    }
-
-    base_problems = fallback_data.get(adventure_type_id, fallback_data[1])
-    result = []
-
-    for i in range(problem_count):
-        result.append(base_problems[i % len(base_problems)])
-
-    return result
-
+        # 전체 과정에서 예외 발생 시 롤백 및 에러 반환
+        db.rollback()
+        return {"error": str(e), "status": "failed", "generated_count": 0}
