@@ -98,3 +98,10 @@ nextwork.md
 
 # Serena
 .serena/
+
+# SSL Certificates (Security - Never commit private keys!)
+*.pem
+*.key
+*.crt
+*.csr
+infrastructure/nginx/ssl/
