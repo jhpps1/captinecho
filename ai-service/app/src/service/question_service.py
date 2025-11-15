@@ -11,10 +11,10 @@ from app.src.utils.s3 import upload_to_s3  # S3 업로드 (필요 시 사용)
 # 🚨 TTS 및 이미지 생성 함수는 내부적으로 S3 업로드를 처리합니다
 from app.src.api.tts_api import generate_tts_and_upload
 from app.src.api.gemini_api import generate_image_with_gemini_flash
+from app.src.core.config import settings
 from dotenv import load_dotenv
-from app.src.api.scheduler.batch_scheduler import start_scheduler
-
-start_scheduler()
+from app.src.utils.normalization import normalize_blank_position
+# Batch scheduler는 Spring Boot에서 관리 (매주 일요일 23:00)
 
 
 load_dotenv()
@@ -115,8 +115,8 @@ def process_day_problem_items(session, student_id, llm_result):
         return False
 
 
-    # 🚨 GMS API 키를 여기서 한 번 읽어옵니다. (OPENAI_API_KEY 사용)
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    # Gemini API Key 사용
+    GEMINI_API_KEY = settings.GEMINI_API_KEY
 
     for item in llm_result:
         # 1. student_id 설정
@@ -156,6 +156,7 @@ def process_day_problem_items(session, student_id, llm_result):
 
 
         generated_sound_path = ""
+        adventure_type = item.get("adventure_type_id")  # adventure_type 미리 정의
         blank_position  = None
         if adventure_type in [1, 2]:
             problem_text = item.get("problem_text", "")
@@ -198,7 +199,7 @@ def process_day_problem_items(session, student_id, llm_result):
             item["image_url"] = "" # 탐험 4는 이미지 생성 안함
 
         # 🚨 [이미지 생성] 탐험 2, 3일 경우 GMS 호출
-        adventure_type = item.get("adventure_type_id")
+        # adventure_type은 이미 위에서 정의됨 (159번 라인)
         problem_text = item.get("problem_text")
 
         # 💡 생성 경로 변수를 미리 초기화
@@ -240,8 +241,11 @@ def process_day_problem_items(session, student_id, llm_result):
             item["problem_phonemes"] = []
             
         # 5. 숫자/문자열 기본값 및 정제 보장 (blank_phoneme 정제 및 길이 제한)
-        if item.get("blank_position") is None:
-            item["blank_position"] = 0
+        # blank_position 정규화 (소문자 → 대문자, 숫자 → 문자열 변환)
+        item["blank_position"] = normalize_blank_position(
+            item.get("blank_position"),
+            adventure_type_id=adventure_type
+        )
          
         blank_phoneme_value = item.get("blank_phoneme")
         if blank_phoneme_value is not None:
@@ -359,7 +363,7 @@ def generate_problems_for_one_week(session, student_id):
     "blank_phoneme": "ㄱ",
     "correct_answer": "ㄱ",
     "choices": ["ㄱ", "ㄴ", "ㄷ"],
-    "blank_position": 2,
+    "blank_position": "INITIAL",
     "student_id": {student_id},
     "image_url": "",
     "sound_url": "problems/sound/{assigned_date}_xxxxx.mp3"
@@ -386,7 +390,7 @@ def generate_problems_for_one_week(session, student_id):
     "blank_phoneme": "ㅂ",
     "correct_answer": "ㅂ",
     "choices": ["ㅂ", "ㅇ", "ㅁ"],
-    "blank_position": 3,
+    "blank_position": "INITIAL",
     "student_id": {student_id},
     "image_url": "problems/image/가방.jpg",
     "sound_url": "problems/sound/{assigned_date}_yyyyy.mp3"
@@ -408,10 +412,10 @@ def generate_problems_for_one_week(session, student_id):
     "interest_id": {interest_id},
     "problem_text": "가방",
     "problem_phonemes": [],
-    "blank_phoneme": "",
+    "blank_phoneme": null,
     "correct_answer": "가방",
     "choices": ["가방", "빵", "파"],
-    "blank_position": 0,
+    "blank_position": null,
     "student_id": {student_id},
     "image_url": "problems/image/가방.jpg",
     "sound_url": "problems/sound/{assigned_date}_zzzzzz.mp3"
@@ -436,7 +440,7 @@ def generate_problems_for_one_week(session, student_id):
     "blank_phoneme": "",
     "correct_answer": "가방",
     "choices": [],
-    "blank_position": 0,
+    "blank_position": "",
     "student_id": {student_id},
     "image_url": "",
     "sound_url": "problems/sound/{assigned_date}_wwwww.mp3"
@@ -446,10 +450,17 @@ def generate_problems_for_one_week(session, student_id):
         - 한글 음소 사용 필수
         - ❌ 금지: 'giyeok', 'naun', 'daun' 같은 영어 음소명
         - ✅ 허용: 'ㄱ', 'ㄴ', 'ㄷ' 같은 한글 자모
+
         # ====================================================================
         # 🚨 추가된 핵심 지침
         # ====================================================================
         - **탐험 2 & 3 규칙:** 'adventure_type_id'가 2 또는 3인 문제의 **'correct_answer'**와 **'choices'** 필드는 반드시 **그림으로 표현할 수 있는 구체적인 명사**(예: '코끼리', '가방', '티라노', '분무기')만 사용해야 합니다. **절대 '가', '나', '다'와 같은 자모, 모음, 또는 한 음절 글자를 단독으로 사용하지 마세요.**
+
+        - **blank_position 필드 규칙 (중요!):**
+            - adventure_type_id가 1 또는 2일 때: 반드시 "INITIAL", "MEDIAL", "FINAL" 중 하나의 **대문자** 값만 사용하세요.
+            - adventure_type_id가 3 또는 4일 때: null 또는 빈 문자열("")을 사용하세요.
+            - ❌ 절대 금지: "initial", "medial", "final" 같은 소문자 값
+            - ✅ 반드시 사용: "INITIAL", "MEDIAL", "FINAL" 대문자 Enum 값만
         # ====================================================================
         - **날짜 배정:** 모든 문제의 "assigned_date" 필드는 **"{assigned_date}"**로 설정해야 합니다.
         - 이 학생의 관심사 interest_id는 {interest_id} 입니다. 모든 문제의 interest_id도 반드시 {interest_id}로 지정하세요.

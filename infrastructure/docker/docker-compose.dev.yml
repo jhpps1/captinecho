@@ -53,6 +53,13 @@ services:
       - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI:-http://localhost:8080/login/oauth2/code/google}
       - MAIL_USERNAME=${MAIL_USERNAME}
       - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - FILE_STORAGE_TYPE=${FILE_STORAGE_TYPE:-local}
+      - FILE_STORAGE_LOCATION=${FILE_STORAGE_LOCATION:-uploads}
+      - FILE_UPLOAD_PROFILE_PATH=${FILE_UPLOAD_PROFILE_PATH:-profiles}
+      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-captain-echo-files}
     depends_on:
       postgres:
         condition: service_healthy

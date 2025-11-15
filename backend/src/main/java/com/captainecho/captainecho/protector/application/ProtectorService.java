@@ -2,6 +2,7 @@ package com.captainecho.captainecho.protector.application;
 
 import com.captainecho.captainecho.common.mail.EmailService;
 import com.captainecho.captainecho.common.mail.RecoveryCodeService;
+import com.captainecho.captainecho.common.storage.FileStorageService;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
 import com.captainecho.captainecho.protector.application.command.CreatePinCommand;
@@ -39,6 +40,7 @@ public class ProtectorService {
     private final com.captainecho.captainecho.student.persistence.StudentInterestRepository studentInterestRepository;
     private final EmailService emailService;
     private final RecoveryCodeService recoveryCodeService;
+    private final FileStorageService fileStorageService;
 
     @Transactional
     public CreatePinResult createPin(CreatePinCommand command) {
@@ -155,12 +157,18 @@ public class ProtectorService {
 
                     log.info("  🎯 변환된 관심사 DTO 개수: {}", interests.size());
 
+                    // DB에 저장된 파일 경로를 URL로 변환
+                    String profileImageUrl = null;
+                    if (student.getProfileImage() != null && !student.getProfileImage().isEmpty()) {
+                        profileImageUrl = fileStorageService.getFileUrl(student.getProfileImage());
+                    }
+
                     return StudentDto.builder()
                             .studentId(student.getStudentId())
                             .name(student.getName())
                             .gender(student.getGender() != null ? student.getGender().name() : null)
                             .birth(student.getBirth() != null ? student.getBirth().toString() : null)
-                            .profileImage(student.getProfileImage())
+                            .profileImage(profileImageUrl)
                             .grade(student.getGrade() != null ? student.getGrade().name() : null)
                             .level(student.getLevel() != null ? student.getLevel().intValue() : null)
                             .coin(student.getCoin())

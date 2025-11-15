@@ -75,13 +75,13 @@ def upload_to_s3(file_data, key_prefix='problems/', file_extension='png'):
         # Public URL 생성
         public_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
 
-        print(f"✅ S3 업로드 성공: {public_url}")
+        print(f"[SUCCESS] S3 upload successful: {public_url}")
         return public_url
 
     except ClientError as e:
         error_code = e.response['Error']['Code']
         error_message = e.response['Error']['Message']
-        print(f"❌ S3 업로드 실패: [{error_code}] {error_message}")
+        print(f"[ERROR] S3 upload failed: [{error_code}] {error_message}")
         raise
 
 

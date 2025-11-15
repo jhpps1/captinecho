@@ -8,10 +8,10 @@ from sqlalchemy import text
 from app.src.tasks.question import get_latest_curriculum, create_day_problem
 from app.src.utils.llm import llm_problem
 from app.src.utils.s3 import upload_to_local # 로컬 개발용
-# 🚨 [수정 필요]: 파일명을 gms_api.py에서 gemini_api.py로 변경했다면 이 부분을 수정해야 합니다.
-# 파일명을 그대로 유지했다면 이 줄은 수정하지 않아도 됩니다. (여기서는 파일명이 바뀌었다고 가정하고 작성합니다)
+from app.src.utils.normalization import normalize_blank_position
 from app.src.api.tts_api import generate_tts_and_upload
-from app.src.api.gemini_api import generate_image_with_gemini_flash # <--- import 경로 수정!
+from app.src.api.gemini_api import generate_image_with_gemini_flash
+from app.src.core.config import settings
 from dotenv import load_dotenv
 # from app.src.tasks.enqueue_task import batch_generate_problems_parallel
 from app.src.core.database import SessionLocal
@@ -115,16 +115,23 @@ def process_day_problem_items(session, student_id, llm_result):
         return False
 
 
-    # 🚨 GMS API 키를 여기서 한 번 읽어옵니다. (OPENAI_API_KEY 사용)
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    # Gemini API Key 사용
+    GEMINI_API_KEY = settings.GEMINI_API_KEY
 
     for item in llm_result:
         # 1. student_id 설정
         item["student_id"] = student_id if student_id is not None else 0
 
+        # [필수] blank_position 정규화 (소문자 → 대문자, 숫자 → 문자열 변환)
+        adventure_type = item.get("adventure_type_id")
+        item["blank_position"] = normalize_blank_position(
+            item.get("blank_position"),
+            adventure_type_id=adventure_type
+        )
+        print(f"[DEBUG] blank_position 정규화 결과: {item['blank_position']}")  # DEBUG
+
         # 💡 [수정] UnboundLocalError 해결: TTS 및 이미지 로직 전에 변수들을 먼저 할당합니다.
         correct_answer_text = item.get("correct_answer")
-        adventure_type = item.get("adventure_type_id")
 
         # 🚨 기본 URL 초기화 (제거된 로직 대체)
         item["image_url"] = ""
@@ -357,7 +364,7 @@ def generate_problems_for_one_week(session, student_id):
     "blank_phoneme": "ㄱ",
     "correct_answer": "ㄱ",
     "choices": ["ㄱ", "ㄴ", "ㄷ"],
-    "blank_position": 2,
+    "blank_position": "INITIAL",
     "student_id": {student_id},
     "image_url": "",
     "sound_url": "problems/sound/{assigned_date}_xxxxx.mp3"
@@ -384,7 +391,7 @@ def generate_problems_for_one_week(session, student_id):
     "blank_phoneme": "ㅂ",
     "correct_answer": "ㅂ",
     "choices": ["ㅂ", "ㅇ", "ㅁ"],
-    "blank_position": 3,
+    "blank_position": "INITIAL",
     "student_id": {student_id},
     "image_url": "problems/image/가방.jpg",
     "sound_url": "problems/sound/{assigned_date}_yyyyy.mp3"
@@ -409,7 +416,7 @@ def generate_problems_for_one_week(session, student_id):
     "blank_phoneme": "",
     "correct_answer": "가방",
     "choices": ["가방", "빵", "파"],
-    "blank_position": 0,
+    "blank_position": null,
     "student_id": {student_id},
     "image_url": "problems/image/가방.jpg",
     "sound_url": "problems/sound/{assigned_date}_zzzzzz.mp3"
@@ -434,7 +441,7 @@ def generate_problems_for_one_week(session, student_id):
     "blank_phoneme": "",
     "correct_answer": "가방",
     "choices": [],
-    "blank_position": 0,
+    "blank_position": null,
     "student_id": {student_id},
     "image_url": "",
     "sound_url": "problems/sound/{assigned_date}_wwwww.mp3"
@@ -459,6 +466,11 @@ def generate_problems_for_one_week(session, student_id):
             "image_data", "sound_data", "problem_phonemes", "blank_position", "blank_phoneme"
             "반드시 한국어로 작성하세요."
             "correct_answer"와 "blank_position"는 각각 5자, 20자를 초과하지 않도록 하세요.
+
+        - **🚨 blank_position 필드 규칙 (매우 중요!):**
+            * adventure_type_id가 1 또는 2인 경우: 반드시 **"INITIAL"**, **"MEDIAL"**, **"FINAL"** 중 하나의 대문자 문자열을 사용하세요.
+            * adventure_type_id가 3 또는 4인 경우: 반드시 **null**을 사용하세요.
+            * ❌ 절대 사용 금지: "initial", "medial", "final" (소문자), 0, 1, 2, 3 (숫자)
 
         - **seq_no**는 해당 요일 내에서 1부터 10까지 순차적으로 부여하세요.
         - **interest_id**는 학습자의 세부 관심사(sub_interest 테이블)와 매칭되는 유효한 ID를 부여하세요.

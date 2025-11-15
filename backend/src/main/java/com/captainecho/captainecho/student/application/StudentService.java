@@ -234,7 +234,7 @@ public class StudentService {
             percent = Math.round((completedCount.floatValue() / totalCount.floatValue()) * 100);
         }
 
-        return GetWeeklyGoalPercentResult.from(percent);
+        return GetWeeklyGoalPercentResult.from(percent, totalCount, completedCount);
     }
 
     @Transactional
@@ -414,7 +414,8 @@ public class StudentService {
         List<GetWeeklyJamoStatResult.AccuracyRate> accuracyRates = jamoStats.stream()
                 .map(stat -> new GetWeeklyJamoStatResult.AccuracyRate(
                         stat.getJamo(),
-                        stat.getWeeklyAccuracyRate().intValue()
+                        stat.getWeeklyAccuracyRate().intValue(),
+                        stat.getTotalAttempts().intValue()
                 ))
                 .sorted((a, b) -> a.jamo().compareTo(b.jamo()))
                 .collect(Collectors.toList());

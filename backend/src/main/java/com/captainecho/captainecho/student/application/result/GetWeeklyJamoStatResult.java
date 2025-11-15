@@ -11,7 +11,8 @@ public record GetWeeklyJamoStatResult(
 
     public record AccuracyRate(
             String jamo,
-            Integer accuracyRate
+            Integer accuracyRate,
+            Integer count
     ) {
     }
 }
