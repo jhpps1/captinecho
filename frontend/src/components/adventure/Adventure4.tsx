@@ -33,6 +33,8 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(false);
+  const [encouragementMessage, setEncouragementMessage] = useState<string | null>(null);
+  const [showImageHint, setShowImageHint] = useState(false);
 
   // 🔽 새로 추가: 방금 녹음한 파일을 들을 수 있는 URL
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // 컴포넌트 언마운트 시 녹음/스트림 정리
   useEffect(() => {
@@ -50,6 +53,9 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
       }
     };
   }, []);
@@ -64,6 +70,45 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
     }
   };
 
+  // 메아리 효과로 녹음 음성 재생
+  const playAudioWithEcho = async () => {
+    if (!audioUrl) return;
+
+    try {
+      // AudioContext 생성 (재사용)
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const audioContext = audioContextRef.current;
+
+      // 오디오 데이터 가져오기
+      const response = await fetch(audioUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      // 메아리 효과 생성 (메아리만 재생)
+      const echoDelays = [0]; // 즉시 재생
+      const echoGains = [0.65]; // 65% 볼륨
+
+      echoDelays.forEach((delay, index) => {
+        const source = audioContext.createBufferSource();
+        const gainNode = audioContext.createGain();
+
+        source.buffer = audioBuffer;
+        gainNode.gain.value = echoGains[index];
+
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        source.start(audioContext.currentTime + delay);
+      });
+
+      console.log('메아리 효과 재생 완료');
+    } catch (error) {
+      console.error('메아리 효과 재생 실패:', error);
+    }
+  };
+
   // 답변 처리
   const handleAnswer = (isCorrect: boolean, similarity?: number) => {
     console.log(`답변 처리: ${isCorrect ? '정답' : '오답'}, 유사도: ${similarity}%`);
@@ -74,10 +119,17 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       setShowFeedback(true);
       setIsCorrectAnswer(true);
 
+      // 힌트 상태 초기화
+      setEncouragementMessage(null);
+      setShowImageHint(false);
+
+      // 🔊 메아리 효과로 녹음 음성 재생
+      playAudioWithEcho();
+
       setTimeout(() => {
         setShowFeedback(false);
         setIsSpeaking(false);
-        // onSubmit('voice-answer', attemptCount);
+        onSubmit('voice-answer', attemptCount);
       }, 2000);
     } else {
       // 오답
@@ -86,11 +138,27 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
 
       setAttemptCount(prev => {
         const newCount = prev + 1;
-        if (newCount >= 3) setShowSpeakerButton(true);
+
+        // 단계별 힌트 제공
+        if (newCount === 2) {
+          // 1번째 오답: 격려 메시지
+          setEncouragementMessage('다시 한번 도전해보자!');
+          setTimeout(() => setEncouragementMessage(null), 2000);
+        } else if (newCount === 3) {
+          // 2번째 오답: 이미지 힌트 (피드백 캐릭터 사라진 후 표시)
+          if (problem.imageUrl) {
+            setTimeout(() => setShowImageHint(true), 3000);
+            setTimeout(() => setShowImageHint(false), 8000);
+          }
+        } else if (newCount >= 4) {
+          // 3번째 오답: 스피커 버튼 (피드백 캐릭터 사라진 후 표시)
+          setTimeout(() => setShowSpeakerButton(true), 3000);
+        }
+
         return newCount;
       });
 
-      setTimeout(() => setShowFeedback(false), 2000);
+      setTimeout(() => setShowFeedback(false), 3000);
     }
   };
 
@@ -220,12 +288,21 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
         onClick={handleMicClick}
       />
 
-      {/* 🔊 방금 녹음한 음성 미리듣기 */}
-      {audioUrl && (
-        <div className="mt-4 w-full max-w-xs">
-          <audio controls src={audioUrl} className="w-full">
-            브라우저가 audio 태그를 지원하지 않습니다.
-          </audio>
+      {/* 이미지 힌트 모달 (2번째 오답) */}
+      {showImageHint && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-md">
+            <p className="mb-4 text-xl font-bold text-center text-orange-500">💡 힌트!</p>
+            <img
+              src={problem.imageUrl || '/adventurepage/no_image.png'}
+              alt="힌트 이미지"
+              className="w-full h-auto rounded-lg shadow-md"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/adventurepage/no_image.png';
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -233,6 +310,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       <FeedbackCharacter
         visible={showFeedback}
         isCorrect={isCorrectAnswer}
+        message={encouragementMessage || undefined}
       />
     </main>
   );
