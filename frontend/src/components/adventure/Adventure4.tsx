@@ -60,6 +60,18 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
     };
   }, []);
 
+  // 이미지 힌트 프리로딩 (2번째 오답 시 빠른 표시를 위해)
+  useEffect(() => {
+    if (problem.imageUrl) {
+      const img = new Image();
+      img.src = problem.imageUrl;
+
+      img.onerror = () => {
+        console.warn('⚠️ 이미지 프리로딩 실패:', problem.imageUrl);
+      };
+    }
+  }, [problem.imageUrl]);
+
   // 스피커 버튼: 단어 음성 재생
   const handlePlayWordAudio = () => {
     if (problem.soundUrl) {
@@ -71,7 +83,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
   };
 
   // 메아리 효과로 녹음 음성 재생
-  const playAudioWithEcho = async (url: string) => {
+  const playAudioWithEcho = async (url: string): Promise<void> => {
     if (!url) {
       console.warn('메아리 재생 실패: URL이 없습니다');
       return;
@@ -101,23 +113,27 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       const echoDelays = [0]; // 즉시 재생
       const echoGains = [0.65]; // 65% 볼륨
 
-      echoDelays.forEach((delay, index) => {
-        const source = audioContext.createBufferSource();
-        const gainNode = audioContext.createGain();
+      // 재생 완료를 Promise로 처리
+      await new Promise<void>((resolve) => {
+        echoDelays.forEach((delay, index) => {
+          const source = audioContext.createBufferSource();
+          const gainNode = audioContext.createGain();
 
-        source.buffer = audioBuffer;
-        gainNode.gain.value = echoGains[index];
+          source.buffer = audioBuffer;
+          gainNode.gain.value = echoGains[index];
 
-        source.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+          source.connect(gainNode);
+          gainNode.connect(audioContext.destination);
 
-        // 재생 완료 이벤트 리스너
-        source.onended = () => {
-          console.log('메아리 효과 재생 완료');
-        };
+          // 재생 완료 이벤트 리스너
+          source.onended = () => {
+            console.log('메아리 효과 재생 완료');
+            resolve();  // 재생 완료 시 Promise 완료
+          };
 
-        source.start(audioContext.currentTime + delay);
-        console.log(`메아리 효과 재생 시작 (delay: ${delay}s, gain: ${echoGains[index]})`);
+          source.start(audioContext.currentTime + delay);
+          // console.log(`메아리 효과 재생 시작 (delay: ${delay}s, gain: ${echoGains[index]}, duration: ${audioBuffer.duration.toFixed(2)}s)`);
+        });
       });
     } catch (error) {
       console.error('메아리 효과 재생 실패:', error);
@@ -125,7 +141,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
   };
 
   // 답변 처리
-  const handleAnswer = (isCorrect: boolean, recordedAudioUrl?: string, similarity?: number) => {
+  const handleAnswer = async (isCorrect: boolean, recordedAudioUrl?: string, similarity?: number) => {
     console.log(`답변 처리: ${isCorrect ? '정답' : '오답'}, 유사도: ${similarity}%`);
 
     if (isCorrect) {
@@ -138,16 +154,17 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       setEncouragementMessage(null);
       setShowImageHint(false);
 
-      // 🔊 메아리 효과로 녹음 음성 재생
+      // 🔊 메아리 효과로 녹음 음성 재생 및 완료 대기
       if (recordedAudioUrl) {
-        playAudioWithEcho(recordedAudioUrl);
+        await playAudioWithEcho(recordedAudioUrl);
+        // 메아리 효과 재생 완료 후 1초 대기
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      setTimeout(() => {
-        setShowFeedback(false);
-        setIsSpeaking(false);
-        onSubmit('voice-answer', attemptCount);
-      }, 2000);
+      // 피드백 캐릭터 및 상태 정리
+      setShowFeedback(false);
+      setIsSpeaking(false);
+      onSubmit('voice-answer', attemptCount);
     } else {
       // 오답
       setShowFeedback(true);
@@ -160,7 +177,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
         if (newCount === 2) {
           // 1번째 오답: 격려 메시지
           setEncouragementMessage('다시 한번 도전해보자!');
-          setTimeout(() => setEncouragementMessage(null), 2000);
+          setTimeout(() => setEncouragementMessage(null), 3000);
         } else if (newCount === 3) {
           // 2번째 오답: 이미지 힌트 (피드백 캐릭터 사라진 후 표시)
           if (problem.imageUrl) {
@@ -212,7 +229,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
           type: 'audio/webm',
         });
 
-        console.log('생성된 WebM 파일:', file);
+        // console.log('생성된 WebM 파일:', file);
 
         // 🔊 미리 듣기용 URL 생성 (문제마다, 녹음할 때마다 최신 걸로 바뀜)
         const previewUrl = URL.createObjectURL(file);
