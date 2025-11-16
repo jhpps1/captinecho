@@ -19,6 +19,28 @@ def build_hierarchical_crew(student_data: dict):
         Crew 인스턴스
     """
 
+    # small_interest_name 처리 (리스트 → 자연스러운 한국어 문장)
+    interests = student_data.get('small_interest_name', [])
+    print('student_data["small_interest_name"]:', interests)
+
+    if isinstance(interests, str):
+      interests = [item.strip() for item in interests.split(',') if item.strip()]
+    elif not isinstance(interests, list):
+        interests = [interests] if interests else []
+    print('interests list (항목 갯수):', len(interests), interests)
+
+
+    if len(interests) == 0:
+        interest_text = "다양한 주제"
+    elif len(interests) == 1:
+        interest_text = interests[0]
+    elif len(interests) == 2:
+        interest_text = f"{interests[0]}와 {interests[1]}"
+    else:
+        interest_text = ", ".join(interests[:-1]) + f", {interests[-1]}"
+
+    print('최종 interest_text:', interest_text)  # <--- 여기!!
+
     # Manager LLM (gpt-4o) - CrewAI 1.x LLM 초기화
     manager_llm = LLM(
         model=settings.OPENAI_MODEL,
@@ -38,6 +60,7 @@ def build_hierarchical_crew(student_data: dict):
             "10년 경력의 난독증 치료사입니다. "
             "자모 인식 장애, 음소 혼동 패턴 분석 전문가로, "
             f"({student_data.get('confusion_jamo')})와 ({student_data.get('real_jamo')})를 분석하여 학생에게 맞는 최적의 문제를 찾습니다."
+            f"**모든 문제 소재는 오직 학생의 관심사({interest_text}) 관련 단어만** 사용해야 하며, 다른 주제의 예시는 들지 마십시오. " # <--- **핵심 수정**
             f"({student_data.get('avg_fail')})과 ({student_data.get('avg_accuracy')})을 기반으로 최적의 난이도와 탐험 유형을 설계합니다. "
         
             "데이터 기반의 객관적 진단을 제공하며, 학습 성과를 최우선으로 고려합니다."
@@ -52,6 +75,7 @@ def build_hierarchical_crew(student_data: dict):
         backstory=(
             "아동 심리학 박사이며, 학습 장애 아동의 정서 관리 전문가입니다. "
             "과도한 학습 부담은 오히려 역효과를 낸다는 것을 잘 알고 있으며, "
+            f"학생의 주요 관심사는 '{interest_text}'입니다. **다른 임의의 주제를 절대 언급하거나 추천하지 마세요.** 오직 학생의 관심사만 활용하여 동기를 부여하는 것이 중요합니다. "
             "아이의 흥미와 성취감을 고려한 균형 잡힌 학습 계획을 추천합니다. "
             "난이도가 너무 높거나 문제 수가 많으면 적극적으로 조정을 요청합니다."
         ),
@@ -66,8 +90,9 @@ def build_hierarchical_crew(student_data: dict):
             f"학부모 커뮤니티 대표입니다. "
             f"보호자가 설정한 목표({student_data.get('protector_goal')})를 "
             f"커리큘럼에 반드시 반영해야 합니다. "
-            f"아이의 관심사({student_data.get('small_interest_name')})를 문제에 활용하여 "
+            f"아이의 관심사({interest_text})들을 모두 문제에 활용하여 "
             f"학습 동기를 높이는 것도 중요하게 생각합니다. "
+            f"'{interest_text}' 이외의 다른 관심사를 언급해서는 안 됩니다. "
             f"아이의 성장과 자신감을 우선시하며, 무리한 학습보다는 꾸준한 발전을 원합니다."
         ),
         allow_delegation=False,
@@ -82,12 +107,14 @@ def build_hierarchical_crew(student_data: dict):
         description=f"""
 당신은 난독증 학생의 주간 커리큘럼을 만드는 **Manager**입니다.
 3명의 전문가를 **자유롭게 활용**하여 최적의 커리큘럼을 만드세요.
+- **관심사 (모두 활용)**: {interest_text}
+f"**모든 문제 소재는 오직 학생의 관심사({interest_text}) 관련 단어만** 사용해야 하며, 다른 주제의 예시는 들지 마십시오. "
 
 ## 📊 학생 정보 (DB에서 조회됨)
 - 이름: {student_data.get('name', '학생')}
 - 현재 레벨: {student_data.get('level', 1)}
 - 약점 자모: {student_data.get('real_jamo', 'ㄱ')} ↔ {student_data.get('confusion_jamo', 'ㄴ')} 혼동
-- 관심사: {student_data.get('small_interest_name', '동물')}
+- **관심사 (모두 활용)**: {interest_text}
 - 보호자 목표: {student_data.get('protector_goal', 'FOCUS_ON_WEAKNESS')}
 - 저번 주 정확도: {student_data.get('weekly_accuracy_rate', 0.0):.1%}
 - 저번 주 실패율: {student_data.get('weekly_fail_rate', 0.0):.1%}
@@ -96,6 +123,16 @@ def build_hierarchical_crew(student_data: dict):
 1. **난독증 치료 전문가** - 학습 진단, 레벨 평가, 탐험 유형 설계
 2. **아동 심리 전문가** - 동기 부여, 스트레스 관리, 과부담 방지
 3. **학부모 대리인** - 보호자 목표 반영, 관심사 활용, 자신감 향상
+
+
+[난이도 레벨별 구조]
+1레벨: 자음+모음 (예: 가/다/라/바 - 받침 없는 기본 단어)
+2레벨: 자음+모음+자음 (예: 각/난/달/밤 - 받침 있는 단순 단어)
+3레벨: 자음+이중모음+모음 (예: 뼈/궤/쥐 - 이중모음 포함)
+4레벨: 2음절 단어 (예: 나비/가방 - 단순 2음절)
+5레벨: 자음+이중모음+받침, 복합(예: 괭/쓩 등)
+6레벨: 복합 2음절 (예: 완벽한 난이도 최고 단어)
+
 
 ## 📋 탐험 유형 정의
 **탐험1: 자모(음소) 맞추기**
@@ -130,14 +167,14 @@ def build_hierarchical_crew(student_data: dict):
 2. **커리큘럼 설계** (월~금, 하루 10문제)
    - 레벨에 맞는 탐험 배치
    - 약점 자모 집중 훈련
-   - 관심사 활용으로 흥미 유발
+   - **제시된 모든 관심사를 반드시 활용**하여 흥미 유발
 
 3. **전문가 협의**
    - 순서는 자유: 치료사 → 심리코치 → 부모 또는 역순 가능
    - 여러 번 왔다 갔다 가능
    - 만장일치까지 협상
 
-## 📤 최종 출력 (반드시 JSON)
+## 📤 최종 출력 예시 (반드시 JSON, 예시 구조를 따라야함) 
 {{
   "level_adjustment": {{
     "current_level": {student_data.get('level', 1)},
@@ -160,13 +197,13 @@ def build_hierarchical_crew(student_data: dict):
     {{"role": "Manager", "message": "오늘 회의 시작하겠습니다. 치료사님 먼저 진단 부탁드립니다."}},
     {{"role": "치료사", "message": "학생의 ㄱ/ㄴ 혼동이 심하고 정확도 60%입니다. 레벨 2 유지하며 탐험1을 강화해야 합니다."}},
     {{"role": "심리코치", "message": "탐험1을 너무 많이 하면 지루해할 수 있어요. 탐험3,4도 적절히 섞어주세요."}},
-    {{"role": "부모", "message": "아이가 {student_data.get('small_interest_name', '동물')}을 좋아하니 그 주제로 문제를 만들어주세요."}},
-    {{"role": "Manager", "message": "좋습니다. 탐험1(5문제), 탐험2(3문제), 탐험3(1문제), 탐험4(1문제)로 균형있게 배치하고, {student_data.get('small_interest_name', '동물')} 주제를 활용하겠습니다."}}
+    {{"role": "부모", "message": "아이가 좋아하는 주제인 **축구, 야구, 체조** 세 가지 관심사를 모두 결합하여 문제에 적극적으로 활용해주세요."}},
+    {{"role": "Manager", "message": "좋습니다. 탐험1(5문제), 탐험2(3문제), 탐험3(1문제), 탐험4(1문제)로 균형있게 배치하고, 학생의 관심사를 적극 활용하겠습니다."}}
   ],
-  "discussion_summary": "3명의 전문가가 협의한 결과, 레벨 2를 유지하면서 약점 자모(ㄱ/ㄴ)를 집중 훈련하되, 지루함을 방지하기 위해 탐험 유형을 다양하게 배치하고 {student_data.get('small_interest_name', '동물')} 주제를 활용하기로 결정했습니다."
+  "discussion_summary": "3명의 전문가가 협의한 결과, 레벨 2를 유지하면서 약점 자모(ㄱ/ㄴ)를 집중 훈련하되, 지루함을 방지하기 위해 탐험 유형을 다양하게 배치하고 학생의 관심사를 활용하여 학습 동기를 높이기로 결정했습니다."
 }}
 
-**중요**: 반드시 JSON 형식으로 출력하세요. JSON 외 다른 텍스트는 포함하지 마세요.
+**중요**: 반드시 JSON 형식으로 출력하세요. JSON 외 다른 텍스트는 포함하지 마세요. 반드시 {interest_text}를 모든 문제에 활용하여 커리큘럼에 반영하세요.
 """,
         expected_output="JSON 형식의 커리큘럼 (level_adjustment, curriculum_structure, dialogue, discussion_summary 포함)",
         agent=None  # Hierarchical에서는 None (Manager가 직접 처리)

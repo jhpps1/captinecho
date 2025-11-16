@@ -12,7 +12,7 @@ from app.src.core.models import (
     LearningSession, LevelHistory, WeeklyJamoStat,
     DayProblem, AdventureType, SubInterest, StudentInterest
 )
-from app.src.tasks.statistics.statistics import fill_reset_and_make_weekly_report
+from app.src.tasks.statistics.statistics import fill_reset_and_make_weekly_report, get_week_boundary, calculate_weekly_total_time
 from app.src.utils.hangul import decompose_word
 from app.src.utils.llm import llm
 from app.src.utils.normalization import normalize_blank_position
@@ -268,20 +268,30 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
 
         # 11. DB 저장 (Manager 생성 dialogue 사용)
         if latest_report:
+            now = datetime.now()
+            week_start, week_end = get_week_boundary(now)
+            total_time = calculate_weekly_total_time(db, student_id, week_start, week_end)
+
             latest_report.curriculum = curriculum_text
             latest_report.discussion_log = dialogue  # Manager가 생성한 A2A 대화 로그 저장
             latest_report.curriculum_structure = curriculum_structure  # JSON (dict)
+            latest_report.total_time = total_time # total_time 갱신
             db.commit()
             db.refresh(latest_report)
             report_id = latest_report.report_id
         else:
+            now = datetime.now()
+            week_start, week_end = get_week_boundary(now)
+            total_time = calculate_weekly_total_time(db, student_id, week_start, week_end)
+            
             new_report = WeeklyPersonalReport(
                 student_id=student_id,
                 curriculum=curriculum_text,
                 discussion_log=dialogue,  # Manager가 생성한 A2A 대화 로그 저장
                 curriculum_structure=curriculum_structure,
                 protector_goal=ProtectorGoalType.FOCUS_ON_WEAKNESS,
-                created_at=datetime.now()
+                created_at=now,
+                total_time=total_time
             )
             db.add(new_report)
             db.commit()
