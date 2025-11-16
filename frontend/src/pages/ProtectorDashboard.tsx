@@ -29,6 +29,8 @@ import {
   getBestJamos,
   getWorstJamos,
   type JamoImprovementApiData,
+  getOverallAccuracy,
+  type OverallAccuracyResponse,
 } from '../api/studentApi'
 
 interface Student {
@@ -59,13 +61,6 @@ const MOCK_JAMO_DATA = [
   { jamo: 'ㅅ', accuracy: 70, count: 44 },
   { jamo: 'ㅇ', accuracy: 85, count: 50 },
 ];
-
-const MOCK_IMPROVEMENT_DATA = {
-  overall: {
-    previous: 78,
-    current: 85,
-  }
-};
 
 /**
  * 이번 주 연속 학습일 계산
@@ -106,6 +101,7 @@ export default function ProtectorDashboard() {
   const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
   const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
+  const [overallAccuracy, setOverallAccuracy] = useState({ previous: 0, current: 0 });
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
@@ -161,6 +157,7 @@ export default function ProtectorDashboard() {
           weeklyAccuracyData,
           bestJamosData,
           worstJamosData,
+          overallAccuracyData,
         ] = await Promise.all([
           getCurriculum(selectedStudentId),
           getLearningTime(selectedStudentId),
@@ -172,6 +169,7 @@ export default function ProtectorDashboard() {
           getWeeklyAccuracy(),
           getBestJamos(),
           getWorstJamos(),
+          getOverallAccuracy(),
         ]);
 
         // 데이터 설정
@@ -183,8 +181,12 @@ export default function ProtectorDashboard() {
         setDailyStreak(dailyStreakData);
         setDailyAccuracy(dailyAccuracyData.accuracy);
         setWeeklyAccuracy(weeklyAccuracyData.accuracy);
-        setDailyAccuracy(dailyAccuracyData.accuracy);
-        setWeeklyAccuracy(weeklyAccuracyData.accuracy);
+
+        // 💡 추가: 전체 정확도 데이터 설정
+        setOverallAccuracy({
+          previous: overallAccuracyData.twoWeeksAgo,
+          current: overallAccuracyData.lastWeek,
+        });
 
         // 💡 추가: API 응답을 ImprovementCard가 요구하는 형식으로 매핑
         const mapJamoData = (apiData: JamoImprovementApiData): JamoImprovementData => ({
@@ -220,6 +222,7 @@ export default function ProtectorDashboard() {
         setDailyAccuracy(0);
         setWeeklyAccuracy(0);
         setJamoImprovements([]);
+        setOverallAccuracy({ previous: 0, current: 0 });
       } finally {
         setIsLoading(false);
       }
@@ -337,7 +340,7 @@ export default function ProtectorDashboard() {
                 {/* Right Column - Improvement Card (full height) */}
                 <div className="lg:col-span-1">
                   <ImprovementCard
-                    overallImprovement={MOCK_IMPROVEMENT_DATA.overall}
+                    overallImprovement={overallAccuracy}
                     jamoImprovements={jamoImprovements}
                   />
                 </div>
