@@ -9,6 +9,7 @@ import com.captainecho.captainecho.auth.application.command.LocalLoginCommand;
 import com.captainecho.captainecho.auth.application.command.LocalSignupCommand;
 import com.captainecho.captainecho.auth.application.command.LoginCommand;
 import com.captainecho.captainecho.auth.application.result.LoginResult;
+import com.captainecho.captainecho.auth.application.result.SignupResult;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.domain.Provider;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
@@ -71,7 +72,7 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResult localSignup(LocalSignupCommand command) {
+    public SignupResult localSignup(LocalSignupCommand command) {
         // 1. 아이디 중복 체크
         if (protectorRepository.existsById(command.username())) {
             throw new EchoException(AuthErrorCode.DUPLICATE_USERNAME);
@@ -98,10 +99,7 @@ public class AuthService {
         Protector savedProtector = protectorRepository.save(newProtector);
         log.info("일반 회원가입 완료 - Protector ID: {}, Username: {}", savedProtector.getProtectorId(), savedProtector.getId());
 
-        // 5. JWT 토큰 생성
-        String accessToken = jwtUtil.generateAccessToken(savedProtector.getProtectorId());
-
-        return new LoginResult(savedProtector.getProtectorId(), accessToken, true);
+        return new SignupResult(true);
     }
 
     @Transactional(readOnly = true)
