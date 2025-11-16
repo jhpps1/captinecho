@@ -19,6 +19,22 @@ def build_hierarchical_crew(student_data: dict):
         Crew 인스턴스
     """
 
+    # small_interest_name 처리 (리스트 → 자연스러운 한국어 문장)
+    interests = student_data.get('small_interest_name', [])
+
+
+    if not isinstance(interests, list):
+        interests = [interests] if interests else []
+
+    if len(interests) == 0:
+        interest_text = "다양한 주제"
+    elif len(interests) == 1:
+        interest_text = interests[0]
+    elif len(interests) == 2:
+        interest_text = f"{interests[0]}와 {interests[1]}"
+    else:
+        interest_text = ", ".join(interests[:-1]) + f", {interests[-1]}"
+
     # Manager LLM (gpt-4o) - CrewAI 1.x LLM 초기화
     manager_llm = LLM(
         model=settings.OPENAI_MODEL,
@@ -66,7 +82,7 @@ def build_hierarchical_crew(student_data: dict):
             f"학부모 커뮤니티 대표입니다. "
             f"보호자가 설정한 목표({student_data.get('protector_goal')})를 "
             f"커리큘럼에 반드시 반영해야 합니다. "
-            f"아이의 관심사({student_data.get('small_interest_name')})를 문제에 활용하여 "
+            f"아이의 관심사({interest_text})를 문제에 활용하여 "
             f"학습 동기를 높이는 것도 중요하게 생각합니다. "
             f"아이의 성장과 자신감을 우선시하며, 무리한 학습보다는 꾸준한 발전을 원합니다."
         ),
@@ -87,7 +103,7 @@ def build_hierarchical_crew(student_data: dict):
 - 이름: {student_data.get('name', '학생')}
 - 현재 레벨: {student_data.get('level', 1)}
 - 약점 자모: {student_data.get('real_jamo', 'ㄱ')} ↔ {student_data.get('confusion_jamo', 'ㄴ')} 혼동
-- 관심사: {student_data.get('small_interest_name', '동물')}
+- 관심사: {interest_text}
 - 보호자 목표: {student_data.get('protector_goal', 'FOCUS_ON_WEAKNESS')}
 - 저번 주 정확도: {student_data.get('weekly_accuracy_rate', 0.0):.1%}
 - 저번 주 실패율: {student_data.get('weekly_fail_rate', 0.0):.1%}
@@ -160,10 +176,10 @@ def build_hierarchical_crew(student_data: dict):
     {{"role": "Manager", "message": "오늘 회의 시작하겠습니다. 치료사님 먼저 진단 부탁드립니다."}},
     {{"role": "치료사", "message": "학생의 ㄱ/ㄴ 혼동이 심하고 정확도 60%입니다. 레벨 2 유지하며 탐험1을 강화해야 합니다."}},
     {{"role": "심리코치", "message": "탐험1을 너무 많이 하면 지루해할 수 있어요. 탐험3,4도 적절히 섞어주세요."}},
-    {{"role": "부모", "message": "아이가 {student_data.get('small_interest_name', '동물')}을 좋아하니 그 주제로 문제를 만들어주세요."}},
-    {{"role": "Manager", "message": "좋습니다. 탐험1(5문제), 탐험2(3문제), 탐험3(1문제), 탐험4(1문제)로 균형있게 배치하고, {student_data.get('small_interest_name', '동물')} 주제를 활용하겠습니다."}}
+    {{"role": "부모", "message": "아이가 {interest_text}을 좋아하니 그 주제로 문제를 만들어주세요."}},
+    {{"role": "Manager", "message": "좋습니다. 탐험1(5문제), 탐험2(3문제), 탐험3(1문제), 탐험4(1문제)로 균형있게 배치하고, {interest_text} 주제를 활용하겠습니다."}}
   ],
-  "discussion_summary": "3명의 전문가가 협의한 결과, 레벨 2를 유지하면서 약점 자모(ㄱ/ㄴ)를 집중 훈련하되, 지루함을 방지하기 위해 탐험 유형을 다양하게 배치하고 {student_data.get('small_interest_name', '동물')} 주제를 활용하기로 결정했습니다."
+  "discussion_summary": "3명의 전문가가 협의한 결과, 레벨 2를 유지하면서 약점 자모(ㄱ/ㄴ)를 집중 훈련하되, 지루함을 방지하기 위해 탐험 유형을 다양하게 배치하고 {interest_text} 주제를 활용하기로 결정했습니다."
 }}
 
 **중요**: 반드시 JSON 형식으로 출력하세요. JSON 외 다른 텍스트는 포함하지 마세요.
