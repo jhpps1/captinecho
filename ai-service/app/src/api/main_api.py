@@ -268,14 +268,9 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
 
         # 11. DB 저장 (Manager 생성 dialogue 사용)
         if latest_report:
-            now = datetime.now()
-            week_start, week_end = get_week_boundary(now)
-            total_time = calculate_weekly_total_time(db, student_id, week_start, week_end)
-
             latest_report.curriculum = curriculum_text
             latest_report.discussion_log = dialogue  # Manager가 생성한 A2A 대화 로그 저장
             latest_report.curriculum_structure = curriculum_structure  # JSON (dict)
-            latest_report.total_time = total_time # total_time 갱신
             db.commit()
             db.refresh(latest_report)
             report_id = latest_report.report_id
@@ -315,23 +310,45 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
         return {"error": str(e), "status": "failed"}
 
 
-# 6. 문제 생성 엔드포인트
+from app.src.service.question_service import generate_problems_for_one_week, generate_problems_from_signup
+
 @router.post("/problems/generate/{student_id}")
 def generate_problems(student_id: int, db: Session = Depends(get_db)):
     """
     커리큘럼 기반으로 주간 문제 생성 (월~금, 하루 10문제)
-    문제 생성 및 DB 저장은 question_service.py의 generate_problems_for_one_week로 위임합니다.
+    신규 가입 학생은 가입 요일부터 금요일까지(평일만) 예외적으로 문제 생성
+    기존 학생은 월~금 전체
     """
     try:
-        # 💡 서비스 함수 호출. 이 함수는 DB 저장까지 완료합니다.
-        result = generate_problems_for_one_week(db, student_id)
+        # 1. 학생 객체 조회 (가입일 필요)
+        student = db.query(Student).filter(Student.student_id == student_id).first()
+        if not student:
+            return {"status": "failed", "student_id": student_id, "generated_count": 0, "week_dates": [], "problems": [], "error": "학생 정보 없음"}
 
-        # generate_problems_for_one_week 함수가 반환한 결과를 처리
+        # 2. 가입일 기준 이번주 판단
+        signup_date = student.created_at.date() if student.created_at else datetime.now().date()
+        today = datetime.now().date()
+        week_start = today - timedelta(days=today.weekday())  # 이번주 월요일
+        week_end = week_start + timedelta(days=4)  # 이번주 금요일
+
+        # 3. 만약 가입일이 이번주에 속하면 "가입일~금요일"만 생성
+        if week_start <= signup_date <= week_end:
+            # 신규 가입 주 = 예외 처리 함수로 문제 생성
+            result = generate_problems_from_signup(db, student_id, signup_date)
+        else:
+            # 기존 학생 = 전체 주 문제 생성
+            result = generate_problems_for_one_week(db, student_id)
+
         if "error" in result:
-             # 오류가 발생한 경우를 대비
-            return {"status": "failed", "student_id": student_id, "generated_count": 0, "week_dates": [], "problems": [], "error": result["error"]}
+            return {
+                "status": "failed",
+                "student_id": student_id,
+                "generated_count": 0,
+                "week_dates": [],
+                "problems": [],
+                "error": result["error"]
+            }
 
-        # 성공적으로 문제 생성이 완료되면 (generated_count는 서비스 함수가 반환)
         return {
             "status": "success",
             "student_id": student_id,
@@ -339,8 +356,7 @@ def generate_problems(student_id: int, db: Session = Depends(get_db)):
             "week_dates": result.get("week_dates", []),
             "problems": result.get("problems", [])
         }
-        
+
     except Exception as e:
-        # 전체 과정에서 예외 발생 시 롤백 및 에러 반환
         db.rollback()
         return {"error": str(e), "status": "failed", "generated_count": 0}
