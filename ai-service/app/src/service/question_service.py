@@ -194,7 +194,7 @@ def process_day_problem_items(session, student_id, llm_result):
                 if jt:
                     blank_position = jt
                     break
-        item["blank_position"] = blank_position if blank_position else ""
+        item["blank_position"] = blank_position  # Adventure 3, 4는 None으로 유지
 
         if problem_text:
             try:
