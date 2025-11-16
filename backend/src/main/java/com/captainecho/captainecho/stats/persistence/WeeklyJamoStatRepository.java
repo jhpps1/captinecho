@@ -28,4 +28,15 @@ public interface WeeklyJamoStatRepository extends JpaRepository<WeeklyJamoStat, 
      * 특정 리포트의 모든 자모 통계 조회
      */
     List<WeeklyJamoStat> findAllByWeeklyPersonalReport_ReportId(Integer reportId);
+
+    /**
+     * 특정 학생의 모든 주차 자모 통계 조회 (전체 학습 분석용)
+     */
+    @Query("""
+            SELECT wjs
+            FROM WeeklyJamoStat wjs
+            WHERE wjs.student.studentId = :studentId
+            ORDER BY wjs.jamo ASC
+            """)
+    List<WeeklyJamoStat> findAllWeeklyStatsByStudentId(@Param("studentId") Integer studentId);
 }

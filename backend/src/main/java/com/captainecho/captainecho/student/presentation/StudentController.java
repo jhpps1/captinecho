@@ -9,6 +9,7 @@ import com.captainecho.captainecho.student.application.command.DeleteStudentComm
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
 import com.captainecho.captainecho.student.application.command.UpdatePinCommand;
@@ -18,6 +19,7 @@ import com.captainecho.captainecho.student.application.result.AddStudentInterest
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
@@ -36,6 +38,7 @@ import com.captainecho.captainecho.student.presentation.response.DeleteStudentIn
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.RecoveryCodeResponse;
+import com.captainecho.captainecho.student.presentation.response.TotalJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
 import com.captainecho.captainecho.student.presentation.response.UpdatePinResponse;
 import com.captainecho.captainecho.student.presentation.response.UpdateProfileImageResponse;
@@ -196,6 +199,25 @@ public class StudentController {
         GetWeeklyJamoStatResult result = studentService.getWeeklyJamoStat(command);
 
         GetWeeklyJamoStatResponse response = GetWeeklyJamoStatResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/total/jamo/stat")
+    public ResponseEntity<TotalJamoStatResponse> getTotalJamoStat(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetTotalJamoStatCommand command = new GetTotalJamoStatCommand(protectorId, studentId);
+        GetTotalJamoStatResult result = studentService.getTotalJamoStat(command);
+
+        TotalJamoStatResponse response = TotalJamoStatResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
