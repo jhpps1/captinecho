@@ -12,6 +12,7 @@ import com.captainecho.captainecho.student.application.command.GetImproveAccurac
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
+import com.captainecho.captainecho.student.application.command.GetWorstImproveJamoCommand;
 import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
 import com.captainecho.captainecho.student.application.command.UpdatePinCommand;
 import com.captainecho.captainecho.student.application.command.UpdateStudentCommand;
@@ -23,6 +24,7 @@ import com.captainecho.captainecho.student.application.result.GetImproveAccuracy
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
+import com.captainecho.captainecho.student.application.result.GetWorstImproveJamoResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
 import com.captainecho.captainecho.student.application.result.UpdatePinResult;
@@ -42,6 +44,7 @@ import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoSt
 import com.captainecho.captainecho.student.presentation.response.ImproveAccuracyResponse;
 import com.captainecho.captainecho.student.presentation.response.RecoveryCodeResponse;
 import com.captainecho.captainecho.student.presentation.response.TotalJamoStatResponse;
+import com.captainecho.captainecho.student.presentation.response.WorstImproveJamoResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
 import com.captainecho.captainecho.student.presentation.response.UpdatePinResponse;
 import com.captainecho.captainecho.student.presentation.response.UpdateProfileImageResponse;
@@ -240,6 +243,25 @@ public class StudentController {
         GetImproveAccuracyResult result = studentService.getImproveAccuracy(command);
 
         ImproveAccuracyResponse response = ImproveAccuracyResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/worst/improve/jamo")
+    public ResponseEntity<WorstImproveJamoResponse> getWorstImproveJamo(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetWorstImproveJamoCommand command = new GetWorstImproveJamoCommand(protectorId, studentId);
+        GetWorstImproveJamoResult result = studentService.getWorstImproveJamo(command);
+
+        WorstImproveJamoResponse response = WorstImproveJamoResponse.from(result);
 
         return ResponseEntity.ok(response);
     }

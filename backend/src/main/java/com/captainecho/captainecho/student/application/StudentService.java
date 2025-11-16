@@ -29,6 +29,7 @@ import com.captainecho.captainecho.student.application.command.GetImproveAccurac
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
+import com.captainecho.captainecho.student.application.command.GetWorstImproveJamoCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.event.FileDeleteEvent;
 
@@ -46,6 +47,7 @@ import com.captainecho.captainecho.student.application.result.GetImproveAccuracy
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
+import com.captainecho.captainecho.student.application.result.GetWorstImproveJamoResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
 import com.captainecho.captainecho.student.application.result.UpdatePinResult;
@@ -593,6 +595,98 @@ public class StudentService {
         return stats.stream()
                 .mapToInt(stat -> stat.getFailCount().intValue())
                 .sum();
+    }
+
+    /**
+     * 가장 개선율이 높은 자모 Top 2 조회 (주차별 비교)
+     */
+    @Transactional(readOnly = true)
+    public GetWorstImproveJamoResult getWorstImproveJamo(GetWorstImproveJamoCommand command) {
+        log.info("개선율 높은 자모 Top 2 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
+                .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
+
+        // 4. 데이터가 2개 미만이면 null 반환
+        if (recentReports.size() < 2) {
+            log.info("개선율 높은 자모 조회 불가 - Student ID: {}, 리포트 개수: {}",
+                    command.studentId(), recentReports.size());
+            return GetWorstImproveJamoResult.of(null);
+        }
+
+        WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
+        WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
+
+        // 5. 지지난주 리포트의 자모별 통계 조회
+        List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(twoWeeksAgoReport.getReportId());
+
+        // 6. 지난주 리포트의 자모별 통계 조회
+        List<WeeklyJamoStat> lastWeekStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
+
+        // 7. 자모별로 그룹핑
+        Map<String, WeeklyJamoStat> twoWeeksAgoMap = twoWeeksAgoStats.stream()
+                .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
+        Map<String, WeeklyJamoStat> lastWeekMap = lastWeekStats.stream()
+                .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
+
+        // 8. 모든 자모에 대해 개선율 계산
+        List<GetWorstImproveJamoResult.WorstJamo> jamoList = new java.util.ArrayList<>();
+
+        // 모든 자모 수집 (양쪽 주차에 있는 모든 자모)
+        Set<String> allJamos = new java.util.HashSet<>();
+        allJamos.addAll(twoWeeksAgoMap.keySet());
+        allJamos.addAll(lastWeekMap.keySet());
+
+        for (String jamo : allJamos) {
+            WeeklyJamoStat twoWeeksAgoStat = twoWeeksAgoMap.get(jamo);
+            WeeklyJamoStat lastWeekStat = lastWeekMap.get(jamo);
+
+            // 양쪽 주차에 모두 데이터가 있는 경우만 계산
+            if (twoWeeksAgoStat != null && lastWeekStat != null) {
+                Integer twoWeeksAgoAccuracy = calculateJamoAccuracy(twoWeeksAgoStat);
+                Integer lastWeekAccuracy = calculateJamoAccuracy(lastWeekStat);
+
+                if (twoWeeksAgoAccuracy != null && lastWeekAccuracy != null) {
+                    Integer improveRate = lastWeekAccuracy - twoWeeksAgoAccuracy;
+                    jamoList.add(new GetWorstImproveJamoResult.WorstJamo(
+                            jamo, twoWeeksAgoAccuracy, lastWeekAccuracy, improveRate
+                    ));
+                }
+            }
+        }
+
+        // 9. 개선율 내림차순 정렬 후 상위 2개만 반환 (동점일 경우 자모 이름 순)
+        List<GetWorstImproveJamoResult.WorstJamo> top2 = jamoList.stream()
+                .sorted(Comparator.comparing(GetWorstImproveJamoResult.WorstJamo::improveRate).reversed()
+                        .thenComparing(GetWorstImproveJamoResult.WorstJamo::jamo))
+                .limit(2)
+                .toList();
+
+        log.info("개선율 높은 자모 Top 2 조회 완료 - Student ID: {}, 조회된 개수: {}", command.studentId(), top2.size());
+
+        return GetWorstImproveJamoResult.of(top2.isEmpty() ? null : top2);
+    }
+
+    /**
+     * 단일 자모의 정확도 계산
+     */
+    private Integer calculateJamoAccuracy(WeeklyJamoStat stat) {
+        int totalAttempts = stat.getTotalAttempts().intValue();
+        int failCount = stat.getFailCount().intValue();
+        return totalAttempts > 0 ? (int) Math.round((totalAttempts - failCount) * 100.0 / totalAttempts) : null;
     }
 
     /**
