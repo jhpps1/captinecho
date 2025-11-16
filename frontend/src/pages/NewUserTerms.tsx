@@ -17,12 +17,18 @@ const NewUserTerms: React.FC = () => {
   /**
    * 스크롤 이벤트 핸들러 - 끝까지 스크롤했는지 확인
    */
-  const handleScroll = (
+const handleScroll = (
     e: UIEvent<HTMLDivElement>,
     setter: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop - clientHeight < 1) {
+    
+    // 남은 스크롤 거리를 계산합니다.
+    const scrollRemaining = scrollHeight - scrollTop - clientHeight;
+    
+    // 5px 정도의 오차를 허용하여 끝까지 스크롤했는지 확인합니다.
+    const tolerance = 5; 
+    if (scrollRemaining < tolerance) {
       setter(true);
     }
   };
