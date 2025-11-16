@@ -26,6 +26,9 @@ import {
   getDailyAccuracy,
   getWeeklyAccuracy,
   type AccuracyResponse,
+  getBestJamos,
+  getWorstJamos,
+  type JamoImprovementApiData,
 } from '../api/studentApi'
 
 interface Student {
@@ -35,6 +38,14 @@ interface Student {
   streak: number;
   isActive: boolean;
   profileImage?: string;
+}
+
+// 💡 추가: ImprovementCard가 필요로 하는 데이터 형식
+interface JamoImprovementData {
+  jamo: string;
+  previousAccuracy: number;
+  currentAccuracy: number;
+  improvement: number;
 }
 
 // Mock Data (백엔드 미구현 - 나중에 API로 교체)
@@ -53,17 +64,7 @@ const MOCK_IMPROVEMENT_DATA = {
   overall: {
     previous: 78,
     current: 85,
-  },
-  jamo: [
-    { jamo: 'ㄱ', previousAccuracy: 65, currentAccuracy: 92, improvement: 27 },
-    { jamo: 'ㄴ', previousAccuracy: 63, currentAccuracy: 65, improvement: 2 },
-    { jamo: 'ㄷ', previousAccuracy: 70, currentAccuracy: 88, improvement: 18 },
-    { jamo: 'ㄹ', previousAccuracy: 68, currentAccuracy: 73, improvement: 5 },
-    { jamo: 'ㅁ', previousAccuracy: 90, currentAccuracy: 95, improvement: 5 },
-    { jamo: 'ㅂ', previousAccuracy: 72, currentAccuracy: 78, improvement: 6 },
-    { jamo: 'ㅅ', previousAccuracy: 65, currentAccuracy: 70, improvement: 5 },
-    { jamo: 'ㅇ', previousAccuracy: 80, currentAccuracy: 85, improvement: 5 },
-  ],
+  }
 };
 
 /**
@@ -104,6 +105,7 @@ export default function ProtectorDashboard() {
   const [dailyGoalCount, setDailyGoalCount] = useState(10);
   const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
+  const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
@@ -142,6 +144,8 @@ export default function ProtectorDashboard() {
   useEffect(() => {
     if (!selectedStudentId) return;
 
+    sessionStorage.setItem('studentId', selectedStudentId.toString());
+
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
@@ -155,6 +159,8 @@ export default function ProtectorDashboard() {
           dailyStreakData,
           dailyAccuracyData,
           weeklyAccuracyData,
+          bestJamosData,
+          worstJamosData,
         ] = await Promise.all([
           getCurriculum(selectedStudentId),
           getLearningTime(selectedStudentId),
@@ -164,6 +170,8 @@ export default function ProtectorDashboard() {
           getDailyStreak(selectedStudentId),
           getDailyAccuracy(),
           getWeeklyAccuracy(),
+          getBestJamos(),
+          getWorstJamos(),
         ]);
 
         // 데이터 설정
@@ -175,6 +183,21 @@ export default function ProtectorDashboard() {
         setDailyStreak(dailyStreakData);
         setDailyAccuracy(dailyAccuracyData.accuracy);
         setWeeklyAccuracy(weeklyAccuracyData.accuracy);
+        setDailyAccuracy(dailyAccuracyData.accuracy);
+        setWeeklyAccuracy(weeklyAccuracyData.accuracy);
+
+        // 💡 추가: API 응답을 ImprovementCard가 요구하는 형식으로 매핑
+        const mapJamoData = (apiData: JamoImprovementApiData): JamoImprovementData => ({
+          jamo: apiData.jamo,
+          previousAccuracy: apiData.twoWeeksAgo,
+          currentAccuracy: apiData.lastWeek,
+          improvement: apiData.improveRate,
+        });
+
+        // ImprovementCard가 이 배열을 받아 알아서 정렬하여 '개선'과 '부진'을 표시
+        const bestJamos = bestJamosData.bestJamos.map(mapJamoData);
+        const worstJamos = worstJamosData.worstJamos.map(mapJamoData);
+        setJamoImprovements([...bestJamos, ...worstJamos]);
 
         // Streak 계산 및 업데이트
         const streak = dailyStreakData.currentStreak;
@@ -196,6 +219,7 @@ export default function ProtectorDashboard() {
         setDailyStreak(null);
         setDailyAccuracy(0);
         setWeeklyAccuracy(0);
+        setJamoImprovements([]);
       } finally {
         setIsLoading(false);
       }
@@ -314,7 +338,7 @@ export default function ProtectorDashboard() {
                 <div className="lg:col-span-1">
                   <ImprovementCard
                     overallImprovement={MOCK_IMPROVEMENT_DATA.overall}
-                    jamoImprovements={MOCK_IMPROVEMENT_DATA.jamo}
+                    jamoImprovements={jamoImprovements}
                   />
                 </div>
               </div>
