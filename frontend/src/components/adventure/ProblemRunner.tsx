@@ -256,7 +256,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
       {/* 진행도 표시 */}
       <div className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
         <span className="text-sm font-semibold">
-          {currentIndex + 1} / {problems.length}
+          {problems[currentIndex]?.seqNo || (currentIndex + 1)} / 10
         </span>
       </div>
 
