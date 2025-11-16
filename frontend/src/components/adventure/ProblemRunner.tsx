@@ -270,7 +270,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         studentId={studentId}
       />
 
-      {/* 개발용: 문제 네비게이션 버튼 */}
+      {/* 개발용: 문제 네비게이션 버튼 (추후 삭제 예정)*/}
       <div className="fixed bottom-4 right-4 flex gap-2 z-50">
         <button
           onClick={handlePrevProblem}
