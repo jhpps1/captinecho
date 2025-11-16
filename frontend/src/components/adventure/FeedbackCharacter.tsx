@@ -3,14 +3,16 @@ import { useEffect, useState } from 'react';
 type FeedbackCharacterProps = {
   visible: boolean;
   isCorrect: boolean;
+  message?: string;
 };
 
-export const FeedbackCharacter = ({ visible, isCorrect }: FeedbackCharacterProps) => {
+export const FeedbackCharacter = ({ visible, isCorrect, message }: FeedbackCharacterProps) => {
   const [show, setShow] = useState(false);
   const [animationState, setAnimationState] = useState<'hidden' | 'pop' | 'stable' | 'fadeOut'>('hidden');
 
   useEffect(() => {
     if (visible) {
+      // 등장 애니메이션: 팝 효과 유지
       setShow(true);
       setAnimationState('hidden');
 
@@ -24,26 +26,22 @@ export const FeedbackCharacter = ({ visible, isCorrect }: FeedbackCharacterProps
         setAnimationState('stable');
       }, 400);
 
-      // 3초 후: 페이드아웃 시작
-      const fadeTimer = setTimeout(() => {
-        setAnimationState('fadeOut');
-      }, 3000);
-
-      // 3.5초 후: 완전히 제거
-      const hideTimer = setTimeout(() => {
-        setShow(false);
-        setAnimationState('hidden');
-      }, 3500);
-
       return () => {
         clearTimeout(popTimer);
         clearTimeout(stableTimer);
-        clearTimeout(fadeTimer);
-        clearTimeout(hideTimer);
       };
     } else {
-      setShow(false);
-      setAnimationState('hidden');
+      // 사라지기: 부드러운 페이드아웃 후 제거
+      setAnimationState('fadeOut');
+
+      const hideTimer = setTimeout(() => {
+        setShow(false);
+        setAnimationState('hidden');
+      }, 300); // 0.3초 페이드아웃
+
+      return () => {
+        clearTimeout(hideTimer);
+      };
     }
   }, [visible]);
 
@@ -72,6 +70,18 @@ export const FeedbackCharacter = ({ visible, isCorrect }: FeedbackCharacterProps
                   transition-all duration-300 ease-out
                   ${getStateClass()}`}
     >
+      {/* 말풍선 (캐릭터 위에 표시) */}
+      {message && (
+        <div className="absolute bottom-full mb-4 right-0 min-w-max">
+          <div className="relative bg-yellow-100 border-2 border-yellow-400 px-10 py-5 sm:px-12 sm:py-6 rounded-2xl shadow-lg animate-bounce">
+            <p className="text-2xl sm:text-3xl font-bold text-gray-800 whitespace-nowrap">{message}</p>
+            {/* 말풍선 꼬리 */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[15px] border-r-[15px] border-t-[15px] border-l-transparent border-r-transparent border-t-yellow-400"></div>
+          </div>
+        </div>
+      )}
+
+      {/* 캐릭터 이미지 */}
       <img
         src={isCorrect ? '/adventurepage/happy_eco.png' : '/adventurepage/question_eco.png'}
         alt={isCorrect ? '정답 캐릭터' : '오답 캐릭터'}

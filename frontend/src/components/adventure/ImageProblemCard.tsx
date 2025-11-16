@@ -2,7 +2,7 @@
 // Adventure3에서 사용
 
 type ImageProblemCardProps = {
-  imageUrl?: string;
+  imageUrl?: string | null;
   alt?: string;
 };
 

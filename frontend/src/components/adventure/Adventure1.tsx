@@ -81,7 +81,7 @@ export const Adventure1 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
 
       setTimeout(() => {
         onSubmit(option, attemptCount);
-      }, 1000);
+      }, 2000);
     } else {
       // 오답
       setIsAnimating(true);
@@ -110,7 +110,7 @@ export const Adventure1 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
       setTimeout(() => {
         setSelectedAnswer(null);
         setIsAnimating(false);
-      }, 1000);
+      }, 2000);
     }
   };
 
