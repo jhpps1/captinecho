@@ -37,7 +37,9 @@ def build_hierarchical_crew(student_data: dict):
         backstory=(
             "10년 경력의 난독증 치료사입니다. "
             "자모 인식 장애, 음소 혼동 패턴 분석 전문가로, "
-            "학생의 정확도와 실패율을 기반으로 최적의 난이도와 탐험 유형을 설계합니다. "
+            f"({student_data.get('confusion_jamo')})와 ({student_data.get('real_jamo')})를 분석하여 학생에게 맞는 최적의 문제를 찾습니다."
+            f"({student_data.get('avg_fail')})과 ({student_data.get('avg_accuracy')})을 기반으로 최적의 난이도와 탐험 유형을 설계합니다. "
+        
             "데이터 기반의 객관적 진단을 제공하며, 학습 성과를 최우선으로 고려합니다."
         ),
         allow_delegation=False,
@@ -62,9 +64,9 @@ def build_hierarchical_crew(student_data: dict):
         goal="보호자 목표를 커리큘럼에 반영",
         backstory=(
             f"학부모 커뮤니티 대표입니다. "
-            f"보호자가 설정한 목표({student_data.get('protector_goal', 'FOCUS_ON_WEAKNESS')})를 "
+            f"보호자가 설정한 목표({student_data.get('protector_goal')})를 "
             f"커리큘럼에 반드시 반영해야 합니다. "
-            f"아이의 관심사({student_data.get('small_interest_name', '동물')})를 문제에 활용하여 "
+            f"아이의 관심사({student_data.get('small_interest_name')})를 문제에 활용하여 "
             f"학습 동기를 높이는 것도 중요하게 생각합니다. "
             f"아이의 성장과 자신감을 우선시하며, 무리한 학습보다는 꾸준한 발전을 원합니다."
         ),

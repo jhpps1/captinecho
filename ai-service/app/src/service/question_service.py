@@ -1,25 +1,17 @@
-#app/src/service/question_service.py
-
 import re
 import json
 import datetime
-import os
 from sqlalchemy import text
 from app.src.tasks.question import get_latest_curriculum, create_day_problem
 from app.src.utils.llm import llm_problem
-from app.src.utils.s3 import upload_to_s3  # S3 업로드 (필요 시 사용)
-# 🚨 TTS 및 이미지 생성 함수는 내부적으로 S3 업로드를 처리합니다
 from app.src.api.tts_api import generate_tts_and_upload
 from app.src.api.gemini_api import generate_image_with_gemini_flash
 from app.src.core.config import settings
 from dotenv import load_dotenv
 from app.src.utils.normalization import normalize_blank_position
-# Batch scheduler는 Spring Boot에서 관리 (매주 일요일 23:00)
-
 
 load_dotenv()
 
-# 한글 자모 분리 테이블
 CHOSEONG_LIST = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
 JUNGSEONG_LIST = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
 JONGSEONG_LIST = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
@@ -39,13 +31,9 @@ def get_jamo_type(syllable, target_jamo):
         return 'FINAL'
     return ''
 
-
-
-
-# === [1] 날짜 자동 계산 함수 ===
 def get_weekdays_for_this_week():
     today = datetime.date.today()
-    weekday = today.weekday()  # 월=0, ... 일=6
+    weekday = today.weekday()  # 월=0 ... 일=6
     days_to_sunday = (6 - weekday) if weekday != 6 else 0
     this_sunday = today + datetime.timedelta(days=days_to_sunday) if weekday != 6 else today
     days_kr = ['월요일', '화요일', '수요일', '목요일', '금요일']
@@ -55,26 +43,37 @@ def get_weekdays_for_this_week():
         weekdays.append((day_kr, day_date.strftime('%Y-%m-%d')))
     return weekdays
 
-# === [2] LLM 코드블록 추출 함수 ===
 def extract_json_from_llm_response(llm_response):
     llm_response = llm_response.strip()
-    # ``````
-    match = re.search(r"```json\s*([\w\W]*?)```", llm_response, re.DOTALL)
+    
+    # 1. ```json ... ``` 형태 추출 시도 (가장 흔함)
+    # 그룹 1: JSON 블록 내부의 내용을 캡처
+    match = re.search(r"```json\s*(.*?)\s*```", llm_response, re.DOTALL | re.IGNORECASE)
     if match:
+        print("✅ JSON 마크다운 블록 추출 성공 (```json)")
         return match.group(1).strip()
-    # 일반 ``````
-    match = re.search(r"```\s*([\w\W]*?)```", llm_response, re.DOTALL)
+    
+    # 2. ``` ... ``` 형태 추출 시도
+    match = re.search(r"```\s*(.*?)\s*```", llm_response, re.DOTALL)
     if match:
+        print("✅ 일반 마크다운 블록 추출 성공 (```)")
         return match.group(1).strip()
+    
+    # 3. LLM이 바로 JSON 배열을 반환했을 경우 (fallback)
+    # 가장 큰 JSON 배열 [...]을 찾아 추출 (추가적인 안정성 확보)
+    match = re.search(r"(\[.*\])", llm_response.strip(), re.DOTALL)
+    if match:
+        print("✅ 원본에서 JSON 배열 추출 성공")
+        return match.group(1).strip()
+
+    print("⚠️ JSON 추출 실패, 원본 텍스트 반환")
     return llm_response.strip()
 
-# === [3] 파싱 전 JS 주석 제거 함수 ===
 def clean_json_for_parsing(json_string):
     json_string = re.sub(r'//.*?(\r\n|\n)', r"\1", json_string)
     json_string = re.sub(r'/\*.*?\*/', '', json_string, flags=re.DOTALL)
     return json_string
 
-# === [추가] 안전하게 LLM JSON 파싱 함수 ===
 def safe_parse_json(llm_response, day_name):
     json_string = extract_json_from_llm_response(llm_response)
     json_string = clean_json_for_parsing(json_string)
@@ -82,12 +81,21 @@ def safe_parse_json(llm_response, day_name):
         print(f"{day_name} LLM 응답이 비어 있어 건너뜀")
         return []
     try:
-        return json.loads(json_string)
+        problems = json.loads(json_string)
+        # LLM이 파싱 가능한 빈 배열을 반환하는 경우도 실패로 간주
+        if not problems:
+            print(f"⚠️ {day_name} JSON 파싱은 성공했으나, 빈 배열이 반환됨.")
+            return []
+        return problems
+        
     except Exception as e:
-        print(f"{day_name} LLM 응답이 올바른 JSON이 아님:", llm_response)
+        # 💡 에러 발생 시 원본 응답의 일부만 출력하도록 수정
+        print(f"❌ {day_name} LLM 응답이 올바른 JSON이 아님: {type(e).__name__} - {e}")
+        print(f"--- 실패한 원본 응답 (앞 500자) ---")
+        print(llm_response[:500])
+        print("---------------------------------")
         return []
 
-# 학생 관심사 가져오기 함수 (text() 래핑 필수)
 def get_interest_id_for_student(session, student_id):
     result = session.execute(
         text("""
@@ -98,10 +106,57 @@ def get_interest_id_for_student(session, student_id):
     row = result.first()
     return row[0] if row else 0
 
-# === [4] DB용 사전 처리 함수 === (blank_phoneme 정제 로직 포함)
+def get_small_interest_name_for_student(session, student_id):
+    result = session.execute(
+        text("""
+        SELECT si.small_interest_name
+        FROM student_interest sti
+        JOIN sub_interest si ON sti.interest_id = si.sub_interest_id
+        WHERE sti.student_id = :student_id LIMIT 1
+        """),
+        {"student_id": student_id}
+    )
+    row = result.first()
+    return row[0] if row else ""
+
+
+def generate_fallback_problems(adventure_type_id: int, problem_count: int) -> list:
+    """
+    OpenAI 실패 시 기본 문제 생성
+    """
+    fallback_data = {
+        1: [  # 자모(음소) 맞추기
+            {"problem_text": "사과", "blank_position": "MEDIAL", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
+            {"problem_text": "고양이", "blank_position": "INITIAL", "blank_phoneme": "ㄱ", "choices": ["ㄱ", "ㄴ", "ㄷ"]},
+            {"problem_text": "토끼", "blank_position": "INITIAL", "blank_phoneme": "ㅌ", "choices": ["ㅌ", "ㄷ", "ㅈ"]},
+        ],
+        2: [  # 빈칸 맞추기
+            {"problem_text": "사과", "image_url": "apple.jpg", "blank_position": "MEDIAL", "blank_phoneme": "ㅘ", "choices": ["ㅘ", "ㅏ", "ㅗ"]},
+            {"problem_text": "나무", "image_url": "tree.jpg", "blank_position": "INITIAL", "blank_phoneme": "ㄴ", "choices": ["ㄴ", "ㄷ", "ㅁ"]},
+            {"problem_text": "별", "image_url": "star.jpg", "blank_position": "FINAL", "blank_phoneme": "ㄹ", "choices": ["ㄹ", "ㅁ", "ㄴ"]},
+        ],
+        3: [  # 단어 맞추기
+            {"problem_text": "사과", "image_url": "apple.jpg", "choices": ["사과", "수박", "포도"], "correct_answer": "사과"},
+            {"problem_text": "바다", "image_url": "sea.jpg", "choices": ["바다", "산", "강"], "correct_answer": "바다"},
+            {"problem_text": "하늘", "image_url": "sky.jpg", "choices": ["하늘", "땅", "구름"], "correct_answer": "하늘"},
+        ],
+        4: [  # 단어 읽기
+            {"problem_text": "강아지"},
+            {"problem_text": "고양이"},
+            {"problem_text": "토끼"},
+        ]
+    }
+
+    base_problems = fallback_data.get(adventure_type_id, fallback_data[1])
+    result = []
+
+    for i in range(problem_count):
+        # 💡 .copy()를 사용하여 독립적인 딕셔너리 복사본을 추가
+        result.append(base_problems[i % len(base_problems)].copy()) 
+
+    return result
+
 def process_day_problem_items(session, student_id, llm_result):
-    
-    # Base64 디코딩을 건너뛸 것으로 예상되는 문자열 패턴을 확인하는 헬퍼 함수
     def is_likely_placeholder(data):
         if not data:
             return True
@@ -114,50 +169,23 @@ def process_day_problem_items(session, student_id, llm_result):
             return True
         return False
 
-
-    # Gemini API Key 사용
     GEMINI_API_KEY = settings.GEMINI_API_KEY
 
     for item in llm_result:
-        # 1. student_id 설정
         item["student_id"] = student_id if student_id is not None else 0
-
-        # 💡 [수정] UnboundLocalError 해결: TTS 및 이미지 로직 전에 변수들을 먼저 할당합니다.
         correct_answer_text = item.get("correct_answer")
         adventure_type = item.get("adventure_type_id")
 
-        # 🚨 기본 URL 초기화 (제거된 로직 대체)
         item["image_url"] = ""
         item["sound_url"] = "problems/default_tts.mp3"
-        
-        # 임시 변수에 데이터 가져오기 (None 처리)
+
         img_data = item.get("image_data")
         snd_data = item.get("sound_data")
-        
-        # # 2. 이미지 처리
-        # if img_data and not is_likely_placeholder(img_data):
-        #     try:
-        #         item["image_url"] = upload_to_local(img_data, key_prefix='problems/')
-        #     except Exception as e:
-        #         print(f"⚠️ Image Base64 Upload Failed for item: {e}")
-        #         item["image_url"] = "" 
-        # else:
-        #     item["image_url"] = ""
-            
-        # # 3. 사운드 처리
-        # if snd_data and not is_likely_placeholder(snd_data):
-        #     try:
-        #         item["sound_url"] = upload_to_local(snd_data, key_prefix='problems/')
-        #     except Exception as e:
-        #         print(f"⚠️ Sound Base64 Upload Failed for item: {e}")
-        #         item["sound_url"] = "problems/default_tts.mp3"
-        # else:
-        #     item["sound_url"] = "problems/default_tts.mp3"
-
 
         generated_sound_path = ""
-        adventure_type = item.get("adventure_type_id")  # adventure_type 미리 정의
-        blank_position  = None
+        blank_position = None
+        problem_text = item.get("problem_text")
+
         if adventure_type in [1, 2]:
             problem_text = item.get("problem_text", "")
             blank_jamo = item.get("blank_phoneme", "").strip()
@@ -168,106 +196,79 @@ def process_day_problem_items(session, student_id, llm_result):
                     break
         item["blank_position"] = blank_position if blank_position else ""
 
-        
-        if problem_text: # 정답 텍스트가 있는 경우에만 TTS 생성 시도
+        if problem_text:
             try:
-                # TTS API 호출: 정답 텍스트를 음성으로 변환하고 업로드 후 URL 반환
                 generated_sound_path = generate_tts_and_upload(
-                    problem_text, 
-                    student_id=student_id, 
-                    key_prefix='problems/sound/' # 저장 경로 지정
+                    problem_text,
+                    student_id=student_id,
+                    key_prefix='problems/sound/'
                 )
             except Exception as e:
                 print(f"❌ TTS 생성 및 업로드 실패: {e}")
                 generated_sound_path = ""
-                
             if generated_sound_path:
                 item["sound_url"] = generated_sound_path
                 print(f"✅ TTS 생성 성공! sound_url: {generated_sound_path}")
-            # 실패 시, item["sound_url"]은 'problems/default_tts.mp3' 기본값을 유지함
 
-
-
-
-
-# 🚨 [새로운 로직] 탐험 4의 correct_answer를 빈 문자열로 강제 처리
         if item.get("adventure_type_id") == 4:
             item["correct_answer"] = ""
-            # choices도 필요 없다면 비워줄 수 있습니다. (로그에 따라 필요하면 추가)
             if item.get("choices") is None or len(item.get("choices", [])) > 0:
-                 item["choices"] = []
-            item["image_url"] = "" # 탐험 4는 이미지 생성 안함
+                item["choices"] = []
+            item["image_url"] = ""
 
-        # 🚨 [이미지 생성] 탐험 2, 3일 경우 GMS 호출
-        # adventure_type은 이미 위에서 정의됨 (159번 라인)
-        problem_text = item.get("problem_text")
-
-        # 💡 생성 경로 변수를 미리 초기화
         generated_image_path = ""
 
         if adventure_type in [2, 3] and problem_text:
-            # GMS API 호출 시작 로그
             print(f"✨ Gemini API 호출 시작: '{problem_text}'")
-
-            # 1. Base64 데이터 생성 시도 로직 건너뛰기
             if GEMINI_API_KEY:
-                # generate_image_with_gemini_flash 함수는 이제 파일 경로를 반환해야 함
-                generated_image_path = generate_image_with_gemini_flash(
-                    problem_text, 
-                    GEMINI_API_KEY 
-                )
+                try:
+                    generated_image_path = generate_image_with_gemini_flash(problem_text, GEMINI_API_KEY)
+                except Exception as e:
+                    error_msg = str(e).encode('ascii', errors='replace').decode('ascii')
+                    print(f"[IMAGE] Error occurred: {error_msg}")
+                    generated_image_path = ""
             else:
                 print("❌ Gemini API Key가 없어 이미지 생성을 시도하지 않았습니다.")
                 generated_image_path = ""
 
-            # 호출 결과 처리 로직 (하나만 남김)
             if generated_image_path:
                 item["image_url"] = generated_image_path
                 print(f"✅ GMS 이미지 생성 성공! URL: {generated_image_path}")
             else:
                 print(f"❌ Gemini 이미지 생성 실패! 기본 URL 사용.")
-                item["image_url"] = "" # 실패 시 image_url을 비워둠
+                item["image_url"] = ""
 
-
-        # 4. 리스트 형식 보장 (choices, problem_phonemes)
         if isinstance(item.get("choices"), str):
             item["choices"] = [x.strip() for x in item["choices"].split(',') if x.strip()]
         elif item.get("choices") is None:
             item["choices"] = []
-            
+
         if isinstance(item.get("problem_phonemes"), str):
             item["problem_phonemes"] = [x.strip() for x in item["problem_phonemes"].split(',') if x.strip()]
         elif not isinstance(item.get("problem_phonemes"), list):
             item["problem_phonemes"] = []
-            
-        # 5. 숫자/문자열 기본값 및 정제 보장 (blank_phoneme 정제 및 길이 제한)
-        # blank_position 정규화 (소문자 → 대문자, 숫자 → 문자열 변환)
+
         item["blank_position"] = normalize_blank_position(
             item.get("blank_position"),
             adventure_type_id=adventure_type
         )
-         
+
         blank_phoneme_value = item.get("blank_phoneme")
         if blank_phoneme_value is not None:
-         # 1단계: 공백 제거
             cleaned_phoneme = str(blank_phoneme_value).strip()
-         
-           # 2단계: 5글자 초과 시 강제 절단 (DB 스키마 VARCHAR(5) 준수)
             if len(cleaned_phoneme) > 5:
                 print(f"⚠️ blank_phoneme '{cleaned_phoneme}'의 길이가 5자를 초과하여 강제 절단됩니다.")
                 item["blank_phoneme"] = cleaned_phoneme[:5]
             elif not cleaned_phoneme:
-                item["blank_phoneme"] = '' # 빈 문자열
+                item["blank_phoneme"] = ''
             else:
                 item["blank_phoneme"] = cleaned_phoneme
         else:
             item["blank_phoneme"] = ''
 
-        # 6. 불필요 필드 제거
         for key in ["image_data", "sound_data"]:
             item.pop(key, None)
-            
-        # 7. REQUIRED_KEYS에 대한 최종 점검 및 기본값 보장
+
         REQUIRED_KEYS = {
             "student_id", "adventure_type_id", "assigned_date", "seq_no", "level",
             "problem_text", "choices", "correct_answer",
@@ -284,102 +285,107 @@ def process_day_problem_items(session, student_id, llm_result):
                     item[req] = ""
                 else:
                     item[req] = ""
-                    
+
         item = {k: v for k, v in item.items() if k in REQUIRED_KEYS}
-        
         print("최종 저장할 item:", item)
         create_day_problem(session, **item)
 
-# 학생 관심사 가져오기 함수(이미 구현되어 있다면 재사용)
-def get_interest_id_for_student(session, student_id):
-    result = session.execute(
-        text("""
-        SELECT interest_id FROM student_interest WHERE student_id=:student_id LIMIT 1
-        """),
-        {"student_id": student_id}
-    )
-    row = result.first()
-    return row[0] if row else 0
+
+def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, assigned_date, student_id, student_level, curriculum_text):
+    type_count_lines = '\n'.join([
+        f"- adventure_type_id={item['type_id']}: {item['count']}개 (순서대로)" for item in curriculum_for_day
+    ])
+    total_count = sum(item['count'] for item in curriculum_for_day)
+    cnt_str = ', '.join([str(item['count']) for item in curriculum_for_day])
+
+    prompt = f"""
+아래 커리큘럼과 학생 세부 관심사({small_interest_name}, sub_interest_id={interest_id})를 반영해
+{day_name}({assigned_date})에 정확히 {total_count}개의 문제를 반드시 아래 순서와 규칙에 맞게 JSON 배열로만 반환합니다.
 
 
-        
-# === [5] 메인: 한 주 전체 처리 === (LLM 프롬프트 수정)
-def generate_problems_for_one_week(session, student_id):
-    curriculum = get_latest_curriculum(session, student_id)
-    if curriculum is None:
-        return None
-    curriculum_text = curriculum[0] if isinstance(curriculum, tuple) else curriculum
-    DAYS = get_weekdays_for_this_week()
+== [생성 개수/순서] ==
+{type_count_lines}
+- 반환하는 배열은 adventure_type_id가 위 순서대로 각 {cnt_str}개 연속 배치되고
+  seq_no는 1부터 {total_count}까지 순차 부여해야 합니다. (ex: adventure_type_id=3이 5개면, 배열에서 3이 5개 연속 등장)
 
 
-       # 학생 관심사 미리 조회
+== [문제 구조 및 adventure_type별 규칙] ==
+반드시 아래 key만 포함:
+"adventure_type_id", "seq_no", "assigned_date", "level", "interest_id", "problem_text", "choices", "correct_answer", "image_url", "sound_url", "problem_phonemes", "blank_position", "blank_phoneme", "student_id"
 
-    def get_small_interest_name_for_student(session, student_id):
-        result = session.execute(
-            text("""
-            SELECT si.small_interest_name
-            FROM student_interest sti
-            JOIN sub_interest si ON sti.interest_id = si.sub_interest_id
-            WHERE sti.student_id = :student_id LIMIT 1
-            """),
-            {"student_id": student_id}
-        )
-        row = result.first()
-        return row[0] if row else ""
 
-    interest_id = get_interest_id_for_student(session, student_id)
-    small_interest_name = get_small_interest_name_for_student(session, student_id)
+각 key는 아래 규칙/값/예시에 정확히 맞추세요.
 
-    for day_name, assigned_date in DAYS:
-        print(f"======= {day_name}({assigned_date}) LLM 문제 생성 =======")
-        # --------------------------------------------------------------------------
-        # 프롬프트를 일일 10문제 요청 형식으로 명확하게 수정
 
-        
-        prompt = f"""
+[1] adventure_type_id=1 (음소 찾기)
+- problem_text: 한글 자음+모음 1음절 (ex: [translate:가])
+- problem_phonemes: ["[translate:ㄱ]", "[translate:ㅏ]"]
+- blank_phoneme: problem_phonemes 중 하나
+- correct_answer: blank_phoneme와 같음
+- choices: blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치
+- blank_position: 반드시 "INITIAL", "MEDIAL", "FINAL" (대문자만)
+- 기타 필드는 "" 또는 []
 
-        아래 커리큘럼 및 학생의 세부 관심사({small_interest_name}, sub_interest_id={interest_id})에 맞춰 {day_name}({assigned_date})의 10개 문제를 반드시 아래 규칙과 예시에 따라 JSON 리스트(배열)로만 반환하세요. 각 문제는 키-값 딕셔너리로 작성되며, 모든 key를 포함해야 합니다.
 
-        *****************************************
-    # [탐험별 구조 및 규칙]
+[2] adventure_type_id=2 (이미지+음소)
+- problem_text: 학생 관심사 기반 그림 그릴 수 있는 구체 명사 (2글자 이상!) 예:[translate:코끼리]
+- problem_phonemes: 해당 자모 배열
+- blank_phoneme: problem_phonemes 중 하나
+- correct_answer: blank_phoneme와 같음
+- choices:  blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치
+- image_url: 연관 그림 경로 또는 ""
+- blank_position: "INITIAL", "MEDIAL", "FINAL" (대문자만)
 
-    #### adventure_type_id = 1 (음소 찾기)
-    - problem_text: 한글 음절 (예: "가")
-    - problem_phonemes: 해당 음절을 구성하는 한글 자모 배열 (예: ["ㄱ", "ㅏ"])
-    - blank_phoneme: problem_phonemes 중 1개 (랜덤)
-    - correct_answer: blank_phoneme과 동일
-    - choices: 여러 한글 자모 (예: ["ㄱ", "ㄴ", "ㄷ"])
-    - 나머지 필드: 필요 없으면 "" 또는 []로 빈 값
 
-    예시:
-    {{
-    "adventure_type_id": 1,
-    "seq_no": 1,
-    "assigned_date": "{assigned_date}",
-    "level": 1,
-    "interest_id": {interest_id},
-    "problem_text": "가",
-    "problem_phonemes": ["ㄱ", "ㅏ"],
-    "blank_phoneme": "ㄱ",
-    "correct_answer": "ㄱ",
-    "choices": ["ㄱ", "ㄴ", "ㄷ"],
-    "blank_position": "INITIAL",
-    "student_id": {student_id},
-    "image_url": "",
-    "sound_url": "problems/sound/{assigned_date}_xxxxx.mp3"
-    }}
+[3] adventure_type_id=3 (이미지+단어)
+- problem_text: 구체 명사 (예: [translate:가방])
+- problem_phonemes: 해당 자모 배열
+- blank_phoneme: "" 또는 null
+- correct_answer: problem_text와 반드시 동일
+- choices: ["[translate:가방]", "[translate:공]", "[translate:공룡]"] 등 correct_answer 포함 구체명사 2가지만! (1글자/자모 절대 금지)
+- blank_position: 필드 자체를 "" 또는 null로 (다른 값, 대소문자, 숫자 금지)
+- image_url: 경로 또는 ""
 
-    #### adventure_type_id = 2 (이미지 + 음소)
-    - problem_text: 단어명 (예: "가방")
-    - problem_phonemes: 단어를 구성하는 자모 배열 (예: ["ㄱ", "ㅏ", "ㅂ", "ㅏ", "ㅇ"])
-    - blank_phoneme: problem_phonemes 중 1개
-    - correct_answer: blank_phoneme과 동일
-    - choices: 한글 자모 여러 개
-    - image_url: 단어와 매칭되는 이미지 경로 (비어도 무관)
-    - 나머지 필드: 필요 없으면 "" 또는 []로 빈 값
 
-    예시:
-    {{
+[4] adventure_type_id=4 (음성판별)
+- problem_text: 구체명사
+- problem_phonemes: 해당 자모 배열
+- blank_phoneme: "" 또는 null
+- correct_answer: problem_text와 동일
+- choices: [] (항상 빈 배열)
+- blank_position: "" 또는 null만 가능
+- image_url: ""
+- sound_url: 경로/빈 문자열
+
+
+[공통 필수]
+- 모든 문제에 아래 항목 필수 포함: adventure_type_id, seq_no, assigned_date, level, interest_id, problem_text, choices, correct_answer, image_url, sound_url, problem_phonemes, blank_position, blank_phoneme, student_id (key 빠짐, 오타, 누락, 타입불일치, 자연어 주석 있으면 실패)
+- assigned_date는 반드시 "{assigned_date}"  
+- interest_id는 "{interest_id}", student_id는 "{student_id}", level은 학생 난이도 사용  
+- seq_no는 1~{total_count}까지 순차 부여, 배열 내 위치와 일치
+- 오직 한글자모, 구체 명사만(로마자/영어/1글자명사/모음 등 금지)
+- 모든 배열 외 자연어, 설명, 주석, 공백줄 없이 오직 JSON 배열 한 개만 반환
+
+
+[예시]
+[
+  {{
+    "adventure_type_id": 1,
+    "seq_no": 1,
+    "assigned_date": "{assigned_date}",
+    "level": {student_level},
+    "interest_id": {interest_id},
+    "problem_text": "가",
+    "problem_phonemes": "ㄱ", "ㅏ"],
+    "blank_phoneme": "ㄱ",
+    "correct_answer": "ㄱ",
+    "choices": ["ㄱ", "ㄴ", "ㄷ"],
+    "blank_position": "INITIAL",
+    "student_id": {student_id},
+    "image_url": "",
+    "sound_url": "problems/sound/{assigned_date}_xxxxxx.mp3"
+  }},
+{{
     "adventure_type_id": 2,
     "seq_no": 2,
     "assigned_date": "{assigned_date}",
@@ -396,39 +402,22 @@ def generate_problems_for_one_week(session, student_id):
     "sound_url": "problems/sound/{assigned_date}_yyyyy.mp3"
     }}
 
-    #### adventure_type_id = 3 (이미지 + 단어)
-    - problem_text: 단어명 (예: "가방")
-    - problem_phonemes, blank_phoneme: 반드시 [] 또는 ""로 빈 값을 입력
-    - correct_answer: 문제와 같은 단어명 (예: "가방")
-    - choices: 여러 단어(예: ["가방", "빵", "파"])
-    - image_url: 해당 단어 이미지 경로
-
-    예시:
-   { {
-    "adventure_type_id": 3,
-    "seq_no": 3,
-    "assigned_date": "{assigned_date}",
-    "level": 2,
-    "interest_id": {interest_id},
-    "problem_text": "가방",
-    "problem_phonemes": [],
-    "blank_phoneme": null,
-    "correct_answer": "가방",
-    "choices": ["가방", "빵", "파"],
-    "blank_position": null,
-    "student_id": {student_id},
-    "image_url": "problems/image/가방.jpg",
-    "sound_url": "problems/sound/{assigned_date}_zzzzzz.mp3"
-    }}
-
-    #### adventure_type_id = 4 (음성 판별)
-    - problem_text: 단어명 (예: "가방")
-    - problem_phonemes, blank_phoneme, choices: 반드시 [] 또는 ""로 빈 값 입력
-    - correct_answer: 문제 단어와 동일
-    - image_url: ""로 입력
-    - sound_url: TTS경로
-
-    예시:
+  {{
+    "adventure_type_id": 3,
+    "seq_no": 6,
+    "assigned_date": "{assigned_date}",
+    "level": {student_level},
+    "interest_id": {interest_id},
+    "problem_text": "코끼리",
+    "problem_phonemes": [],
+    "blank_phoneme": null,
+    "correct_answer": "코끼리",
+    "choices": ["코끼리", "사자", "호랑이"],
+    "blank_position": null,
+    "student_id": {student_id},
+    "image_url": "problems/image/코끼리.jpg",
+    "sound_url": ""
+  }},
     {{
     "adventure_type_id": 4,
     "seq_no": 4,
@@ -446,43 +435,91 @@ def generate_problems_for_one_week(session, student_id):
     "sound_url": "problems/sound/{assigned_date}_wwwww.mp3"
     }}
 
-        *****************************************
-        - 한글 음소 사용 필수
-        - ❌ 금지: 'giyeok', 'naun', 'daun' 같은 영어 음소명
-        - ✅ 허용: 'ㄱ', 'ㄴ', 'ㄷ' 같은 한글 자모
+]
+(…실제 출제에선 타입/개수/seq_no 순서/값이 가변적으로 연속 정렬되어야 함)
 
-        # ====================================================================
-        # 🚨 추가된 핵심 지침
-        # ====================================================================
-        - **탐험 2 & 3 규칙:** 'adventure_type_id'가 2 또는 3인 문제의 **'correct_answer'**와 **'choices'** 필드는 반드시 **그림으로 표현할 수 있는 구체적인 명사**(예: '코끼리', '가방', '티라노', '분무기')만 사용해야 합니다. **절대 '가', '나', '다'와 같은 자모, 모음, 또는 한 음절 글자를 단독으로 사용하지 마세요.**
 
-        - **blank_position 필드 규칙 (중요!):**
-            - adventure_type_id가 1 또는 2일 때: 반드시 "INITIAL", "MEDIAL", "FINAL" 중 하나의 **대문자** 값만 사용하세요.
-            - adventure_type_id가 3 또는 4일 때: null 또는 빈 문자열("")을 사용하세요.
-            - ❌ 절대 금지: "initial", "medial", "final" 같은 소문자 값
-            - ✅ 반드시 사용: "INITIAL", "MEDIAL", "FINAL" 대문자 Enum 값만
-        # ====================================================================
-        - **날짜 배정:** 모든 문제의 "assigned_date" 필드는 **"{assigned_date}"**로 설정해야 합니다.
-        - 이 학생의 관심사 interest_id는 {interest_id} 입니다. 모든 문제의 interest_id도 반드시 {interest_id}로 지정하세요.
-         
-        - **구조 준수:** 각 문제는 아래 필드를 반드시 포함하고, 주석 없이 순수 JSON으로 반환하세요.
-            "adventure_type_id":1~4, "seq_no": 1~10, "assigned_date": "YYYY-MM-DD", "level": 1~6,
-            "interest_id": (학습자의 세부 관심사 ID와 매칭, 없으면 0), "problem_text", "choices", "correct_answer",
-            "image_data", "sound_data", "problem_phonemes", "blank_position", "blank_phoneme"
-            "반드시 한국어로 작성하세요."
-            "correct_answer"와 "blank_position"는 각각 5자, 20자를 초과하지 않도록 하세요.
+== [마지막] ==
+- 반드시 위 구조와 규칙만 지켜, key 누락/오타/불필요 필드 없이 오로지 이 포맷의 문제 배열만 반환!
 
-        - **seq_no**는 해당 요일 내에서 1부터 10까지 순차적으로 부여하세요.
-        - **interest_id**는 학습자의 세부 관심사(sub_interest 테이블)와 매칭되는 유효한 ID를 부여하세요.
-        - **curriculum_text:**
-        {curriculum_text}
-        """
-        # --------------------------------------------------------------------------
-        llm_response = llm_problem(prompt)
-        llm_result = safe_parse_json(llm_response, day_name)
-        if not llm_result:
-            print(f"==== {day_name} 문제 건너뜀 (빈 응답) ===")
+"""
+    return prompt
+
+def generate_problems_for_one_week(session, student_id):
+    report = session.execute(
+        text("""
+             SELECT curriculum, curriculum_structure
+             FROM weekly_personal_report
+             WHERE student_id=:student_id
+             ORDER BY created_at DESC LIMIT 1
+         """), {"student_id": student_id}
+    ).fetchone()
+
+    # 1. 초기 조건 실패 시 딕셔너리 반환
+    if not report or not report[1]:
+        print("커리큘럼 구조 없음")
+        # main_api.py에서 처리 가능한 형태로 반환
+        return {"error": "학생의 최신 커리큘럼 구조를 찾을 수 없습니다."} 
+
+    curriculum_text = report[0]
+    curriculum_structure = report[1]
+
+    interest_id = get_interest_id_for_student(session, student_id)
+    small_interest_name = get_small_interest_name_for_student(session, student_id)
+    DAYS = get_weekdays_for_this_week()
+    day_map = {"월요일": "monday", "화요일": "tuesday", "수요일": "wednesday", "목요일": "thursday", "금요일": "friday"}
+
+    all_generated_problems_metadata = [] # 💡 최종 반환할 문제를 담을 리스트
+
+    for day_name, assigned_date in DAYS:
+        day_key = day_map.get(day_name, day_name.lower())
+        curriculum_for_day = curriculum_structure.get(day_key, [])
+        if not curriculum_for_day:
+            print(f"{day_name} 계획 없음, 건너뜀!")
             continue
-        process_day_problem_items(session, student_id, llm_result)
+        prompt = make_prompt(
+            curriculum_for_day=curriculum_for_day,
+            small_interest_name=small_interest_name,
+            interest_id=interest_id,
+            day_name=day_name,
+            assigned_date=assigned_date,
+            student_id=student_id,
+            student_level=1,  # 실제 레벨 조회 시 적용
+            curriculum_text=curriculum_text
+        )
+        llm_response = llm_problem(prompt)
+        problems_to_process = safe_parse_json(llm_response, day_name) # LLM 결과
+        
+        # 2. LLM 실패 시 폴백으로 대체
+        if not problems_to_process:
+            total_count = sum(item['count'] for item in curriculum_for_day)
+            first_type = curriculum_for_day[0]['type_id'] if curriculum_for_day else 1
+            
+            # 폴백 문제를 생성
+            problems_to_process = generate_fallback_problems(first_type, total_count)
+            
+            if not problems_to_process:
+                print(f"==== {day_name} 폴백 생성도 실패 (건너뜀) ===")
+                continue
+            
+            print(f"==== {day_name} LLM 실패, 폴백 문제 {len(problems_to_process)}개 생성 ====")
 
-# correct_anser 100, blank_phoneme 50자로 
+        # 3. DB 저장 및 메타데이터 집계
+        # process_day_problem_items가 DB 저장까지 완료
+        process_day_problem_items(session, student_id, problems_to_process)
+        
+        # 생성된 문제 메타데이터를 최종 반환 리스트에 추가 (seq_no를 1부터 다시 계산)
+        for idx, item in enumerate(problems_to_process):
+             all_generated_problems_metadata.append({
+                "date": assigned_date,
+                "seq_no": idx + 1,
+                "adventure_type": item.get('adventure_type_id'),
+                "problem": item.get('problem_text')
+            })
+
+    # 4. 최종 집계 결과 반환
+    return {
+        "generated_count": len(all_generated_problems_metadata),
+        "week_dates": [day[1] for day in DAYS], 
+        "problems": all_generated_problems_metadata
+    }
