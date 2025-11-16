@@ -7,6 +7,7 @@ import type {
   StudyType,
   StartAdventureResponse,
   EndAdventureResponse,
+  PronunciationEvaluationResponse,
 } from '../types/adventure';
 import { normalizeProblemsResponse } from '../types/adventure';
 
@@ -243,4 +244,47 @@ export const submitSessionCorrect = async (
   });
 
   await axiosInstance.post(`/student/${studentId}/session/correct`, requestBody);
+};
+
+/**
+ * 발음 평가 (STT)
+ * POST /stt/evaluate-pronunciation
+ *
+ * @param audioFile - WebM 오디오 파일
+ * @param problemId - 문제 ID
+ * @param studentId - 학생 ID
+ * @returns 발음 평가 결과 (정확도, 음성 인식 텍스트 등)
+ *
+ * @description
+ * - ai-service의 Whisper API를 통한 음성 인식 및 발음 평가
+ * - WebM 오디오 파일을 multipart/form-data로 전송
+ * - 음소별 정확도 분석 결과 반환
+ * - 정확도 80% 이상 권장 기준
+ *
+ * @example
+ * const result = await evaluatePronunciation(audioFile, 123, 456);
+ * const isCorrect = result.accuracy >= 80;
+ * console.log(`정확도: ${result.accuracy}%, 인식 결과: ${result.user_text}`);
+ */
+export const evaluatePronunciation = async (
+  audioFile: File,
+  problemId: number,
+  studentId: number
+): Promise<PronunciationEvaluationResponse> => {
+  const formData = new FormData();
+  formData.append('audio_file', audioFile);
+  formData.append('problem_id', problemId.toString());
+  formData.append('student_id', studentId.toString());
+
+  const response = await axiosInstance.post<PronunciationEvaluationResponse>(
+    '/stt/evaluate-pronunciation',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+
+  return response.data;
 };

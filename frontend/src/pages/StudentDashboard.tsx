@@ -184,6 +184,8 @@ export default function StudentDashboard() {
 
                 const streakPromise = fetch(`/api/student/${id}/dashboard/daily-streak`, { headers });
 
+                console.log(streakPromise)
+
                 // Promise.all로 프로필 요청, 푼 문제수 요청, 주간 streak 요청 이렇게 세 요청을 동시에 실행
                 const [profileResponse, countResponse, streakResponse] = await Promise.all([
                     profilePromise,

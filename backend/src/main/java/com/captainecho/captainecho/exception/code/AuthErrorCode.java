@@ -18,6 +18,9 @@ public enum AuthErrorCode implements ErrorCode {
     // 401 UNAUTHORIZED
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AU40101", "유효하지 않은 토큰입니다"),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AU40102", "만료된 토큰입니다"),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AU40103", "아이디 또는 비밀번호가 일치하지 않습니다"),
+    USER_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AU40104", "존재하지 않는 사용자입니다"),
+    DELETED_USER(HttpStatus.UNAUTHORIZED, "AU40105", "탈퇴한 사용자입니다"),
 
     // 403 FORBIDDEN
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "AU40301", "접근 권한이 없습니다"),

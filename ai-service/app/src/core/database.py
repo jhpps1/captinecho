@@ -1,5 +1,6 @@
 # src/core/database.py
 
+import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.src.core.config import settings
@@ -21,6 +22,7 @@ engine = create_engine(
     DATABASE_URL,
     echo=False,
     pool_pre_ping=True,
+    json_serializer=lambda obj: json.dumps(obj, ensure_ascii=False, default=str)
 )
 
 

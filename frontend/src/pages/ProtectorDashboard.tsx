@@ -22,6 +22,19 @@ import {
   type DailyStreakResponse,
 } from '../api/dashboardApi';
 
+import {
+  getDailyAccuracy,
+  getWeeklyAccuracy,
+  type AccuracyResponse,
+  getBestJamos,
+  getWorstJamos,
+  type JamoImprovementApiData,
+  getOverallAccuracy,
+  type OverallAccuracyResponse,
+  getAllJamoStats,
+  type JamoStatData,
+} from '../api/studentApi'
+
 interface Student {
   id: number;
   name: string;
@@ -31,34 +44,13 @@ interface Student {
   profileImage?: string;
 }
 
-// Mock Data (백엔드 미구현 - 나중에 API로 교체)
-const MOCK_JAMO_DATA = [
-  { jamo: 'ㄱ', accuracy: 92, count: 45 },
-  { jamo: 'ㄴ', accuracy: 65, count: 38 },
-  { jamo: 'ㄷ', accuracy: 88, count: 52 },
-  { jamo: 'ㄹ', accuracy: 73, count: 41 },
-  { jamo: 'ㅁ', accuracy: 95, count: 49 },
-  { jamo: 'ㅂ', accuracy: 78, count: 36 },
-  { jamo: 'ㅅ', accuracy: 70, count: 44 },
-  { jamo: 'ㅇ', accuracy: 85, count: 50 },
-];
-
-const MOCK_IMPROVEMENT_DATA = {
-  overall: {
-    previous: 78,
-    current: 85,
-  },
-  jamo: [
-    { jamo: 'ㄱ', previousAccuracy: 65, currentAccuracy: 92, improvement: 27 },
-    { jamo: 'ㄴ', previousAccuracy: 63, currentAccuracy: 65, improvement: 2 },
-    { jamo: 'ㄷ', previousAccuracy: 70, currentAccuracy: 88, improvement: 18 },
-    { jamo: 'ㄹ', previousAccuracy: 68, currentAccuracy: 73, improvement: 5 },
-    { jamo: 'ㅁ', previousAccuracy: 90, currentAccuracy: 95, improvement: 5 },
-    { jamo: 'ㅂ', previousAccuracy: 72, currentAccuracy: 78, improvement: 6 },
-    { jamo: 'ㅅ', previousAccuracy: 65, currentAccuracy: 70, improvement: 5 },
-    { jamo: 'ㅇ', previousAccuracy: 80, currentAccuracy: 85, improvement: 5 },
-  ],
-};
+// 💡 추가: ImprovementCard가 필요로 하는 데이터 형식
+interface JamoImprovementData {
+  jamo: string;
+  previousAccuracy: number;
+  currentAccuracy: number;
+  improvement: number;
+}
 
 /**
  * 이번 주 연속 학습일 계산
@@ -93,9 +85,14 @@ export default function ProtectorDashboard() {
   const [curriculum, setCurriculum] = useState<string>('');
   const [learningTime, setLearningTime] = useState<LearningTimeResponse | null>(null);
   const [dailyStreak, setDailyStreak] = useState<DailyStreakResponse | null>(null)
-  const [dailyGoalCount, setDailyGoalCount] = useState(50);
+  const [dailyAccuracy, setDailyAccuracy] = useState(0);
+  const [weeklyAccuracy, setWeeklyAccuracy] = useState(0);
+  const [dailyGoalCount, setDailyGoalCount] = useState(10);
   const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
+  const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
+  const [overallAccuracy, setOverallAccuracy] = useState({ previous: 0, current: 0 });
+  const [jamoStats, setJamoStats] = useState<JamoStatData[]>([]);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
@@ -134,6 +131,8 @@ export default function ProtectorDashboard() {
   useEffect(() => {
     if (!selectedStudentId) return;
 
+    sessionStorage.setItem('studentId', selectedStudentId.toString());
+
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
@@ -145,6 +144,12 @@ export default function ProtectorDashboard() {
           dailyCompletedData,
           weeklyPercentData,
           dailyStreakData,
+          dailyAccuracyData,
+          weeklyAccuracyData,
+          bestJamosData,
+          worstJamosData,
+          overallAccuracyData,
+          allJamoStatsData,
         ] = await Promise.all([
           getCurriculum(selectedStudentId),
           getLearningTime(selectedStudentId),
@@ -152,6 +157,12 @@ export default function ProtectorDashboard() {
           getDailyCompletedCount(selectedStudentId),
           getWeeklyGoalPercent(selectedStudentId),
           getDailyStreak(selectedStudentId),
+          getDailyAccuracy(),
+          getWeeklyAccuracy(),
+          getBestJamos(),
+          getWorstJamos(),
+          getOverallAccuracy(),
+          getAllJamoStats(),
         ]);
 
         // 데이터 설정
@@ -161,6 +172,38 @@ export default function ProtectorDashboard() {
         setDailyCompletedCount(dailyCompletedData.completedCount);
         setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
         setDailyStreak(dailyStreakData);
+        setDailyAccuracy(dailyAccuracyData.accuracy);
+        setWeeklyAccuracy(weeklyAccuracyData.accuracy);
+
+        // 💡 추가: 자모 통계 데이터 설정
+        // WeaknessAlert가 기대하는 속성명(accuracy, count)과 API 응답(accuracyRate, count)이 살짝 다를 수 있으므로 매핑
+        // 하지만 WeaknessAlert의 JamoData 인터페이스를 보니 `accuracy`를 쓰고 있음.
+        // API는 `accuracyRate`를 줌. 따라서 매핑 필요.
+        const mappedJamoStats = allJamoStatsData.accuracyRates.map(stat => ({
+          jamo: stat.jamo,
+          accuracy: stat.accuracyRate, // 매핑: accuracyRate -> accuracy
+          count: stat.count
+        }));
+        setJamoStats(allJamoStatsData.accuracyRates);
+
+        // 💡 추가: 전체 정확도 데이터 설정
+        setOverallAccuracy({
+          previous: overallAccuracyData.twoWeeksAgo,
+          current: overallAccuracyData.lastWeek,
+        });
+
+        // 💡 추가: API 응답을 ImprovementCard가 요구하는 형식으로 매핑
+        const mapJamoData = (apiData: JamoImprovementApiData): JamoImprovementData => ({
+          jamo: apiData.jamo,
+          previousAccuracy: apiData.twoWeeksAgo,
+          currentAccuracy: apiData.lastWeek,
+          improvement: apiData.improveRate,
+        });
+
+        // ImprovementCard가 이 배열을 받아 알아서 정렬하여 '개선'과 '부진'을 표시
+        const bestJamos = bestJamosData.bestJamos.map(mapJamoData);
+        const worstJamos = worstJamosData.worstJamos.map(mapJamoData);
+        setJamoImprovements([...bestJamos, ...worstJamos]);
 
         // Streak 계산 및 업데이트
         const streak = dailyStreakData.currentStreak;
@@ -180,6 +223,11 @@ export default function ProtectorDashboard() {
         setCurriculum('데이터를 불러올 수 없습니다.');
         setLearningTime(null);
         setDailyStreak(null);
+        setDailyAccuracy(0);
+        setWeeklyAccuracy(0);
+        setJamoImprovements([]);
+        setOverallAccuracy({ previous: 0, current: 0 });
+        setJamoStats([]);
       } finally {
         setIsLoading(false);
       }
@@ -191,10 +239,10 @@ export default function ProtectorDashboard() {
   // 학습 시간 데이터를 차트 형식으로 변환
   const weeklyTimeData = learningTime
     ? ['월', '화', '수', '목', '금', '토', '일'].map((day, index) => ({
-        day,
-        thisWeek: learningTime.thisWeekLearningTime.daily[index]?.learningMinutes || 0,
-        lastWeek: learningTime.lastWeekLearningTime.daily[index]?.learningMinutes || 0,
-      }))
+      day,
+      thisWeek: learningTime.thisWeekLearningTime.daily[index]?.learningMinutes || 0,
+      lastWeek: learningTime.lastWeekLearningTime.daily[index]?.learningMinutes || 0,
+    }))
     : [];
 
   // 출석 데이터 (월~금, 이번 주)
@@ -207,19 +255,19 @@ export default function ProtectorDashboard() {
     problems: { current: dailyCompletedCount, target: dailyGoalCount },
     time: {
       current: learningTime?.thisWeekLearningTime.daily[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.learningMinutes || 0,
-      target: 30, // 고정값 (백엔드에서 제공하지 않음)
+      target: 10, // 고정값 (백엔드에서 제공하지 않음)
     },
-    accuracy: { current: 83 }, // Mock (백엔드 미구현)
+    accuracy: { current: dailyAccuracy },
   };
 
   // 주간 목표 데이터
   const weeklyGoals = {
-    problems: { current: weeklyGoalPercent, target: 100 },
+    problems: { current: weeklyGoalPercent, target: 50 },
     time: {
       current: learningTime?.thisWeekLearningTime.totalMinutes || 0,
       target: 400, // 고정값
     },
-    accuracy: { current: 85 }, // Mock (백엔드 미구현)
+    accuracy: { current: weeklyAccuracy },
   };
 
   // 커리큘럼 객체 생성
@@ -291,14 +339,20 @@ export default function ProtectorDashboard() {
                   <WeeklyTimeChart data={weeklyTimeData} />
 
                   {/* Weakness Alert with Expandable Chart */}
-                  <WeaknessAlert allJamoData={MOCK_JAMO_DATA} />
+                  <WeaknessAlert
+                    allJamoData={jamoStats.map(stat => ({
+                      jamo: stat.jamo,
+                      accuracy: stat.accuracyRate, // 여기서 'accuracyRate'를 'accuracy'로 변경
+                      count: stat.count,
+                    }))}
+                  />
                 </div>
 
                 {/* Right Column - Improvement Card (full height) */}
                 <div className="lg:col-span-1">
                   <ImprovementCard
-                    overallImprovement={MOCK_IMPROVEMENT_DATA.overall}
-                    jamoImprovements={MOCK_IMPROVEMENT_DATA.jamo}
+                    overallImprovement={overallAccuracy}
+                    jamoImprovements={jamoImprovements}
                   />
                 </div>
               </div>

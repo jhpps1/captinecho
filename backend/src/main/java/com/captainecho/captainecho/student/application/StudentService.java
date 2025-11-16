@@ -14,15 +14,23 @@ import com.captainecho.captainecho.interest.persistence.SubInterestRepository;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.stats.domain.JamoStat;
+import com.captainecho.captainecho.stats.domain.WeeklyJamoStat;
+import com.captainecho.captainecho.stats.domain.WeeklyPersonalReport;
 import com.captainecho.captainecho.stats.persistence.JamoStatRepository;
+import com.captainecho.captainecho.stats.persistence.WeeklyJamoStatRepository;
+import com.captainecho.captainecho.stats.persistence.WeeklyPersonalReportRepository;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
+import com.captainecho.captainecho.student.application.command.GetImproveAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
+import com.captainecho.captainecho.student.application.command.GetBestImproveJamoCommand;
+import com.captainecho.captainecho.student.application.command.GetWorstImproveJamoCommand;
 import com.captainecho.captainecho.student.application.command.RegisterStudentCommand;
 import com.captainecho.captainecho.student.application.event.FileDeleteEvent;
 
@@ -36,8 +44,12 @@ import com.captainecho.captainecho.student.application.result.DeleteStudentInter
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
+import com.captainecho.captainecho.student.application.result.GetImproveAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
+import com.captainecho.captainecho.student.application.result.GetBestImproveJamoResult;
+import com.captainecho.captainecho.student.application.result.GetWorstImproveJamoResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
 import com.captainecho.captainecho.student.application.result.UpdatePinResult;
@@ -59,7 +71,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -75,6 +89,8 @@ public class StudentService {
     private final DayProblemRepository dayProblemRepository;
     private final PhonemeFeatureRepository phonemeFeatureRepository;
     private final JamoStatRepository jamoStatRepository;
+    private final WeeklyJamoStatRepository weeklyJamoStatRepository;
+    private final WeeklyPersonalReportRepository weeklyPersonalReportRepository;
     private final FileStorageProperties fileStorageProperties;
     private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
@@ -407,20 +423,353 @@ public class StudentService {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 학생의 모든 자모 통계 조회
-        List<JamoStat> jamoStats = jamoStatRepository.findAllByStudent_StudentId(command.studentId());
+        // 3. 학생의 가장 최근 주간 자모 통계 조회 (지난주 데이터)
+        List<WeeklyJamoStat> weeklyJamoStats = weeklyJamoStatRepository.findLatestWeeklyStatsByStudentId(command.studentId());
 
-        // 4. AccuracyRate 리스트로 변환 및 자모 순서대로 정렬 (정답률은 weeklyAccuracyRate를 정수로 변환)
-        List<GetWeeklyJamoStatResult.AccuracyRate> accuracyRates = jamoStats.stream()
+        log.info("WeeklyJamoStat 조회 결과 - Student ID: {}, 조회된 데이터 개수: {}", command.studentId(), weeklyJamoStats.size());
+
+        // 데이터 샘플 로그 (첫 3개)
+        weeklyJamoStats.stream().limit(3).forEach(stat ->
+            log.info("Sample - Jamo: {}, Accuracy: {}, TotalAttempts: {}",
+                stat.getJamo(), stat.getWeeklyAccuracyRate(), stat.getTotalAttempts())
+        );
+
+        // 4. AccuracyRate 리스트로 변환 (이미 자모 순서대로 정렬됨)
+        List<GetWeeklyJamoStatResult.AccuracyRate> accuracyRates = weeklyJamoStats.stream()
                 .map(stat -> new GetWeeklyJamoStatResult.AccuracyRate(
                         stat.getJamo(),
                         stat.getWeeklyAccuracyRate().intValue(),
                         stat.getTotalAttempts().intValue()
                 ))
-                .sorted((a, b) -> a.jamo().compareTo(b.jamo()))
                 .collect(Collectors.toList());
 
+        log.info("지난주 학습 분석 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), accuracyRates.size());
+
         return GetWeeklyJamoStatResult.of(accuracyRates);
+    }
+
+    /**
+     * 전체 학습 분석 조회 (모든 주차 합산)
+     */
+    @Transactional(readOnly = true)
+    public GetTotalJamoStatResult getTotalJamoStat(GetTotalJamoStatCommand command) {
+        log.info("전체 학습 분석 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 해당 학생의 모든 주차 자모 통계 조회
+        List<WeeklyJamoStat> allWeeklyStats = weeklyJamoStatRepository.findAllWeeklyStatsByStudentId(command.studentId());
+
+        if (allWeeklyStats.isEmpty()) {
+            log.info("전체 학습 분석 데이터 없음 - Student ID: {}", command.studentId());
+            return GetTotalJamoStatResult.of(List.of());
+        }
+
+        // 4. 자모별로 그룹핑하여 합산
+        Map<String, List<WeeklyJamoStat>> statsByJamo = allWeeklyStats.stream()
+                .collect(Collectors.groupingBy(WeeklyJamoStat::getJamo));
+
+        // 5. 각 자모별로 총 시도 횟수와 평균 정확도 계산
+        List<GetTotalJamoStatResult.AccuracyRate> accuracyRates = statsByJamo.entrySet().stream()
+                .map(entry -> {
+                    String jamo = entry.getKey();
+                    List<WeeklyJamoStat> stats = entry.getValue();
+
+                    // 총 시도 횟수
+                    int totalCount = stats.stream()
+                            .mapToInt(stat -> stat.getTotalAttempts().intValue())
+                            .sum();
+
+                    // 총 실패 횟수
+                    int totalFails = stats.stream()
+                            .mapToInt(stat -> stat.getFailCount().intValue())
+                            .sum();
+
+                    // 평균 정확도 = ((총 시도 - 총 실패) / 총 시도) * 100
+                    int averageAccuracy = totalCount > 0 ? (int) Math.round((totalCount - totalFails) * 100.0 / totalCount) : 0;
+
+                    return new GetTotalJamoStatResult.AccuracyRate(jamo, averageAccuracy, totalCount);
+                })
+                .sorted(Comparator.comparing(GetTotalJamoStatResult.AccuracyRate::jamo))
+                .collect(Collectors.toList());
+
+        log.info("전체 학습 분석 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), accuracyRates.size());
+
+        return GetTotalJamoStatResult.of(accuracyRates);
+    }
+
+    /**
+     * 지지난주 대비 지난주 전체 정확도 개선율 조회
+     */
+    @Transactional(readOnly = true)
+    public GetImproveAccuracyResult getImproveAccuracy(GetImproveAccuracyCommand command) {
+        log.info("정확도 개선율 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
+                .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
+
+        // 4. 데이터가 2개 미만이면 null 반환
+        if (recentReports.size() < 2) {
+            log.info("정확도 개선율 조회 불가 - Student ID: {}, 리포트 개수: {}",
+                    command.studentId(), recentReports.size());
+            return GetImproveAccuracyResult.of(null, null, null);
+        }
+
+        WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
+        WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
+
+        // 5. 지지난주까지의 누적 통계 계산 (첫 리포트 ~ 지지난주 리포트)
+        List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
+                .findAll()
+                .stream()
+                .filter(stat -> stat.getStudent().getStudentId().equals(command.studentId()))
+                .filter(stat -> stat.getWeeklyPersonalReport().getReportId() <= twoWeeksAgoReport.getReportId())
+                .toList();
+
+        Integer twoWeeksAgoAccuracy = calculateAccuracy(twoWeeksAgoStats);
+
+        // 6. 지난주 단독 통계 계산 (지난주 리포트만)
+        List<WeeklyJamoStat> lastWeekOnlyStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
+
+        // 7. 지난주 누적 정확도 계산
+        int lastWeekTotalAttempts = calculateTotalAttempts(twoWeeksAgoStats) + calculateTotalAttempts(lastWeekOnlyStats);
+        int lastWeekTotalFails = calculateTotalFails(twoWeeksAgoStats) + calculateTotalFails(lastWeekOnlyStats);
+        Integer lastWeekAccuracy = lastWeekTotalAttempts > 0
+                ? (int) Math.round((lastWeekTotalAttempts - lastWeekTotalFails) * 100.0 / lastWeekTotalAttempts)
+                : null;
+
+        // 8. 개선율 계산
+        Integer improveRate = (twoWeeksAgoAccuracy != null && lastWeekAccuracy != null)
+                ? lastWeekAccuracy - twoWeeksAgoAccuracy
+                : null;
+
+        log.info("정확도 개선율 조회 완료 - Student ID: {}, 지지난주: {}%, 지난주: {}%, 개선율: {}%",
+                command.studentId(), twoWeeksAgoAccuracy, lastWeekAccuracy, improveRate);
+
+        return GetImproveAccuracyResult.of(twoWeeksAgoAccuracy, lastWeekAccuracy, improveRate);
+    }
+
+    /**
+     * 통계 리스트로부터 정확도 계산
+     */
+    private Integer calculateAccuracy(List<WeeklyJamoStat> stats) {
+        if (stats.isEmpty()) {
+            return null;
+        }
+        int totalAttempts = calculateTotalAttempts(stats);
+        int totalFails = calculateTotalFails(stats);
+        return totalAttempts > 0 ? (int) Math.round((totalAttempts - totalFails) * 100.0 / totalAttempts) : null;
+    }
+
+    /**
+     * 통계 리스트로부터 총 시도 횟수 계산
+     */
+    private int calculateTotalAttempts(List<WeeklyJamoStat> stats) {
+        return stats.stream()
+                .mapToInt(stat -> stat.getTotalAttempts().intValue())
+                .sum();
+    }
+
+    /**
+     * 통계 리스트로부터 총 실패 횟수 계산
+     */
+    private int calculateTotalFails(List<WeeklyJamoStat> stats) {
+        return stats.stream()
+                .mapToInt(stat -> stat.getFailCount().intValue())
+                .sum();
+    }
+
+    /**
+     * 가장 개선율이 높은 자모 Top 2 조회 (주차별 비교)
+     */
+    @Transactional(readOnly = true)
+    public GetBestImproveJamoResult getBestImproveJamo(GetBestImproveJamoCommand command) {
+        log.info("개선율 높은 자모 Top 2 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
+                .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
+
+        // 4. 데이터가 2개 미만이면 null 반환
+        if (recentReports.size() < 2) {
+            log.info("개선율 높은 자모 조회 불가 - Student ID: {}, 리포트 개수: {}",
+                    command.studentId(), recentReports.size());
+            return GetBestImproveJamoResult.of(null);
+        }
+
+        WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
+        WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
+
+        // 5. 지지난주 리포트의 자모별 통계 조회
+        List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(twoWeeksAgoReport.getReportId());
+
+        // 6. 지난주 리포트의 자모별 통계 조회
+        List<WeeklyJamoStat> lastWeekStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
+
+        // 7. 자모별로 그룹핑
+        Map<String, WeeklyJamoStat> twoWeeksAgoMap = twoWeeksAgoStats.stream()
+                .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
+        Map<String, WeeklyJamoStat> lastWeekMap = lastWeekStats.stream()
+                .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
+
+        // 8. 모든 자모에 대해 개선율 계산
+        List<GetBestImproveJamoResult.BestJamo> jamoList = new java.util.ArrayList<>();
+
+        // 모든 자모 수집 (양쪽 주차에 있는 모든 자모)
+        Set<String> allJamos = new java.util.HashSet<>();
+        allJamos.addAll(twoWeeksAgoMap.keySet());
+        allJamos.addAll(lastWeekMap.keySet());
+
+        for (String jamo : allJamos) {
+            WeeklyJamoStat twoWeeksAgoStat = twoWeeksAgoMap.get(jamo);
+            WeeklyJamoStat lastWeekStat = lastWeekMap.get(jamo);
+
+            // 양쪽 주차에 모두 데이터가 있는 경우만 계산
+            if (twoWeeksAgoStat != null && lastWeekStat != null) {
+                // weekly_accuracy_rate 컬럼에서 직접 가져오기
+                Integer twoWeeksAgoAccuracy = twoWeeksAgoStat.getWeeklyAccuracyRate().intValue();
+                Integer lastWeekAccuracy = lastWeekStat.getWeeklyAccuracyRate().intValue();
+                Integer improveRate = lastWeekAccuracy - twoWeeksAgoAccuracy;
+
+                jamoList.add(new GetBestImproveJamoResult.BestJamo(
+                        jamo, twoWeeksAgoAccuracy, lastWeekAccuracy, improveRate
+                ));
+            }
+        }
+
+        // 9. 개선율 내림차순 정렬 후 상위 2개만 반환 (동점일 경우 자모 이름 순)
+        List<GetBestImproveJamoResult.BestJamo> top2 = jamoList.stream()
+                .sorted(Comparator.comparing(GetBestImproveJamoResult.BestJamo::improveRate).reversed()
+                        .thenComparing(GetBestImproveJamoResult.BestJamo::jamo))
+                .limit(2)
+                .toList();
+
+        log.info("개선율 높은 자모 Top 2 조회 완료 - Student ID: {}, 조회된 개수: {}", command.studentId(), top2.size());
+
+        return GetBestImproveJamoResult.of(top2.isEmpty() ? null : top2);
+    }
+
+    /**
+     * 단일 자모의 정확도 계산
+     */
+    private Integer calculateJamoAccuracy(WeeklyJamoStat stat) {
+        int totalAttempts = stat.getTotalAttempts().intValue();
+        int failCount = stat.getFailCount().intValue();
+        return totalAttempts > 0 ? (int) Math.round((totalAttempts - failCount) * 100.0 / totalAttempts) : null;
+    }
+
+    /**
+     * 정확도가 가장 낮은 자모 Top 2 조회 (지난주 정확도 기준)
+     */
+    @Transactional(readOnly = true)
+    public GetWorstImproveJamoResult getWorstImproveJamo(GetWorstImproveJamoCommand command) {
+        log.info("정확도 낮은 자모 Top 2 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
+                .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
+
+        // 4. 데이터가 2개 미만이면 null 반환
+        if (recentReports.size() < 2) {
+            log.info("정확도 낮은 자모 조회 불가 - Student ID: {}, 리포트 개수: {}",
+                    command.studentId(), recentReports.size());
+            return GetWorstImproveJamoResult.of(null);
+        }
+
+        WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
+        WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
+
+        // 5. 지지난주 리포트의 자모별 통계 조회
+        List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(twoWeeksAgoReport.getReportId());
+
+        // 6. 지난주 리포트의 자모별 통계 조회
+        List<WeeklyJamoStat> lastWeekStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
+
+        // 7. 자모별로 그룹핑
+        Map<String, WeeklyJamoStat> twoWeeksAgoMap = twoWeeksAgoStats.stream()
+                .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
+        Map<String, WeeklyJamoStat> lastWeekMap = lastWeekStats.stream()
+                .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
+
+        // 8. 모든 자모에 대해 정확도 및 개선율 계산
+        List<GetWorstImproveJamoResult.WorstJamo> jamoList = new java.util.ArrayList<>();
+
+        // 모든 자모 수집 (양쪽 주차에 있는 모든 자모)
+        Set<String> allJamos = new java.util.HashSet<>();
+        allJamos.addAll(twoWeeksAgoMap.keySet());
+        allJamos.addAll(lastWeekMap.keySet());
+
+        for (String jamo : allJamos) {
+            WeeklyJamoStat twoWeeksAgoStat = twoWeeksAgoMap.get(jamo);
+            WeeklyJamoStat lastWeekStat = lastWeekMap.get(jamo);
+
+            // 양쪽 주차에 모두 데이터가 있는 경우만 계산
+            if (twoWeeksAgoStat != null && lastWeekStat != null) {
+                // weekly_accuracy_rate 컬럼에서 직접 가져오기
+                Integer twoWeeksAgoAccuracy = twoWeeksAgoStat.getWeeklyAccuracyRate().intValue();
+                Integer lastWeekAccuracy = lastWeekStat.getWeeklyAccuracyRate().intValue();
+                Integer improveRate = lastWeekAccuracy - twoWeeksAgoAccuracy;
+
+                jamoList.add(new GetWorstImproveJamoResult.WorstJamo(
+                        jamo, twoWeeksAgoAccuracy, lastWeekAccuracy, improveRate
+                ));
+            }
+        }
+
+        // 9. 지난주 정확도 오름차순 정렬 후 하위 2개 반환 (동점일 경우 자모 이름 순)
+        List<GetWorstImproveJamoResult.WorstJamo> bottom2 = jamoList.stream()
+                .sorted(Comparator.comparing(GetWorstImproveJamoResult.WorstJamo::lastWeek)
+                        .thenComparing(GetWorstImproveJamoResult.WorstJamo::jamo))
+                .limit(2)
+                .toList();
+
+        log.info("정확도 낮은 자모 Top 2 조회 완료 - Student ID: {}, 조회된 개수: {}", command.studentId(), bottom2.size());
+
+        return GetWorstImproveJamoResult.of(bottom2.isEmpty() ? null : bottom2);
     }
 
     /**

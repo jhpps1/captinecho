@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSuppleProblems, startAdventure, endAdventure } from '../../api/adventureApi';
-import type { Problem, SessionState } from '../../types/adventure';
-import { ProblemRunner } from './ProblemRunner';
-import { AdventureLayout } from './AdventureLayout';
-import { CompletionModal } from './modals/CompletionModal';
+import { getSuppleProblems, startAdventure, endAdventure } from '../api/adventureApi';
+import type { Problem, SessionState } from '../types/adventure';
+import { ProblemRunner } from '../components/adventure/ProblemRunner';
+import { AdventureLayout } from '../components/adventure/AdventureLayout';
+import { CompletionModal } from '../components/adventure/modals/CompletionModal';
 
 /**
- * SuppleRunner - 추가학습 문제 관리 컴포넌트
+ * SuppleRunner - 추가학습 문제 관리 페이지
  *
  * @description
  * - URL에서 studentId, typeId 추출

@@ -59,7 +59,7 @@ CREATE TABLE protector (
     deleted_at TIMESTAMP,
     email VARCHAR(500),
     terms_agreed BOOLEAN DEFAULT false NOT NULL,
-    UNIQUE(provider, social_id)
+--     UNIQUE(provider, social_id)-- -- 
 );
 
 COMMENT ON TABLE protector IS '보호자 계정';

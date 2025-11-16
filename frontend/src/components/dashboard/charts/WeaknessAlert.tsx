@@ -1,6 +1,21 @@
 import { useState } from 'react';
-import { AlertTriangle, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import {
+  AlertTriangle,
+  TrendingDown,
+  ChevronDown,
+  ChevronUp,
+  Info, // 1. Info 아이콘 추가
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 
 interface JamoData {
   jamo: string;
@@ -15,6 +30,29 @@ interface WeaknessAlertProps {
 
 export default function WeaknessAlert({ allJamoData }: WeaknessAlertProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // 2. [수정] 빈 데이터 상태(Empty State)를 먼저 처리
+  if (!allJamoData || allJamoData.length === 0) {
+    return (
+      <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-neutral-200 flex items-center justify-center flex-shrink-0">
+            <Info size={24} className="text-neutral-500" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-neutral-700 font-pretendard">
+              아직 학습 데이터가 없습니다
+            </h3>
+            <p className="text-sm text-neutral-500 font-pretendard mt-1">
+              학습을 시작하면 분석 데이터를 볼 수 있어요.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- 기존 로직 (데이터가 하나 이상 있을 때만 실행됨) ---
 
   // 정확도 낮은 순으로 정렬
   const sortedData = [...allJamoData].sort((a, b) => a.accuracy - b.accuracy);
@@ -44,10 +82,12 @@ export default function WeaknessAlert({ allJamoData }: WeaknessAlertProps) {
     );
   }
 
+  // --- 기존 '부족한 자모' 경고 상태 로직 (변경 없음) ---
   return (
     <div className="bg-warning/5 rounded-xl p-6 border border-warning/20">
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
+        {/* ... (이하 동일) ... */}
         <div className="w-12 h-12 rounded-lg bg-warning/20 flex items-center justify-center flex-shrink-0">
           <AlertTriangle size={24} className="text-warning" />
         </div>
@@ -106,13 +146,20 @@ export default function WeaknessAlert({ allJamoData }: WeaknessAlertProps) {
             📊 전체 자모별 정확도
           </h4>
 
-          <ResponsiveContainer width="100%" height={Math.max(sortedData.length * 30, 300)}>
+          <ResponsiveContainer
+            width="100%"
+            height={Math.max(sortedData.length * 30, 300)}
+          >
             <BarChart
               data={sortedData}
               layout="vertical"
               margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" horizontal={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#E5E7EB"
+                horizontal={false}
+              />
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -123,13 +170,22 @@ export default function WeaknessAlert({ allJamoData }: WeaknessAlertProps) {
                   value: '정확도 (%)',
                   position: 'insideBottom',
                   offset: -5,
-                  style: { fill: '#6B7280', fontFamily: 'Pretendard', fontSize: 12 },
+                  style: {
+                    fill: '#6B7280',
+                    fontFamily: 'Pretendard',
+                    fontSize: 12,
+                  },
                 }}
               />
               <YAxis
                 type="category"
                 dataKey="jamo"
-                tick={{ fill: '#1F2937', fontFamily: 'Pretendard', fontWeight: 600, fontSize: 14 }}
+                tick={{
+                  fill: '#1F2937',
+                  fontFamily: 'Pretendard',
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
                 tickLine={false}
                 axisLine={false}
                 width={50}

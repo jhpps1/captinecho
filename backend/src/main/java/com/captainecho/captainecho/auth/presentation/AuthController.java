@@ -2,8 +2,12 @@ package com.captainecho.captainecho.auth.presentation;
 
 import com.captainecho.captainecho.auth.application.AuthService;
 import com.captainecho.captainecho.auth.application.result.LoginResult;
+import com.captainecho.captainecho.auth.application.result.SignupResult;
+import com.captainecho.captainecho.auth.presentation.response.SignupResponse;
+import com.captainecho.captainecho.auth.presentation.request.LocalLoginRequest;
 import com.captainecho.captainecho.auth.presentation.request.LocalSignupRequest;
 import com.captainecho.captainecho.auth.presentation.request.LoginRequest;
+import com.captainecho.captainecho.auth.presentation.response.LocalLoginResponse;
 import com.captainecho.captainecho.auth.presentation.response.LoginResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +34,18 @@ public class AuthController {
     }
 
     @PostMapping("/local/signup")
-    public ResponseEntity<LoginResponse> localSignup(@Valid @RequestBody LocalSignupRequest request) {
-        LoginResult result = authService.localSignup(request.toCommand());
+    public ResponseEntity<SignupResponse> localSignup(@Valid @RequestBody LocalSignupRequest request) {
+        SignupResult result = authService.localSignup(request.toCommand());
 
-        LoginResponse response = LoginResponse.from(result);
+        SignupResponse response = SignupResponse.from(result);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/local/login")
+    public ResponseEntity<LocalLoginResponse> localLogin(@Valid @RequestBody LocalLoginRequest request) {
+        String accessToken = authService.localLogin(request.toCommand());
+
+        return ResponseEntity.ok(LocalLoginResponse.of(accessToken));
     }
 }

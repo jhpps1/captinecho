@@ -5,6 +5,8 @@ import Cookies from 'js-cookie';
 import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import AddStudentModal from '../components/protector/modals/AddStudentModal';
 import InterestSelectionModal from '../components/protector/modals/InterestSelectionModal';
+import StudentProfileModal from '../components/protector/modals/StudentProfileModal';
+import AddStudentCompleteModal from '../components/protector/modals/AddStudentCompleteModal';
 import { getStudents, registerStudent, deleteStudent, getStudentCount } from '../api/protectorApi';
 import {
   mapGenderToBackend,
@@ -36,12 +38,15 @@ export default function ManageStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<number[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [studentCount, setStudentCount] = useState<{ total: number; remain: number } | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null); // 수정할 학생 정보
 
   // 학생 수 조회
   const fetchStudentCount = async () => {
@@ -138,11 +143,11 @@ export default function ManageStudentsPage() {
       console.log('📥 학생 등록 응답:', response);
 
       if (response.success) {
-        alert(`학생 "${studentData.name}"이(가) 추가되었습니다!`);
-        await fetchStudents();
-        await fetchStudentCount();
-        setShowAddModal(false);
-        setSelectedInterests([]);
+        await fetchStudents(); // 학생 목록 새로고침
+        await fetchStudentCount(); // 학생 수 새로고침
+        setShowAddModal(false); // 학생 추가 모달 닫기
+        setSelectedInterests([]); // 선택한 관심사 초기화
+        setShowCompleteModal(true); // "추가 완료" 모달 띄우기
       }
     } catch (error: any) {
       console.error('❌ 학생 등록 실패:', error);
@@ -154,6 +159,21 @@ export default function ManageStudentsPage() {
     } finally {
       setIsAddingStudent(false);
     }
+  };
+
+  const handleProfileUploadSuccess = (newImageUrl: string) => {
+    if (!editingStudent) return;
+
+    // students 상태 배열에서 해당 학생의 profileImage 업데이트
+    setStudents(prevStudents =>
+      prevStudents.map(s =>
+        s.id === editingStudent.id ? { ...s, profileImage: newImageUrl } : s
+      )
+    );
+
+    // 모달 닫기 및 상태 초기화
+    setShowProfileModal(false);
+    setEditingStudent(null);
   };
 
   const handleInterestConfirm = (interestIds: number[]) => {
@@ -213,12 +233,38 @@ export default function ManageStudentsPage() {
         />
       )}
 
+      {showCompleteModal && (
+        <AddStudentCompleteModal
+          isOpen={showCompleteModal}
+          onClose={() => setShowCompleteModal(false)}
+          onNavigate={() => {
+            setShowCompleteModal(false);
+            navigate('/select-profile'); // 프로필 선택 페이지로 이동
+          }}
+        />
+      )}
+
       {/* 관심사 선택 모달 */}
       {showInterestModal && (
         <InterestSelectionModal
           onClose={() => setShowInterestModal(false)}
           onConfirm={handleInterestConfirm}
           initialSelection={selectedInterests}
+        />
+      )}
+
+      {/* 프로필 사진 변경 모달 렌더링 */}
+      {showProfileModal && editingStudent && (
+        <StudentProfileModal
+          isOpen={showProfileModal}
+          onClose={() => {
+            setShowProfileModal(false);
+            setEditingStudent(null);
+          }}
+          onSuccess={handleProfileUploadSuccess}
+          // editingStudent.profileImage가 undefined일 수 있으니 '' (빈 문자열)로 처리
+          currentImageUrl={editingStudent.profileImage || ''}
+          studentId={editingStudent.id}
         />
       )}
 
@@ -240,11 +286,10 @@ export default function ManageStudentsPage() {
             <button
               onClick={() => setShowAddModal(true)}
               disabled={studentCount?.remain === 0}
-              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 ${
-                studentCount?.remain === 0
+              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 ${studentCount?.remain === 0
                   ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
                   : 'bg-primary text-white hover:bg-primary/90'
-              }`}
+                }`}
             >
               <Users size={20} />+ 학생 추가
             </button>
@@ -259,11 +304,19 @@ export default function ManageStudentsPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-white">
-                        {student.name.charAt(0)}
-                      </span>
-                    </div>
+                    {student.profileImage ? (
+                      <img 
+                        src={student.profileImage} 
+                        alt={student.name}
+                        className="w-16 h-16 rounded-full object-cover border-2 border-neutral-200"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-white">
+                          {student.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <h3 className="text-lg font-bold text-neutral-800">
                         {student.name}
@@ -290,6 +343,16 @@ export default function ManageStudentsPage() {
                           className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
                         >
                           ✏️ 수정하기
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingStudent(student); // 1. 수정할 학생 설정
+                            setShowProfileModal(true);  // 2. 모달 열기
+                            setOpenDropdownId(null);      // 3. 드롭다운 닫기
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
+                        >
+                          ✏️ 프로필 사진 변경
                         </button>
                         <button
                           onClick={async () => {

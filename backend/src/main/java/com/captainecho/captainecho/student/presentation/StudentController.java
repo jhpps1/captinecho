@@ -8,8 +8,12 @@ import com.captainecho.captainecho.student.application.command.AddStudentInteres
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
+import com.captainecho.captainecho.student.application.command.GetImproveAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
+import com.captainecho.captainecho.student.application.command.GetBestImproveJamoCommand;
+import com.captainecho.captainecho.student.application.command.GetWorstImproveJamoCommand;
 import com.captainecho.captainecho.student.application.command.UpdateProfileImageCommand;
 import com.captainecho.captainecho.student.application.command.UpdatePinCommand;
 import com.captainecho.captainecho.student.application.command.UpdateStudentCommand;
@@ -17,8 +21,12 @@ import com.captainecho.captainecho.student.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
+import com.captainecho.captainecho.student.application.result.GetImproveAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
+import com.captainecho.captainecho.student.application.result.GetBestImproveJamoResult;
+import com.captainecho.captainecho.student.application.result.GetWorstImproveJamoResult;
 import com.captainecho.captainecho.student.application.result.RegisterStudentResult;
 import com.captainecho.captainecho.student.application.result.UpdateProfileImageResult;
 import com.captainecho.captainecho.student.application.result.UpdatePinResult;
@@ -35,7 +43,11 @@ import com.captainecho.captainecho.student.presentation.response.DailyStreakResp
 import com.captainecho.captainecho.student.presentation.response.DeleteStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
+import com.captainecho.captainecho.student.presentation.response.ImproveAccuracyResponse;
 import com.captainecho.captainecho.student.presentation.response.RecoveryCodeResponse;
+import com.captainecho.captainecho.student.presentation.response.TotalJamoStatResponse;
+import com.captainecho.captainecho.student.presentation.response.BestImproveJamoResponse;
+import com.captainecho.captainecho.student.presentation.response.WorstImproveJamoResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
 import com.captainecho.captainecho.student.presentation.response.UpdatePinResponse;
 import com.captainecho.captainecho.student.presentation.response.UpdateProfileImageResponse;
@@ -196,6 +208,82 @@ public class StudentController {
         GetWeeklyJamoStatResult result = studentService.getWeeklyJamoStat(command);
 
         GetWeeklyJamoStatResponse response = GetWeeklyJamoStatResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/total/jamo/stat")
+    public ResponseEntity<TotalJamoStatResponse> getTotalJamoStat(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetTotalJamoStatCommand command = new GetTotalJamoStatCommand(protectorId, studentId);
+        GetTotalJamoStatResult result = studentService.getTotalJamoStat(command);
+
+        TotalJamoStatResponse response = TotalJamoStatResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/improve/accuracy")
+    public ResponseEntity<ImproveAccuracyResponse> getImproveAccuracy(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetImproveAccuracyCommand command = new GetImproveAccuracyCommand(protectorId, studentId);
+        GetImproveAccuracyResult result = studentService.getImproveAccuracy(command);
+
+        ImproveAccuracyResponse response = ImproveAccuracyResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/best/improve/jamo")
+    public ResponseEntity<BestImproveJamoResponse> getBestImproveJamo(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetBestImproveJamoCommand command = new GetBestImproveJamoCommand(protectorId, studentId);
+        GetBestImproveJamoResult result = studentService.getBestImproveJamo(command);
+
+        BestImproveJamoResponse response = BestImproveJamoResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/worst/improve/jamo")
+    public ResponseEntity<WorstImproveJamoResponse> getWorstImproveJamo(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetWorstImproveJamoCommand command = new GetWorstImproveJamoCommand(protectorId, studentId);
+        GetWorstImproveJamoResult result = studentService.getWorstImproveJamo(command);
+
+        WorstImproveJamoResponse response = WorstImproveJamoResponse.from(result);
 
         return ResponseEntity.ok(response);
     }

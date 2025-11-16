@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getDailyProblems, startAdventure, endAdventure } from '../../api/adventureApi';
-import type { Problem, SessionState } from '../../types/adventure';
-import { ProblemRunner } from './ProblemRunner';
-import { AdventureLayout } from './AdventureLayout';
+import { getDailyProblems, startAdventure, endAdventure } from '../api/adventureApi';
+import type { Problem, SessionState } from '../types/adventure';
+import { ProblemRunner } from '../components/adventure/ProblemRunner';
+import { AdventureLayout } from '../components/adventure/AdventureLayout';
 
 /**
- * DailyRunner - 일일탐험 문제 관리 컴포넌트
+ * DailyRunner - 일일탐험 문제 관리 페이지
  *
  * @description
  * - URL에서 idx 추출

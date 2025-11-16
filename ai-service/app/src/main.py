@@ -80,7 +80,7 @@ def save_report_via_api(student_id, curriculum, discussion_log):
     API_URL = "http://localhost:8000/save-report"
     payload = {
         "curriculum": curriculum,
-        "discussion_log": discussion_log
+        "discussion_log": json.dumps(discussion_log, ensure_ascii=False)
     }
     tries = 3
     for attempt in range(tries):

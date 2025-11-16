@@ -2,6 +2,7 @@ package com.captainecho.captainecho.protector.domain;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 @Getter
 @Table(name = "protector")
 public class Protector {
@@ -34,7 +37,7 @@ public class Protector {
     @Enumerated(EnumType.STRING)
     private Provider provider;
 
-    @Column(name = "social_id", length = 255)
+    @Column(name = "social_id", length = 255, nullable = true)
     private String socialId;
 
     @Column(name = "email", length = 500)
@@ -42,7 +45,8 @@ public class Protector {
 
     @Column(name = "max_student_count")
     @ColumnDefault("2")
-    private Short maxStudentCount;
+    @Builder.Default
+    private Short maxStudentCount = 2;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -50,28 +54,16 @@ public class Protector {
 
     @Column(name = "terms_agreed", nullable = false)
     @ColumnDefault("false")
+    @Builder.Default
     private Boolean termsAgreed = false;
 
     @Column(name = "is_deleted", nullable = false)
     @ColumnDefault("false")
+    @Builder.Default
     private Boolean isDeleted = false;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
-
-    @Builder
-    public Protector(String id, String password, String protectorPin, Provider provider, String socialId, String email, Short maxStudentCount) {
-        this.id = id;
-        this.password = password;
-        this.protectorPin = protectorPin;
-        this.provider = provider;
-        this.socialId = socialId;
-        this.email = email;
-        this.maxStudentCount = maxStudentCount != null ? maxStudentCount : 2;
-        this.termsAgreed = false;
-        this.isDeleted = false;
-    }
-
 
     public void delete() {
         this.isDeleted = true;

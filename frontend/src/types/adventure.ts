@@ -210,3 +210,20 @@ export function normalizeProblemsResponse(response: ProblemsResponse): {
     isActive: boolean;
     startedAt: string | null; // ISO 8601 timestamp
   }
+
+// ==================== 발음 평가 관련 타입 ====================
+
+/**
+ * 발음 평가 API 응답
+ * POST /stt/evaluate-pronunciation
+ */
+export interface PronunciationEvaluationResponse {
+  student_id: number;
+  problem_id: number;
+  correct_text: string;      // 정답 텍스트
+  user_text: string;          // 음성 인식 결과
+  accuracy: number;           // 정확도 (0-100)
+  total_phonemes: number;     // 전체 음소 개수
+  correct_phonemes: number;   // 정확한 음소 개수
+  timestamp: string;          // ISO 8601 timestamp
+}

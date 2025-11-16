@@ -5,9 +5,11 @@ import com.captainecho.captainecho.common.util.GoogleTokenVerifier;
 import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.AuthErrorCode;
 import com.captainecho.captainecho.jwt.util.JwtUtil;
+import com.captainecho.captainecho.auth.application.command.LocalLoginCommand;
 import com.captainecho.captainecho.auth.application.command.LocalSignupCommand;
 import com.captainecho.captainecho.auth.application.command.LoginCommand;
 import com.captainecho.captainecho.auth.application.result.LoginResult;
+import com.captainecho.captainecho.auth.application.result.SignupResult;
 import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.domain.Provider;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
@@ -70,7 +72,7 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResult localSignup(LocalSignupCommand command) {
+    public SignupResult localSignup(LocalSignupCommand command) {
         // 1. 아이디 중복 체크
         if (protectorRepository.existsById(command.username())) {
             throw new EchoException(AuthErrorCode.DUPLICATE_USERNAME);
@@ -97,9 +99,30 @@ public class AuthService {
         Protector savedProtector = protectorRepository.save(newProtector);
         log.info("일반 회원가입 완료 - Protector ID: {}, Username: {}", savedProtector.getProtectorId(), savedProtector.getId());
 
-        // 5. JWT 토큰 생성
-        String accessToken = jwtUtil.generateAccessToken(savedProtector.getProtectorId());
+        return new SignupResult(true);
+    }
 
-        return new LoginResult(savedProtector.getProtectorId(), accessToken, true);
+    @Transactional(readOnly = true)
+    public String localLogin(LocalLoginCommand command) {
+        // 1. 사용자 조회
+        Protector protector = protectorRepository.findById(command.username())
+                .orElseThrow(() -> new EchoException(AuthErrorCode.USER_NOT_FOUND));
+
+        // 2. 탈퇴 여부 확인
+        if (Boolean.TRUE.equals(protector.getIsDeleted())) {
+            throw new EchoException(AuthErrorCode.DELETED_USER);
+        }
+
+        // 3. 비밀번호 검증
+        if (!passwordEncoder.matches(command.password(), protector.getPassword())) {
+            throw new EchoException(AuthErrorCode.INVALID_CREDENTIALS);
+        }
+
+        // 4. JWT 토큰 생성
+        String accessToken = jwtUtil.generateAccessToken(protector.getProtectorId());
+
+        log.info("일반 로그인 성공 - Protector ID: {}, Username: {}", protector.getProtectorId(), protector.getId());
+
+        return accessToken;
     }
 }
