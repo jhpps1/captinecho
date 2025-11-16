@@ -22,6 +22,12 @@ import {
   type DailyStreakResponse,
 } from '../api/dashboardApi';
 
+import {
+  getDailyAccuracy,
+  getWeeklyAccuracy,
+  type AccuracyResponse,
+} from '../api/studentApi'
+
 interface Student {
   id: number;
   name: string;
@@ -93,7 +99,9 @@ export default function ProtectorDashboard() {
   const [curriculum, setCurriculum] = useState<string>('');
   const [learningTime, setLearningTime] = useState<LearningTimeResponse | null>(null);
   const [dailyStreak, setDailyStreak] = useState<DailyStreakResponse | null>(null)
-  const [dailyGoalCount, setDailyGoalCount] = useState(50);
+  const [dailyAccuracy, setDailyAccuracy] = useState(0);
+  const [weeklyAccuracy, setWeeklyAccuracy] = useState(0);
+  const [dailyGoalCount, setDailyGoalCount] = useState(10);
   const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
 
@@ -145,6 +153,8 @@ export default function ProtectorDashboard() {
           dailyCompletedData,
           weeklyPercentData,
           dailyStreakData,
+          dailyAccuracyData,
+          weeklyAccuracyData,
         ] = await Promise.all([
           getCurriculum(selectedStudentId),
           getLearningTime(selectedStudentId),
@@ -152,6 +162,8 @@ export default function ProtectorDashboard() {
           getDailyCompletedCount(selectedStudentId),
           getWeeklyGoalPercent(selectedStudentId),
           getDailyStreak(selectedStudentId),
+          getDailyAccuracy(),
+          getWeeklyAccuracy(),
         ]);
 
         // 데이터 설정
@@ -161,6 +173,8 @@ export default function ProtectorDashboard() {
         setDailyCompletedCount(dailyCompletedData.completedCount);
         setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
         setDailyStreak(dailyStreakData);
+        setDailyAccuracy(dailyAccuracyData.accuracy);
+        setWeeklyAccuracy(weeklyAccuracyData.accuracy);
 
         // Streak 계산 및 업데이트
         const streak = dailyStreakData.currentStreak;
@@ -180,6 +194,8 @@ export default function ProtectorDashboard() {
         setCurriculum('데이터를 불러올 수 없습니다.');
         setLearningTime(null);
         setDailyStreak(null);
+        setDailyAccuracy(0);
+        setWeeklyAccuracy(0);
       } finally {
         setIsLoading(false);
       }
@@ -191,10 +207,10 @@ export default function ProtectorDashboard() {
   // 학습 시간 데이터를 차트 형식으로 변환
   const weeklyTimeData = learningTime
     ? ['월', '화', '수', '목', '금', '토', '일'].map((day, index) => ({
-        day,
-        thisWeek: learningTime.thisWeekLearningTime.daily[index]?.learningMinutes || 0,
-        lastWeek: learningTime.lastWeekLearningTime.daily[index]?.learningMinutes || 0,
-      }))
+      day,
+      thisWeek: learningTime.thisWeekLearningTime.daily[index]?.learningMinutes || 0,
+      lastWeek: learningTime.lastWeekLearningTime.daily[index]?.learningMinutes || 0,
+    }))
     : [];
 
   // 출석 데이터 (월~금, 이번 주)
@@ -207,19 +223,19 @@ export default function ProtectorDashboard() {
     problems: { current: dailyCompletedCount, target: dailyGoalCount },
     time: {
       current: learningTime?.thisWeekLearningTime.daily[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.learningMinutes || 0,
-      target: 30, // 고정값 (백엔드에서 제공하지 않음)
+      target: 10, // 고정값 (백엔드에서 제공하지 않음)
     },
-    accuracy: { current: 83 }, // Mock (백엔드 미구현)
+    accuracy: { current: dailyAccuracy },
   };
 
   // 주간 목표 데이터
   const weeklyGoals = {
-    problems: { current: weeklyGoalPercent, target: 100 },
+    problems: { current: weeklyGoalPercent, target: 50 },
     time: {
       current: learningTime?.thisWeekLearningTime.totalMinutes || 0,
       target: 400, // 고정값
     },
-    accuracy: { current: 85 }, // Mock (백엔드 미구현)
+    accuracy: { current: weeklyAccuracy },
   };
 
   // 커리큘럼 객체 생성

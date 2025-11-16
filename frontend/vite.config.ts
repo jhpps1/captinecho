@@ -16,6 +16,10 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       // Spring Boot 백엔드
       '/api': {
         target: 'http://localhost:8080',
