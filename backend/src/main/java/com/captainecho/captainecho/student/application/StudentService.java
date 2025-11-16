@@ -15,14 +15,17 @@ import com.captainecho.captainecho.protector.domain.Protector;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.stats.domain.JamoStat;
 import com.captainecho.captainecho.stats.domain.WeeklyJamoStat;
+import com.captainecho.captainecho.stats.domain.WeeklyPersonalReport;
 import com.captainecho.captainecho.stats.persistence.JamoStatRepository;
 import com.captainecho.captainecho.stats.persistence.WeeklyJamoStatRepository;
+import com.captainecho.captainecho.stats.persistence.WeeklyPersonalReportRepository;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
+import com.captainecho.captainecho.student.application.command.GetImproveAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
@@ -39,6 +42,7 @@ import com.captainecho.captainecho.student.application.result.DeleteStudentInter
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
+import com.captainecho.captainecho.student.application.result.GetImproveAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
@@ -82,6 +86,7 @@ public class StudentService {
     private final PhonemeFeatureRepository phonemeFeatureRepository;
     private final JamoStatRepository jamoStatRepository;
     private final WeeklyJamoStatRepository weeklyJamoStatRepository;
+    private final WeeklyPersonalReportRepository weeklyPersonalReportRepository;
     private final FileStorageProperties fileStorageProperties;
     private final ApplicationEventPublisher eventPublisher;
     private final FileStorageService fileStorageService;
@@ -495,6 +500,99 @@ public class StudentService {
         log.info("전체 학습 분석 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), accuracyRates.size());
 
         return GetTotalJamoStatResult.of(accuracyRates);
+    }
+
+    /**
+     * 지지난주 대비 지난주 전체 정확도 개선율 조회
+     */
+    @Transactional(readOnly = true)
+    public GetImproveAccuracyResult getImproveAccuracy(GetImproveAccuracyCommand command) {
+        log.info("정확도 개선율 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 존재 여부 확인
+        if (!studentRepository.existsById(command.studentId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // 2. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
+                .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
+
+        // 4. 데이터가 2개 미만이면 null 반환
+        if (recentReports.size() < 2) {
+            log.info("정확도 개선율 조회 불가 - Student ID: {}, 리포트 개수: {}",
+                    command.studentId(), recentReports.size());
+            return GetImproveAccuracyResult.of(null, null, null);
+        }
+
+        WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
+        WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
+
+        // 5. 지지난주까지의 누적 통계 계산 (첫 리포트 ~ 지지난주 리포트)
+        List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
+                .findAll()
+                .stream()
+                .filter(stat -> stat.getStudent().getStudentId().equals(command.studentId()))
+                .filter(stat -> stat.getWeeklyPersonalReport().getReportId() <= twoWeeksAgoReport.getReportId())
+                .toList();
+
+        Integer twoWeeksAgoAccuracy = calculateAccuracy(twoWeeksAgoStats);
+
+        // 6. 지난주 단독 통계 계산 (지난주 리포트만)
+        List<WeeklyJamoStat> lastWeekOnlyStats = weeklyJamoStatRepository
+                .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
+
+        // 7. 지난주 누적 정확도 계산
+        int lastWeekTotalAttempts = calculateTotalAttempts(twoWeeksAgoStats) + calculateTotalAttempts(lastWeekOnlyStats);
+        int lastWeekTotalFails = calculateTotalFails(twoWeeksAgoStats) + calculateTotalFails(lastWeekOnlyStats);
+        Integer lastWeekAccuracy = lastWeekTotalAttempts > 0
+                ? (int) Math.round((lastWeekTotalAttempts - lastWeekTotalFails) * 100.0 / lastWeekTotalAttempts)
+                : null;
+
+        // 8. 개선율 계산
+        Integer improveRate = (twoWeeksAgoAccuracy != null && lastWeekAccuracy != null)
+                ? lastWeekAccuracy - twoWeeksAgoAccuracy
+                : null;
+
+        log.info("정확도 개선율 조회 완료 - Student ID: {}, 지지난주: {}%, 지난주: {}%, 개선율: {}%",
+                command.studentId(), twoWeeksAgoAccuracy, lastWeekAccuracy, improveRate);
+
+        return GetImproveAccuracyResult.of(twoWeeksAgoAccuracy, lastWeekAccuracy, improveRate);
+    }
+
+    /**
+     * 통계 리스트로부터 정확도 계산
+     */
+    private Integer calculateAccuracy(List<WeeklyJamoStat> stats) {
+        if (stats.isEmpty()) {
+            return null;
+        }
+        int totalAttempts = calculateTotalAttempts(stats);
+        int totalFails = calculateTotalFails(stats);
+        return totalAttempts > 0 ? (int) Math.round((totalAttempts - totalFails) * 100.0 / totalAttempts) : null;
+    }
+
+    /**
+     * 통계 리스트로부터 총 시도 횟수 계산
+     */
+    private int calculateTotalAttempts(List<WeeklyJamoStat> stats) {
+        return stats.stream()
+                .mapToInt(stat -> stat.getTotalAttempts().intValue())
+                .sum();
+    }
+
+    /**
+     * 통계 리스트로부터 총 실패 횟수 계산
+     */
+    private int calculateTotalFails(List<WeeklyJamoStat> stats) {
+        return stats.stream()
+                .mapToInt(stat -> stat.getFailCount().intValue())
+                .sum();
     }
 
     /**

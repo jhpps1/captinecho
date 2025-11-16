@@ -8,6 +8,7 @@ import com.captainecho.captainecho.student.application.command.AddStudentInteres
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
+import com.captainecho.captainecho.student.application.command.GetImproveAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
@@ -18,6 +19,7 @@ import com.captainecho.captainecho.student.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
+import com.captainecho.captainecho.student.application.result.GetImproveAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
@@ -37,6 +39,7 @@ import com.captainecho.captainecho.student.presentation.response.DailyStreakResp
 import com.captainecho.captainecho.student.presentation.response.DeleteStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
+import com.captainecho.captainecho.student.presentation.response.ImproveAccuracyResponse;
 import com.captainecho.captainecho.student.presentation.response.RecoveryCodeResponse;
 import com.captainecho.captainecho.student.presentation.response.TotalJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.RegisterStudentResponse;
@@ -218,6 +221,25 @@ public class StudentController {
         GetTotalJamoStatResult result = studentService.getTotalJamoStat(command);
 
         TotalJamoStatResponse response = TotalJamoStatResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/improve/accuracy")
+    public ResponseEntity<ImproveAccuracyResponse> getImproveAccuracy(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetImproveAccuracyCommand command = new GetImproveAccuracyCommand(protectorId, studentId);
+        GetImproveAccuracyResult result = studentService.getImproveAccuracy(command);
+
+        ImproveAccuracyResponse response = ImproveAccuracyResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
