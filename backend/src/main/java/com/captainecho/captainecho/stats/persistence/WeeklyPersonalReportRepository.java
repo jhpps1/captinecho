@@ -36,4 +36,9 @@ public interface WeeklyPersonalReportRepository extends JpaRepository<WeeklyPers
             LocalDateTime startDate,
             LocalDateTime endDate
     );
+
+    /**
+     * 특정 학생의 최근 2개 주간 리포트 조회 (최신순)
+     */
+    List<WeeklyPersonalReport> findTop2ByStudent_StudentIdOrderByCreatedAtDesc(Integer studentId);
 }
