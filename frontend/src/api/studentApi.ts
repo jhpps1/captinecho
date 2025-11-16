@@ -33,6 +33,17 @@ export interface OverallAccuracyResponse {
   improveRate: number;
 }
 
+// 💡 추가: 전체 학습 분석 API 응답 인터페이스
+export interface JamoStatData {
+  jamo: string;
+  accuracyRate: number;
+  count: number;
+}
+
+export interface AllJamoStatsResponse {
+  accuracyRates: JamoStatData[];
+}
+
 /**
  * sessionStorage에서 학생 ID를 가져옵니다.
  * @throws {Error} 학생 ID를 찾을 수 없는 경우 (로그인이 필요한 경우)
@@ -135,5 +146,17 @@ export const getOverallAccuracy = async (): Promise<OverallAccuracyResponse> => 
   const studentId = getStudentId();
   const url = `/student/${studentId}/dashboard/improve/accuracy`;
   const response = await axiosInstance.get<OverallAccuracyResponse>(url);
+  return response.data;
+};
+
+// 💡 추가: 특정 아동의 전체 학습 분석 조회
+/**
+ * 특정 아동의 전체 학습 분석을 조회합니다.
+ * GET /api/student/{student-id}/dashboard/total/jamo/stat
+ */
+export const getAllJamoStats = async (): Promise<AllJamoStatsResponse> => {
+  const studentId = getStudentId();
+  const url = `/student/${studentId}/dashboard/total/jamo/stat`;
+  const response = await axiosInstance.get<AllJamoStatsResponse>(url);
   return response.data;
 };

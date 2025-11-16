@@ -31,6 +31,8 @@ import {
   type JamoImprovementApiData,
   getOverallAccuracy,
   type OverallAccuracyResponse,
+  getAllJamoStats,
+  type JamoStatData,
 } from '../api/studentApi'
 
 interface Student {
@@ -49,18 +51,6 @@ interface JamoImprovementData {
   currentAccuracy: number;
   improvement: number;
 }
-
-// Mock Data (백엔드 미구현 - 나중에 API로 교체)
-const MOCK_JAMO_DATA = [
-  { jamo: 'ㄱ', accuracy: 92, count: 45 },
-  { jamo: 'ㄴ', accuracy: 65, count: 38 },
-  { jamo: 'ㄷ', accuracy: 88, count: 52 },
-  { jamo: 'ㄹ', accuracy: 73, count: 41 },
-  { jamo: 'ㅁ', accuracy: 95, count: 49 },
-  { jamo: 'ㅂ', accuracy: 78, count: 36 },
-  { jamo: 'ㅅ', accuracy: 70, count: 44 },
-  { jamo: 'ㅇ', accuracy: 85, count: 50 },
-];
 
 /**
  * 이번 주 연속 학습일 계산
@@ -102,6 +92,7 @@ export default function ProtectorDashboard() {
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
   const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
   const [overallAccuracy, setOverallAccuracy] = useState({ previous: 0, current: 0 });
+  const [jamoStats, setJamoStats] = useState<JamoStatData[]>([]);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
@@ -158,6 +149,7 @@ export default function ProtectorDashboard() {
           bestJamosData,
           worstJamosData,
           overallAccuracyData,
+          allJamoStatsData,
         ] = await Promise.all([
           getCurriculum(selectedStudentId),
           getLearningTime(selectedStudentId),
@@ -170,6 +162,7 @@ export default function ProtectorDashboard() {
           getBestJamos(),
           getWorstJamos(),
           getOverallAccuracy(),
+          getAllJamoStats(),
         ]);
 
         // 데이터 설정
@@ -181,6 +174,17 @@ export default function ProtectorDashboard() {
         setDailyStreak(dailyStreakData);
         setDailyAccuracy(dailyAccuracyData.accuracy);
         setWeeklyAccuracy(weeklyAccuracyData.accuracy);
+
+        // 💡 추가: 자모 통계 데이터 설정
+        // WeaknessAlert가 기대하는 속성명(accuracy, count)과 API 응답(accuracyRate, count)이 살짝 다를 수 있으므로 매핑
+        // 하지만 WeaknessAlert의 JamoData 인터페이스를 보니 `accuracy`를 쓰고 있음.
+        // API는 `accuracyRate`를 줌. 따라서 매핑 필요.
+        const mappedJamoStats = allJamoStatsData.accuracyRates.map(stat => ({
+          jamo: stat.jamo,
+          accuracy: stat.accuracyRate, // 매핑: accuracyRate -> accuracy
+          count: stat.count
+        }));
+        setJamoStats(allJamoStatsData.accuracyRates);
 
         // 💡 추가: 전체 정확도 데이터 설정
         setOverallAccuracy({
@@ -223,6 +227,7 @@ export default function ProtectorDashboard() {
         setWeeklyAccuracy(0);
         setJamoImprovements([]);
         setOverallAccuracy({ previous: 0, current: 0 });
+        setJamoStats([]);
       } finally {
         setIsLoading(false);
       }
@@ -334,7 +339,13 @@ export default function ProtectorDashboard() {
                   <WeeklyTimeChart data={weeklyTimeData} />
 
                   {/* Weakness Alert with Expandable Chart */}
-                  <WeaknessAlert allJamoData={MOCK_JAMO_DATA} />
+                  <WeaknessAlert
+                    allJamoData={jamoStats.map(stat => ({
+                      jamo: stat.jamo,
+                      accuracy: stat.accuracyRate, // 여기서 'accuracyRate'를 'accuracy'로 변경
+                      count: stat.count,
+                    }))}
+                  />
                 </div>
 
                 {/* Right Column - Improvement Card (full height) */}
