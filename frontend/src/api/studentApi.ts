@@ -12,6 +12,21 @@ export interface AccuracyResponse {
   accuracy: number;
 }
 
+export interface JamoImprovementApiData {
+  jamo: string;
+  twoWeeksAgo: number;
+  lastWeek: number;
+  improveRate: number;
+}
+
+export interface BestJamosResponse {
+  bestJamos: JamoImprovementApiData[];
+}
+
+export interface WorstJamosResponse {
+  worstJamos: JamoImprovementApiData[];
+}
+
 /**
  * sessionStorage에서 학생 ID를 가져옵니다.
  * @throws {Error} 학생 ID를 찾을 수 없는 경우 (로그인이 필요한 경우)
@@ -79,5 +94,28 @@ export const getWeeklyAccuracy = async (): Promise<AccuracyResponse> => {
   const studentId = getStudentId();
   const url = `/student/${studentId}/dashboard/accuracy/week`;
   const response = await axiosInstance.get<AccuracyResponse>(url);
+  return response.data;
+};
+
+/**
+ * 가장 많이 개선된 자모 Top2 조회
+ * GET /api/student/{student-id}/dashboard/best/improve/jamo
+ */
+export const getBestJamos = async (): Promise<BestJamosResponse> => {
+  const studentId = getStudentId();
+  const url = `/student/${studentId}/dashboard/best/improve/jamo`;
+  const response = await axiosInstance.get<BestJamosResponse>(url);
+  return response.data;
+};
+
+// 💡 추가: 정확도가 낮은 자모 Top2 조회
+/**
+ * 정확도가 낮은 자모 Top2 조회
+ * GET /api/student/{student-id}/dashboard/worst/improve/jamo
+ */
+export const getWorstJamos = async (): Promise<WorstJamosResponse> => {
+  const studentId = getStudentId();
+  const url = `/student/${studentId}/dashboard/worst/improve/jamo`;
+  const response = await axiosInstance.get<WorstJamosResponse>(url);
   return response.data;
 };
