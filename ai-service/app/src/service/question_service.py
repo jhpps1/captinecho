@@ -523,3 +523,97 @@ def generate_problems_for_one_week(session, student_id):
         "week_dates": [day[1] for day in DAYS], 
         "problems": all_generated_problems_metadata
     }
+
+
+def generate_problems_from_signup(session, student_id, signup_date=None):
+    """
+    신규 가입 학생: 가입 요일부터 해당 주 금요일까지(평일만) 문제 생성
+    """
+    import datetime
+
+    if signup_date is None:
+        signup_date = datetime.date.today()
+    elif isinstance(signup_date, datetime.datetime):
+        signup_date = signup_date.date()
+
+    weekday = signup_date.weekday()  # 0=월 ... 6=일
+
+    # 주말 가입 시: 다음주 월요일부터
+    if weekday >= 5:  # 토/일
+        days_until_monday = 7 - weekday
+        start_date = signup_date + datetime.timedelta(days=days_until_monday)
+    else:
+        start_date = signup_date
+
+    # 해당 주 금요일 계산
+    days_until_friday = 4 - start_date.weekday()
+    end_date = start_date + datetime.timedelta(days=days_until_friday)
+    # end_date가 이미 다음주면 이번주 금요일까지만
+    if (end_date - start_date).days < 0:
+        end_date = start_date
+
+    all_generated_problems_metadata = []
+
+    # 요일별 루프: start_date ~ end_date
+    current = start_date
+    while current <= end_date:
+        if current.weekday() < 5:  # 평일만
+            assigned_date = current.strftime('%Y-%m-%d')
+            # 문제 생성 원리: 기존과 거의 동일, 단 DAYS 대신 단일 날짜 할당
+            # curriculum_structure, interest_id 등 로딩 방식은 기존 함수와 같게!
+            # ...
+            # 1. 커리큘럼 등 준비
+            report = session.execute(
+                text("""
+                    SELECT curriculum, curriculum_structure
+                    FROM weekly_personal_report
+                    WHERE student_id=:student_id
+                    ORDER BY created_at DESC LIMIT 1
+                """), {"student_id": student_id}
+            ).fetchone()
+            if not report or not report[1]:
+                continue
+            curriculum_text = report[0]
+            curriculum_structure = report[1]
+            interest_id = get_interest_id_for_student(session, student_id)
+            small_interest_name = get_small_interest_name_for_student(session, student_id)
+            # 날짜별 요일 키 생성
+            day_map = {0: "monday", 1: "tuesday", 2: "wednesday", 3: "thursday", 4: "friday"}
+            day_key = day_map.get(current.weekday(), "monday")
+            curriculum_for_day = curriculum_structure.get(day_key, [])
+            if not curriculum_for_day:
+                continue
+            prompt = make_prompt(
+                curriculum_for_day=curriculum_for_day,
+                small_interest_name=small_interest_name,
+                interest_id=interest_id,
+                day_name="",  # 필요 시: ['월요일','화요일',...][current.weekday()]
+                assigned_date=assigned_date,
+                student_id=student_id,
+                student_level=1,  # 실제 레벨 적용
+                curriculum_text=curriculum_text
+            )
+            llm_response = llm_problem(prompt)
+            problems_to_process = safe_parse_json(llm_response, assigned_date)
+            if not problems_to_process:
+                total_count = sum(item['count'] for item in curriculum_for_day)
+                first_type = curriculum_for_day[0]['type_id'] if curriculum_for_day else 1
+                problems_to_process = generate_fallback_problems(first_type, total_count)
+                if not problems_to_process:
+                    continue
+            process_day_problem_items(session, student_id, problems_to_process)
+            # 메타데이터 집계
+            for idx, item in enumerate(problems_to_process):
+                all_generated_problems_metadata.append({
+                    "date": assigned_date,
+                    "seq_no": idx + 1,
+                    "adventure_type": item.get('adventure_type_id'),
+                    "problem": item.get('problem_text')
+                })
+        current += datetime.timedelta(days=1)
+
+    return {
+        "generated_count": len(all_generated_problems_metadata),
+        "week_dates": [start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')],
+        "problems": all_generated_problems_metadata
+    }
