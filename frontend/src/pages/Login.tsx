@@ -29,7 +29,7 @@ const Login = () => {
     try {
       // idToken을 백엔드 서버로 전송
       const response = await axios.post<LoginResponse>(
-        '/api/auth/login',
+        '/api/auth/social/login',
         {
           idToken: idToken,
           provider: 'google',
