@@ -7,13 +7,16 @@ import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.ProtectorErrorCode;
 import com.captainecho.captainecho.protector.application.command.CreatePinCommand;
 import com.captainecho.captainecho.protector.application.command.GetStudentCountCommand;
+import com.captainecho.captainecho.protector.application.command.UpdateEmailCommand;
 import com.captainecho.captainecho.protector.application.command.UpdatePinCommand;
 import com.captainecho.captainecho.protector.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.protector.application.result.CreatePinResult;
 import com.captainecho.captainecho.protector.application.result.GetStudentCountResult;
+import com.captainecho.captainecho.protector.application.result.UpdateEmailResult;
 import com.captainecho.captainecho.protector.application.result.UpdatePinResult;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 import com.captainecho.captainecho.protector.domain.Protector;
+import com.captainecho.captainecho.protector.domain.Provider;
 import com.captainecho.captainecho.protector.persistence.ProtectorRepository;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.domain.StudentInterest;
@@ -261,5 +264,37 @@ public class ProtectorService {
         protector.updateTermsAgreed(termsAgreed);
 
         log.info("약관 동의 상태 업데이트 완료 - Protector ID: {}, Terms Agreed: {}", protectorId, termsAgreed);
+    }
+
+    /**
+     * 이메일 업데이트
+     */
+    @Transactional
+    public UpdateEmailResult updateEmail(UpdateEmailCommand command) {
+        // 1. Protector 조회
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+
+        // 2. LOCAL 유저 검증 (OAuth 유저는 이메일 변경 불가)
+        if (protector.getProvider() != Provider.LOCAL) {
+            throw new EchoException(ProtectorErrorCode.OAUTH_USER_EMAIL_UPDATE_NOT_ALLOWED);
+        }
+
+        // 3. 현재 이메일과 동일한 경우 성공 처리
+        if (command.newEmail().equals(protector.getEmail())) {
+            log.info("이메일 변경 요청 - 동일한 이메일로 요청됨 - Protector ID: {}", command.protectorId());
+            return new UpdateEmailResult(true);
+        }
+
+        // 4. 이메일 중복 체크 (다른 유저가 사용 중인지 확인)
+        if (protectorRepository.existsByEmail(command.newEmail())) {
+            throw new EchoException(ProtectorErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        // 5. 이메일 업데이트
+        protector.updateEmail(command.newEmail());
+
+        log.info("이메일 업데이트 완료 - Protector ID: {}, New Email: {}", command.protectorId(), command.newEmail());
+        return new UpdateEmailResult(true);
     }
 }
