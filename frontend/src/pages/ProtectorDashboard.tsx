@@ -144,8 +144,8 @@ export default function ProtectorDashboard() {
           dailyCompletedData,
           weeklyPercentData,
           dailyStreakData,
-          dailyAccuracyData,
-          weeklyAccuracyData,
+          // dailyAccuracyData,    // ❌ 404 Error - 백엔드 API 미구현
+          // weeklyAccuracyData,   // ❌ 404 Error - 백엔드 API 미구현
           bestJamosData,
           worstJamosData,
           overallAccuracyData,
@@ -157,8 +157,8 @@ export default function ProtectorDashboard() {
           getDailyCompletedCount(selectedStudentId),
           getWeeklyGoalPercent(selectedStudentId),
           getDailyStreak(selectedStudentId),
-          getDailyAccuracy(),
-          getWeeklyAccuracy(),
+          // getDailyAccuracy(),   // ❌ 404 Error - 임시 주석 처리
+          // getWeeklyAccuracy(),  // ❌ 404 Error - 임시 주석 처리
           getBestJamos(),
           getWorstJamos(),
           getOverallAccuracy(),
@@ -172,8 +172,9 @@ export default function ProtectorDashboard() {
         setDailyCompletedCount(dailyCompletedData.completedCount);
         setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
         setDailyStreak(dailyStreakData);
-        setDailyAccuracy(dailyAccuracyData.accuracy);
-        setWeeklyAccuracy(weeklyAccuracyData.accuracy);
+        // ✅ 404 Error 방지를 위한 기본값 설정 (null = 데이터 없음)
+        setDailyAccuracy(null);
+        setWeeklyAccuracy(null);
 
         // 💡 추가: 자모 통계 데이터 설정
         // WeaknessAlert가 기대하는 속성명(accuracy, count)과 API 응답(accuracyRate, count)이 살짝 다를 수 있으므로 매핑
