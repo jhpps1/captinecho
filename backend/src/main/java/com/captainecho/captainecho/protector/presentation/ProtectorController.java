@@ -7,12 +7,14 @@ import com.captainecho.captainecho.protector.application.ProtectorService;
 import com.captainecho.captainecho.protector.application.command.GetStudentCountCommand;
 import com.captainecho.captainecho.protector.application.result.CreatePinResult;
 import com.captainecho.captainecho.protector.application.result.GetStudentCountResult;
+import com.captainecho.captainecho.protector.application.result.UpdateEmailResult;
 import com.captainecho.captainecho.protector.application.result.UpdatePinResult;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
 import com.captainecho.captainecho.protector.application.result.StudentListResult;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinRequest;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinResponse;
 import com.captainecho.captainecho.protector.presentation.request.CreatePinRequest;
+import com.captainecho.captainecho.protector.presentation.request.UpdateEmailRequest;
 import com.captainecho.captainecho.protector.presentation.request.UpdatePinRequest;
 import com.captainecho.captainecho.protector.presentation.request.UpdateTermsRequest;
 import com.captainecho.captainecho.protector.presentation.request.VerifyRecoveryCodeRequest;
@@ -20,6 +22,7 @@ import com.captainecho.captainecho.protector.presentation.response.CreatePinResp
 import com.captainecho.captainecho.protector.presentation.response.GetStudentCountResponse;
 import com.captainecho.captainecho.protector.presentation.response.RecoveryCodeResponse;
 import com.captainecho.captainecho.protector.presentation.response.StudentListResponse;
+import com.captainecho.captainecho.protector.presentation.response.UpdateEmailResponse;
 import com.captainecho.captainecho.protector.presentation.response.UpdatePinResponse;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -190,5 +193,27 @@ public class ProtectorController {
         protectorService.updateTermsAgreed(protectorId, request.termsAgreed());
 
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 이메일 업데이트
+     * PATCH /protector/info/email
+     */
+    @PatchMapping("/info/email")
+    public ResponseEntity<UpdateEmailResponse> updateEmail(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @Valid @RequestBody UpdateEmailRequest request
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        UpdateEmailResult result = protectorService.updateEmail(request.toCommand(protectorId));
+
+        UpdateEmailResponse response = UpdateEmailResponse.from(result);
+
+        return ResponseEntity.ok(response);
     }
 }
