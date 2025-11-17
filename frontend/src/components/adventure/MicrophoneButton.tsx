@@ -5,12 +5,14 @@ type MicrophoneButtonProps = {
   isRecording: boolean;   // 녹음 중 여부 (pulse 애니메이션)
   isAnalyzing: boolean;   // 백엔드 분석 중 여부
   onClick: () => void;    // 버튼 클릭 핸들러 (녹음 시작/종료)
+  isTutorialMode?: boolean; // 튜토리얼 모드 여부
 };
 
 export const MicrophoneButton = ({
   isRecording,
   isAnalyzing,
   onClick,
+  isTutorialMode = false,
 }: MicrophoneButtonProps) => {
   // 상태에 따른 텍스트 결정
   const getStatusText = () => {
@@ -25,7 +27,8 @@ export const MicrophoneButton = ({
         {/* 마이크 버튼 */}
         <button
           onClick={onClick}
-          className="
+          disabled={isTutorialMode}
+          className={`
             rounded-full
             bg-gradient-to-b from-[#FFE29A] to-[#FF9F2E]
             border-[4px] border-[#C4601B]
@@ -33,9 +36,9 @@ export const MicrophoneButton = ({
             flex items-center justify-center
             active:translate-y-[2px]
             active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
-            hover:scale-105 cursor-pointer
             transition-all duration-200
-          "
+            ${!isTutorialMode ? 'hover:scale-105 cursor-pointer' : 'cursor-default pointer-events-none'}
+          `}
           style={{
             width: 'min(16vw, 110px)',
             height: 'min(16vw, 110px)',
