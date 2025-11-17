@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import PINInputModal from '../components/protector/PINInputModal';
-import { getStudents, verifyPin, updatePin } from '../api/protectorApi';
+import WithdrawalModal from '../components/protector/modals/WithdrawalModal'; // 경로에 맞게 수정
+import { withdrawAccount, getStudents, verifyPin, updatePin } from '../api/protectorApi';
 
 interface Student {
   id: number;
@@ -23,6 +24,8 @@ export default function SettingsPage() {
   const [showConfirmPinModal, setShowConfirmPinModal] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
+  const [withdrawStep, setWithdrawStep] = useState<0 | 1 | 2 | 3>(0); // 0: 없음, 1:경고, 2:PIN, 3:입력
+  const [isWithdrawLoading, setIsWithdrawLoading] = useState(false);
 
   // 학생 목록 조회
   const fetchStudents = async () => {
@@ -132,6 +135,63 @@ export default function SettingsPage() {
     setSelectedStudentId(studentId);
   };
 
+  // 1. [탈퇴 버튼 클릭] -> 1단계 모달 열기
+  const handleWithdrawClick = () => {
+    setWithdrawStep(1);
+  };
+
+  // 2. [1단계 확인] -> 2단계(PIN)로 이동
+  const handleStep1Confirm = () => {
+    setWithdrawStep(2);
+  };
+
+  // 3. [2단계 PIN 입력 성공] -> 3단계(최종 확인)로 이동
+  // 기존 PINInputModal의 onSubmit에 전달할 함수입니다.
+  const handleWithdrawPinSubmit = async (pin: string) => {
+    try {
+      const result = await verifyPin(pin);
+      if (result.success) {
+        setWithdrawStep(3); // PIN 맞으면 3단계로
+      } else {
+        throw new Error('PIN mismatch'); // PINInputModal에서 에러 처리됨
+      }
+    } catch (error) {
+      throw error; // PINInputModal로 에러 전파
+    }
+  };
+
+  // 4. [3단계 최종 확인] -> API 호출 및 로그아웃 처리
+  const handleFinalWithdraw = async () => {
+    setIsWithdrawLoading(true);
+    try {
+      const response = await withdrawAccount();
+
+      // 성공 시 (API 응답이 success: true 라고 가정)
+      if (response.success) {
+        alert('회원 탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.');
+
+        // 데이터 정리
+        sessionStorage.removeItem('studentId');
+        Cookies.remove('accessToken', { path: '/' });
+
+        // 메인으로 이동
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('회원 탈퇴 실패:', error);
+      alert('회원 탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsWithdrawLoading(false);
+      setWithdrawStep(0);
+    }
+  };
+
+  // 공통: 모달 닫기
+  const handleWithdrawClose = () => {
+    setWithdrawStep(0);
+    setIsWithdrawLoading(false);
+  };
+
   return (
     <div className="flex min-h-screen bg-neutral-50 font-pretendard">
       {/* PIN 변경 모달들 */}
@@ -191,12 +251,53 @@ export default function SettingsPage() {
                 보호자 모드 접근을 위한 PIN 번호를 변경할 수 있습니다
               </p>
               <button
-                onClick={handleChangePinClick}
+                onClick={() => {/* 기존 PIN 변경 로직 */ }}
                 className="px-6 py-3 bg-primary text-white rounded-lg font-semibold font-pretendard hover:bg-primary/90 transition-colors"
               >
                 PIN 변경하기
               </button>
             </div>
+            <div className='my-6'>
+              <h2 className="text-lg font-semibold text-neutral-700 font-pretendard mb-3">
+                회원 탈퇴
+              </h2>
+              <p className="text-sm text-neutral-500 font-pretendard mb-4">
+                서비스를 그만 이용하신다면 해당 기능으로 탈퇴 하실 수 있습니다.
+              </p>
+              {/* 추가된 탈퇴 버튼 */}
+              <button
+                onClick={handleWithdrawClick}
+                className="px-6 py-3 bg-white border border-red-200 text-red-600 rounded-lg font-semibold font-pretendard hover:bg-red-50 hover:border-red-300 transition-colors text-sm"
+              >
+                회원 탈퇴
+              </button>
+            </div>
+            {/* 1단계 & 3단계: WithdrawalModal 재사용 */}
+            {(withdrawStep === 1 || withdrawStep === 3) && (
+              <WithdrawalModal
+                step={withdrawStep}
+                onConfirm={withdrawStep === 1 ? handleStep1Confirm : handleFinalWithdraw}
+                onClose={handleWithdrawClose}
+                isLoading={isWithdrawLoading}
+              />
+            )}
+
+            {/* 2단계: 기존 PINInputModal 재사용 */}
+            {withdrawStep === 2 && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center"> {/* z-index 높게 설정 */}
+                <PINInputModal
+                  title="본인 확인"
+                  subtitle="PIN 번호 입력"
+                  description="탈퇴를 위해 보호자 PIN 번호를 입력해주세요."
+                  onSubmit={handleWithdrawPinSubmit}
+                  onClose={handleWithdrawClose}
+                  onForgotPin={() => {
+                    alert('PIN 찾기 기능을 이용해주세요.');
+                    handleWithdrawClose();
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
