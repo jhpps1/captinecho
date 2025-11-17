@@ -4,7 +4,7 @@ import { getSuppleProblems, startAdventure, endAdventure } from '../api/adventur
 import type { Problem, SessionState } from '../types/adventure';
 import { ProblemRunner } from '../components/adventure/ProblemRunner';
 import { AdventureLayout } from '../components/adventure/AdventureLayout';
-import { CompletionModal } from '../components/adventure/modals/CompletionModal';
+import { SuppleCompletionModal } from '../components/adventure/modals/SuppleCompletionModal';
 import { ErrorModal } from '../components/adventure/modals/ErrorModal';
 
 /**
@@ -39,7 +39,7 @@ export const SuppleRunner = () => {
   });
 
   const [isStarting, setIsStarting] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false); // 완료 여부 추가
+  const [showCompletionModal, setShowCompletionModal] = useState(false); // 완료 모달 표시 여부
 
   // [수정됨] typeId만 파싱합니다.
   const parsedTypeId = typeId ? parseInt(typeId, 10) : null;
@@ -140,45 +140,74 @@ export const SuppleRunner = () => {
     }
   };
 
-  // 세션 종료 핸들러 (완료 시 호출)
-  const handleEndAdventure = async () => {
-   if (!studentId || !session.isActive) return;
+  // 문제 완료 핸들러 (완료 시 호출)
+  const handleEndAdventure = () => {
+    // 세션 종료하지 않고 모달만 표시
+    console.log('✅ 10문제 완료, 완료 모달 표시');
+    setShowCompletionModal(true);
+  };
+
+  // "다시 10문제 풀기" 핸들러
+  const handleRetry = async () => {
+    if (!studentId || !parsedTypeId) return;
 
     try {
-      console.log('🏁 세션 종료 중...');
-      const success = await endAdventure(studentId);
+      console.log('🔄 추가학습 다시 시작...');
 
-      if (success) {
-        console.log('✅ 세션 종료 성공');
-        setSession({
-          sessionId: null,
-          studyType: null,
-          isActive: false,
-          startedAt: null,
-        });
-        setIsCompleted(true); // 완료 상태 설정 → 모달 표시
+      // 1. 기존 세션 종료
+      if (session.isActive) {
+        await endAdventure(studentId);
+      }
+
+      // 2. 상태 초기화
+      setShowCompletionModal(false);
+      setProblems([]);
+      setSession({
+        sessionId: null,
+        studyType: null,
+        isActive: false,
+        startedAt: null,
+      });
+
+      // 3. 새 세션 시작
+      const sessionId = await startAdventure(studentId, 'SUPPLE');
+      setSession({
+        sessionId,
+        studyType: 'SUPPLE',
+        isActive: true,
+        startedAt: new Date().toISOString(),
+      });
+
+      // 4. 새 문제 로드
+      const data = await getSuppleProblems(studentId, parsedTypeId);
+      if (data.problems && data.problems.length > 0) {
+        setProblems(data.problems);
+        console.log(`✅ 새로운 문제 ${data.problems.length}개 로드 완료`);
       }
     } catch (err) {
-      console.error('❌ 세션 종료 실패:', err);
+      console.error('❌ 다시 시작 실패:', err);
+      setError('문제를 다시 불러오는데 실패했습니다.');
     }
   };
 
-  // 완료 모달 확인 버튼 클릭 시 학생 대시보드로 이동
-  const handleCompletionConfirm = () => {
-    navigate(`/student`);
+  // "학생 대시보드로 돌아가기" 핸들러
+  const handleGoHome = async () => {
+    if (!studentId) return;
+
+    try {
+      // 세션 종료
+      if (session.isActive) {
+        await endAdventure(studentId);
+      }
+      // 대시보드로 이동
+      navigate('/student');
+    } catch (err) {
+      console.error('❌ 세션 종료 실패:', err);
+      navigate('/student'); // 에러가 나도 대시보드로 이동
+    }
   };
 
-  // 완료 화면 - CompletionModal만 표시 (최우선)
-  if (isCompleted) {
-    return (
-      <CompletionModal
-        isOpen={true}
-        onConfirm={handleCompletionConfirm}
-      />
-    );
-  }
-
-// 시작 대기 화면 (세션이 활성화되지 않았을 때)
+  // 시작 대기 화면 (세션이 활성화되지 않았을 때)
   if (!session.isActive && !isLoading) {
     return (
       <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
@@ -205,12 +234,12 @@ export const SuppleRunner = () => {
             backgroundColor: 'transparent' // 기존 bg-white 대신 투명 배경
           }}
         >
-          <h1 className="text-4xl font-bold text-green-700 mb-4">추가학습</h1>
+          <h1 className="text-4xl font-bold text-blue-700 mb-4">추가학습</h1>
           <p className="text-xl text-[#623d14] mb-8">선택한 유형의 학습을 시작할 준비가 되셨나요?</p>
           <button
             onClick={handleStartAdventure}
             disabled={isStarting}
-            className="px-8 py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="px-8 py-4 bg-blue-500 text-white text-xl font-bold rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             {isStarting ? '시작 중...' : '학습 시작하기'}
           </button>
@@ -238,20 +267,29 @@ export const SuppleRunner = () => {
 
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   // 추가학습은 모든 문제가 같은 타입이므로 parsedTypeId를 직접 사용
-return (
-    <AdventureLayout
-      adventureTypeId={parsedTypeId as 1 | 2 | 3 | 4}
-      onExitConfirm={handleEndAdventure}
-    >
-      {(isTutorialMode) => (
-        <ProblemRunner
-          problems={problems}
-          mode="supple"
-          studentId={studentId!}
-          isTutorialMode={isTutorialMode}
-          onComplete={handleEndAdventure}
-        />
-      )}
-    </AdventureLayout>
+  return (
+    <>
+      <AdventureLayout
+        adventureTypeId={parsedTypeId as 1 | 2 | 3 | 4}
+        onExitConfirm={handleGoHome}
+      >
+        {(isTutorialMode) => (
+          <ProblemRunner
+            problems={problems}
+            mode="supple"
+            studentId={studentId!}
+            isTutorialMode={isTutorialMode}
+            onComplete={handleEndAdventure}
+          />
+        )}
+      </AdventureLayout>
+
+      {/* 완료 모달 */}
+      <SuppleCompletionModal
+        isOpen={showCompletionModal}
+        onRetry={handleRetry}
+        onGoHome={handleGoHome}
+      />
+    </>
   );
 };
