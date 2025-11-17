@@ -5,6 +5,7 @@ import type { Problem, SessionState } from '../types/adventure';
 import { ProblemRunner } from '../components/adventure/ProblemRunner';
 import { AdventureLayout } from '../components/adventure/AdventureLayout';
 import { CompletionModal } from '../components/adventure/modals/CompletionModal';
+import { ErrorModal } from '../components/adventure/modals/ErrorModal';
 
 /**
  * SuppleRunner - 추가학습 문제 관리 페이지
@@ -178,7 +179,7 @@ export const SuppleRunner = () => {
   }
 
 // 시작 대기 화면 (세션이 활성화되지 않았을 때)
-  if (!session.isActive && !isLoading && !error) {
+  if (!session.isActive && !isLoading) {
     return (
       <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
         {/* 동영상 배경 */}
@@ -214,6 +215,13 @@ export const SuppleRunner = () => {
             {isStarting ? '시작 중...' : '학습 시작하기'}
           </button>
         </div>
+
+        {/* 에러 모달 */}
+        <ErrorModal
+          isOpen={!!error}
+          errorMessage={error || ''}
+          onConfirm={() => navigate('/student')}
+        />
       </div>
     );
   }
@@ -224,23 +232,6 @@ export const SuppleRunner = () => {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
         <p className="text-xl text-gray-600">추가학습 문제를 불러오는 중...</p>
-      </div>
-    );
-  }
-
-  // 에러 화면
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-2xl text-red-500 mb-4">⚠️ {error}</p>
-          <button
-            onClick={() => navigate('/student')}
-            className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
-          >
-            돌아가기
-          </button>
-        </div>
       </div>
     );
   }
