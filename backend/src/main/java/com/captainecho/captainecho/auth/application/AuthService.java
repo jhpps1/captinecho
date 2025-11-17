@@ -48,6 +48,11 @@ public class AuthService {
         Protector protector = existingProtector
                 .orElseGet(() -> createNewProtector(provider, tokenInfo.socialId(), tokenInfo.email()));
 
+        // 탈퇴한 회원인지 확인
+        if (Boolean.TRUE.equals(protector.getIsDeleted())) {
+            throw new EchoException(AuthErrorCode.DELETED_USER);
+        }
+
         // 기존 사용자이지만 이메일이 없는 경우 자동 업데이트
         if ((protector.getEmail() == null || protector.getEmail().isEmpty()) && tokenInfo.email() != null) {
             protector.updateEmail(tokenInfo.email());

@@ -5,11 +5,13 @@ import com.captainecho.captainecho.exception.EchoException;
 import com.captainecho.captainecho.exception.code.CommonErrorCode;
 import com.captainecho.captainecho.protector.application.ProtectorService;
 import com.captainecho.captainecho.protector.application.command.GetStudentCountCommand;
+import com.captainecho.captainecho.protector.application.command.WithdrawCommand;
 import com.captainecho.captainecho.protector.application.result.CreatePinResult;
 import com.captainecho.captainecho.protector.application.result.GetStudentCountResult;
 import com.captainecho.captainecho.protector.application.result.UpdateEmailResult;
 import com.captainecho.captainecho.protector.application.result.UpdatePinResult;
 import com.captainecho.captainecho.protector.application.result.VerifyPinResult;
+import com.captainecho.captainecho.protector.application.result.WithdrawResult;
 import com.captainecho.captainecho.protector.application.result.StudentListResult;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinRequest;
 import com.captainecho.captainecho.protector.presentation.dto.VerifyPinResponse;
@@ -24,12 +26,14 @@ import com.captainecho.captainecho.protector.presentation.response.RecoveryCodeR
 import com.captainecho.captainecho.protector.presentation.response.StudentListResponse;
 import com.captainecho.captainecho.protector.presentation.response.UpdateEmailResponse;
 import com.captainecho.captainecho.protector.presentation.response.UpdatePinResponse;
+import com.captainecho.captainecho.protector.presentation.response.WithdrawResponse;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -213,6 +217,27 @@ public class ProtectorController {
         UpdateEmailResult result = protectorService.updateEmail(request.toCommand(protectorId));
 
         UpdateEmailResponse response = UpdateEmailResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 보호자 회원 탈퇴
+     * DELETE /api/protector/withdraw
+     */
+    @DeleteMapping("/withdraw")
+    public ResponseEntity<WithdrawResponse> withdraw(
+            @AuthenticationPrincipal ProtectorPrincipal principal
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        WithdrawCommand command = new WithdrawCommand(protectorId);
+        WithdrawResult result = protectorService.withdraw(command);
+        WithdrawResponse response = WithdrawResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
