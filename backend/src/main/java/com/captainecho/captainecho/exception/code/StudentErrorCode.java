@@ -20,7 +20,6 @@ public enum StudentErrorCode implements ErrorCode {
     INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "ST40009", "지원하지 않는 파일 형식입니다"),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "ST40010", "파일 크기가 제한을 초과했습니다"),
     PIN_NOT_MATCH(HttpStatus.BAD_REQUEST, "ST40011", "PIN이 일치하지 않습니다"),
-    PROFILE_IMAGE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "ST40012", "프로필 이미지가 이미 등록되어 있습니다"),
     INVALID_RECOVERY_CODE(HttpStatus.BAD_REQUEST, "ST40013", "유효하지 않은 복구 코드입니다"),
 
     // 403 FORBIDDEN
