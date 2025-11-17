@@ -34,7 +34,7 @@ public class S3FileStorageService implements FileStorageService {
     private final FileStorageProperties fileStorageProperties;
 
     @Override
-    public String store(MultipartFile file, String prefix) {
+    public String store(MultipartFile file, String prefix, Integer protectorId, Integer studentId) {
         // 파일 검증
         validateFile(
                 file,
@@ -47,17 +47,18 @@ public class S3FileStorageService implements FileStorageService {
         String originalFileName = file.getOriginalFilename();
         String fileExtension = getFileExtension(originalFileName);
 
-        // S3 객체 키 생성: profiles/{hash}.{extension}
-        String s3Key = String.format("%s/%s.%s", prefix, fileHash, fileExtension);
+        // S3 객체 키 생성: profiles/protector-{protectorId}/student-{studentId}/{hash}.{extension}
+        String s3Key = String.format("%s/protector-%d/student-%d/%s.%s",
+                prefix, protectorId, studentId, fileHash, fileExtension);
 
         try {
-            // S3에 파일 업로드 (Public Read 권한 설정)
+            // S3에 파일 업로드 (버킷 정책으로 Public Read 권한 관리)
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(s3Properties.getS3().getBucket())
                     .key(s3Key)
                     .contentType(file.getContentType())
                     .contentLength(file.getSize())
-                    .acl(ObjectCannedACL.PUBLIC_READ)  // Public 읽기 권한 설정
+                    // ACL 제거: S3 버킷이 ACL을 지원하지 않을 수 있으므로 버킷 정책으로 Public 접근 허용
                     .build();
 
             s3Client.putObject(
