@@ -300,14 +300,15 @@ const SelectProfile = () => {
     if (!selectedStudentId) return; // selectedStudentId가 없으면 함수 종료
 
     try {
-      // [!!] 실제 학생 PIN 검증 API를 호출하도록 수정합니다.
-      // selectedStudentId와 pin을 인자로 넘겨 API를 호출합니다.
-      const result = await verifyStudentPin(selectedStudentId, pin);
+      // sessionStorage를 먼저 설정 (verifyStudentPin에서 사용)
+      sessionStorage.setItem('studentId', String(selectedStudentId));
+
+      // PIN만 전달 (studentId는 sessionStorage에서 자동으로 가져옴)
+      const result = await verifyStudentPin(pin);
 
       if (result.success) {
         // PIN 검증 성공 시
         console.log('학생 PIN 인증 성공');
-        sessionStorage.setItem('studentId', String(selectedStudentId));
         navigate('/student');
         handleStudentPinModalClose(); // 모달 닫기
       } else {

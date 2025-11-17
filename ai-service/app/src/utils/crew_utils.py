@@ -63,13 +63,29 @@ def extract_final_results(history):
             discussion_log = rest_txt[:next_cur].strip()
     return curriculum, discussion_log
 
+def extract_clean_curriculum(raw: str) -> str:
+    # [위 답변의 정규표현식 버전 그대로 붙여도 OK]
+    import re
+    dialogue_match = re.search(r'협의 대화[=\s]*\n(.+?)=+ ?협의 요약', raw, re.DOTALL)
+    dialogue = dialogue_match.group(1).strip() if dialogue_match else ""
+    summary_match = re.search(r'=+ ?협의 요약 ?=+\n(.+?)(=+|$)', raw, re.DOTALL)
+    summary = summary_match.group(1).strip() if summary_match else ""
+
+    result = ""
+    if dialogue:
+        dialogue_blocks = [block.strip() for block in dialogue.split("\n") if block.strip()]
+        result += "\n\n".join(dialogue_blocks)
+    if summary:
+        result += "\n\n\n================= 협의 요약 ======================\n\n" + summary
+    return result
+
 
 def save_report_via_api(student_id, curriculum, discussion_log):
     import requests
     API_URL = "http://localhost:8000/save-report"
     payload = {
         "curriculum": curriculum,
-        "discussion_log": discussion_log
+        "discussion_log": json.dumps(discussion_log, ensure_ascii=False)
     }
     tries = 3
     for attempt in range(tries):

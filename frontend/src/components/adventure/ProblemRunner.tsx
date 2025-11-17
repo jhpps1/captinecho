@@ -183,17 +183,30 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
       setCurrentIndex((prev) => prev + 1);
       setAttemptCount(1); // 시도 횟수 초기화
     } else {
-      // 모든 문제 완료
-      console.log('🎉 모든 문제 완료!');
-      setIsAllCompleted(true);
+      // ✅ 실제로 모든 문제가 완료되었는지 확인
+      const allCompleted = problems.every(p => p.isCompleted);
 
-      // 👇 추가: 세션 종료 콜백 호출
-      if (onComplete) {
-        try {
-          await onComplete();
-          console.log('✅ 세션 종료 완료');
-        } catch (error) {
-          console.error('❌ 세션 종료 실패:', error);
+      if (allCompleted) {
+        // 모든 문제 완료
+        console.log('🎉 모든 문제 완료!');
+        setIsAllCompleted(true);
+
+        // 👇 세션 종료 콜백 호출
+        if (onComplete) {
+          try {
+            await onComplete();
+            console.log('✅ 세션 종료 완료');
+          } catch (error) {
+            console.error('❌ 세션 종료 실패:', error);
+          }
+        }
+      } else {
+        // 미완료 문제가 있으면 첫 번째 미완료 문제로 이동
+        console.log('⚠️ 아직 미완료 문제가 있습니다. 첫 번째 미완료 문제로 이동합니다.');
+        const nextIncomplete = problems.findIndex(p => !p.isCompleted);
+        if (nextIncomplete >= 0) {
+          setCurrentIndex(nextIncomplete);
+          setAttemptCount(1);
         }
       }
     }
@@ -215,6 +228,12 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
 
   // 개발자용: 다음 문제로 이동
   const handleNextProblem = () => {
+    // ✅ 현재 문제를 풀지 않았다면 경고
+    if (!currentProblem.isCompleted) {
+      alert('⚠️ 현재 문제를 먼저 풀어주세요!');
+      return;
+    }
+
     if (currentIndex < problems.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       setAttemptCount(1); // 시도 횟수 초기화

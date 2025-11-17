@@ -6,6 +6,7 @@ import DashboardSidebar from '../components/dashboard/layout/DashboardSidebar';
 import AddStudentModal from '../components/protector/modals/AddStudentModal';
 import InterestSelectionModal from '../components/protector/modals/InterestSelectionModal';
 import StudentProfileModal from '../components/protector/modals/StudentProfileModal';
+import AddStudentCompleteModal from '../components/protector/modals/AddStudentCompleteModal';
 import { getStudents, registerStudent, deleteStudent, getStudentCount } from '../api/protectorApi';
 import {
   mapGenderToBackend,
@@ -37,6 +38,7 @@ export default function ManageStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<number[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
@@ -141,11 +143,11 @@ export default function ManageStudentsPage() {
       console.log('📥 학생 등록 응답:', response);
 
       if (response.success) {
-        alert(`학생 "${studentData.name}"이(가) 추가되었습니다!`);
-        await fetchStudents();
-        await fetchStudentCount();
-        setShowAddModal(false);
-        setSelectedInterests([]);
+        await fetchStudents(); // 학생 목록 새로고침
+        await fetchStudentCount(); // 학생 수 새로고침
+        setShowAddModal(false); // 학생 추가 모달 닫기
+        setSelectedInterests([]); // 선택한 관심사 초기화
+        setShowCompleteModal(true); // "추가 완료" 모달 띄우기
       }
     } catch (error: any) {
       console.error('❌ 학생 등록 실패:', error);
@@ -228,6 +230,17 @@ export default function ManageStudentsPage() {
           onOpenInterests={() => setShowInterestModal(true)}
           selectedInterestsCount={selectedInterests.length}
           isLoading={isAddingStudent}
+        />
+      )}
+
+      {showCompleteModal && (
+        <AddStudentCompleteModal
+          isOpen={showCompleteModal}
+          onClose={() => setShowCompleteModal(false)}
+          onNavigate={() => {
+            setShowCompleteModal(false);
+            navigate('/select-profile'); // 프로필 선택 페이지로 이동
+          }}
         />
       )}
 

@@ -15,8 +15,10 @@ def get_week_boundary(now=None):
     """이번 주(월~월) 시작, 종료 반환"""
     if not now:
         now = datetime.now()
-    start = now - timedelta(days=now.weekday())  # 월요일 0시
-    end = start + timedelta(days=7)              # 다음주 월요일 0시
+    # 시간 부분을 자정으로 설정하여 정확한 주 시작일 계산
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = today - timedelta(days=today.weekday())  # 이번 주 월요일 0시
+    end = start + timedelta(days=7)                  # 다음 주 월요일 0시
     return start, end
 
 def calculate_weekly_total_time(db, student_id, week_start, week_end):

@@ -52,6 +52,7 @@ class Student(Base):
     name = Column(String(30), nullable=False)
     gender = Column(Enum(Gender), nullable=True)
     level = Column(SmallInteger, nullable=True)
+    created_at = Column(DateTime, nullable=False)
 
 class ErrorPattern(Base):
     """오류 패턴 (ERD 2.3 기반)"""
