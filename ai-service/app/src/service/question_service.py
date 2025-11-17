@@ -306,7 +306,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 == [생성 개수/순서] ==
 {type_count_lines}
 - 반환하는 배열은 adventure_type_id가 위 순서대로 각 {cnt_str}개 연속 배치되고
-  seq_no는 1부터 {total_count}까지 순차 부여해야 합니다. (ex: adventure_type_id=3이 5개면, 배열에서 3이 5개 연속 등장)
+  seq_no는 1부터 {total_count}까지 순차 부여해야 합니다.seq_no는 중복이 안되게 1, 2, 3, 4, 5, 6, 7, 8, 9, 10으로 나타내야합니다. (ex: adventure_type_id=3이 5개면, 배열에서 3이 5개 연속 등장)
 
 
 == [문제 구조 및 adventure_type별 규칙] ==
