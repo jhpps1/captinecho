@@ -7,6 +7,7 @@ type WordCardProps = {
   showSpeaker: boolean;      // 스피커 버튼 표시 여부 (3회 시도 후 힌트)
   onSpeakerClick: () => void; // 스피커 버튼 클릭 핸들러
   isSpeaking: boolean;       // 웨이브 효과 활성화 여부 (발음 유사도 OK일 때)
+  isTutorialMode?: boolean;  // 튜토리얼 모드 여부
 };
 
 export const WordCard = ({
@@ -14,6 +15,7 @@ export const WordCard = ({
   showSpeaker,
   onSpeakerClick,
   isSpeaking,
+  isTutorialMode = false,
 }: WordCardProps) => {
   return (
     <>
@@ -38,7 +40,7 @@ export const WordCard = ({
             width: 'clamp(280px, 70%, 700px)',
             boxShadow: '0 8px 0 rgba(0,0,0,0.3)',
             position: 'relative',
-            zIndex: 4,
+            zIndex: 25,
           }}
         >
           {/* 단어 텍스트 */}
@@ -60,7 +62,8 @@ export const WordCard = ({
         {showSpeaker && (
           <button
             onClick={onSpeakerClick}
-            className="
+            disabled={isTutorialMode}
+            className={`
               absolute
               left-[calc(100%+1rem)]
               w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20
@@ -71,9 +74,8 @@ export const WordCard = ({
               flex items-center justify-center
               active:translate-y-[2px] active:shadow-[0_6px_0_rgba(0,0,0,0.3)]
               transition-all duration-200
-              hover:scale-105 cursor-pointer
-            "
-            style={{ zIndex: 3 }}
+              ${!isTutorialMode ? 'hover:scale-105 cursor-pointer' : 'cursor-default pointer-events-none'}
+            `}
             aria-label="단어 발음 듣기"
           >
             <span
