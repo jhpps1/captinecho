@@ -4,6 +4,7 @@ import { getDailyProblems, startAdventure, endAdventure } from '../api/adventure
 import type { Problem, SessionState } from '../types/adventure';
 import { ProblemRunner } from '../components/adventure/ProblemRunner';
 import { AdventureLayout } from '../components/adventure/AdventureLayout';
+import { ErrorModal } from '../components/adventure/modals/ErrorModal';
 
 /**
  * DailyRunner - 일일탐험 문제 관리 페이지
@@ -95,10 +96,10 @@ export const DailyRunner = () => {
         console.log('🔍 API로 일일문제 완료 여부 확인 중...');
         const data = await getDailyProblems(studentId);
 
-        // 빈 배열이면 모두 완료
+        // 빈 배열이면 문제 데이터가 없는 것으로 판단
         if (!data.problems || data.problems.length === 0) {
-          console.log('✅ 오늘의 일일문제 이미 완료됨');
-          setIsAllCompleted(true);
+          console.log('❌ 일일문제 데이터가 없음');
+          setError('일일문제가 아직 준비되지 않았습니다.');
           setIsLoading(false);
           return;
         }
@@ -188,15 +189,31 @@ export const DailyRunner = () => {
   // 완료 화면 (모든 문제를 다 풀었을 때)
   if (isAllCompleted) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
-        <div className="text-center bg-white p-10 rounded-2xl shadow-xl max-w-md">
-          <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-4xl font-bold text-green-600 mb-4">모든 문제 완료!</h1>
-          <p className="text-xl text-gray-600 mb-2">오늘의 탐험을 성공적으로 마쳤어요!</p>
-          <p className="text-sm text-gray-500 mb-8">내일 또 만나요! ✨</p>
+      <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          src="/adventurepage/todaysgamebackground.mp4"
+        >
+          Your browser does not support the video tag.
+        </video>
+        <div
+          className="relative text-center p-25 rounded-2xl z-10"
+          style={{
+            backgroundImage: `url('/adventurepage/layoutmap.png')`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: 'transparent'
+          }}
+        >
+          <h1 className="text-4xl font-bold text-blue-900 mb-4">모든 탐험을 완료했어요!</h1>
+          <p className="text-lg text-[#623d14] mb-8">내일 또 만나요!</p>
           <button
             onClick={() => navigate('/student')}
-            className="px-8 py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600 transition-colors"
+            className="px-8 py-4 bg-blue-500 text-white text-xl font-bold rounded-lg hover:bg-blue-600 transition-colors"
           >
             돌아가기
           </button>
@@ -206,7 +223,7 @@ export const DailyRunner = () => {
   }
 
   // 시작 대기 화면 (세션이 활성화되지 않았을 때) - 동영상 배경 추가
-  if (!session.isActive && !isLoading && !error) {
+  if (!session.isActive && !isLoading) {
     return (
       <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
         <video
@@ -222,7 +239,7 @@ export const DailyRunner = () => {
           className="relative text-center p-25 rounded-2xl z-10"
           style={{
             backgroundImage: `url('/adventurepage/layoutmap.png')`,
-            backgroundSize: 'cover',
+            backgroundSize: 'contain',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             // Tailwind bg-white 대신 투명 배경으로
@@ -239,6 +256,13 @@ export const DailyRunner = () => {
             {isStarting ? '시작 중...' : '탐험 시작하기'}
           </button>
         </div>
+
+        {/* 에러 모달 */}
+        <ErrorModal
+          isOpen={!!error}
+          errorMessage={error || ''}
+          onConfirm={() => navigate('/student')}
+        />
       </div>
     );
   }
@@ -249,23 +273,6 @@ export const DailyRunner = () => {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
         <p className="text-xl text-gray-600">문제를 불러오는 중...</p>
-      </div>
-    );
-  }
-
-  // 에러 화면
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-2xl text-red-500 mb-4">⚠️ {error}</p>
-          <button
-            onClick={() => navigate('/student')}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-          >
-            돌아가기
-          </button>
-        </div>
       </div>
     );
   }
