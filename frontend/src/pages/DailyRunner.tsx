@@ -96,10 +96,10 @@ export const DailyRunner = () => {
         console.log('🔍 API로 일일문제 완료 여부 확인 중...');
         const data = await getDailyProblems(studentId);
 
-        // 빈 배열이면 모두 완료
+        // 빈 배열이면 문제 데이터가 없는 것으로 판단
         if (!data.problems || data.problems.length === 0) {
-          console.log('✅ 오늘의 일일문제 이미 완료됨');
-          setIsAllCompleted(true);
+          console.log('❌ 일일문제 데이터가 없음');
+          setError('일일문제가 아직 준비되지 않았습니다.');
           setIsLoading(false);
           return;
         }
@@ -189,15 +189,31 @@ export const DailyRunner = () => {
   // 완료 화면 (모든 문제를 다 풀었을 때)
   if (isAllCompleted) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
-        <div className="text-center bg-white p-10 rounded-2xl shadow-xl max-w-md">
-          <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-4xl font-bold text-green-600 mb-4">모든 문제 완료!</h1>
-          <p className="text-xl text-gray-600 mb-2">오늘의 탐험을 성공적으로 마쳤어요!</p>
-          <p className="text-sm text-gray-500 mb-8">내일 또 만나요! ✨</p>
+      <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          src="/adventurepage/todaysgamebackground.mp4"
+        >
+          Your browser does not support the video tag.
+        </video>
+        <div
+          className="relative text-center p-25 rounded-2xl z-10"
+          style={{
+            backgroundImage: `url('/adventurepage/layoutmap.png')`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: 'transparent'
+          }}
+        >
+          <h1 className="text-4xl font-bold text-blue-900 mb-4">모든 탐험을 완료했어요!</h1>
+          <p className="text-lg text-[#623d14] mb-8">내일 또 만나요!</p>
           <button
             onClick={() => navigate('/student')}
-            className="px-8 py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600 transition-colors"
+            className="px-8 py-4 bg-blue-500 text-white text-xl font-bold rounded-lg hover:bg-blue-600 transition-colors"
           >
             돌아가기
           </button>
@@ -223,7 +239,7 @@ export const DailyRunner = () => {
           className="relative text-center p-25 rounded-2xl z-10"
           style={{
             backgroundImage: `url('/adventurepage/layoutmap.png')`,
-            backgroundSize: 'cover',
+            backgroundSize: 'contain',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             // Tailwind bg-white 대신 투명 배경으로
