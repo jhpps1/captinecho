@@ -73,6 +73,9 @@ class STTService:
             # response_format="text"일 때는 문자열이 직접 반환됨
             result = transcript.strip() if isinstance(transcript, str) else str(transcript).strip()
 
+            # 🔍 디버깅: Whisper API 응답 로그
+            print(f"[STT] Whisper 인식 결과: '{result}' (길이: {len(result)})")
+
             if not result:
                 raise ValueError("음성 인식 결과가 비어있습니다. 오디오 파일을 확인해주세요.")
 
