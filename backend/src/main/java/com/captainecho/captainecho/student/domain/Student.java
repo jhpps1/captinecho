@@ -120,4 +120,11 @@ public class Student {
     public void updateLevel(Short level) {
         this.level = level;
     }
+
+    /**
+     * 학생을 소프트 삭제합니다.
+     */
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }

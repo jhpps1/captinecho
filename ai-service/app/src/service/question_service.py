@@ -31,6 +31,32 @@ def get_jamo_type(syllable, target_jamo):
         return 'FINAL'
     return ''
 
+def get_student_interests(session, student_id):
+    result = session.execute(
+        text("""
+            SELECT si.small_interest_name
+            FROM student_interest sti
+            JOIN sub_interest si ON sti.interest_id = si.sub_interest_id
+            WHERE sti.student_id = :student_id
+        """),
+        {"student_id": student_id}
+    )
+    return [row[0] for row in result.fetchall()]
+
+def get_weak_phonemes_for_student(session, student_id, top_n=2):
+    result = session.execute(
+        text("""
+            SELECT jamo
+            FROM weekly_jamo_stat
+            WHERE student_id = :student_id
+            ORDER BY fail_count DESC
+            LIMIT :limit
+        """),
+        {"student_id": student_id, "limit": top_n}
+    )
+    return [row[0] for row in result.fetchall()]
+
+
 def get_weekdays_for_this_week():
     today = datetime.date.today()
     weekday = today.weekday()  # 월=0 ... 일=6
@@ -273,7 +299,7 @@ def process_day_problem_items(session, student_id, llm_result):
             "student_id", "adventure_type_id", "assigned_date", "seq_no", "level",
             "problem_text", "choices", "correct_answer",
             "image_url", "sound_url", "problem_phonemes",
-            "blank_position", "blank_phoneme","interest_id"
+            "blank_position", "blank_phoneme","interest_id",
         }
         for req in REQUIRED_KEYS:
             if req not in item or item[req] is None:
@@ -289,19 +315,31 @@ def process_day_problem_items(session, student_id, llm_result):
         item = {k: v for k, v in item.items() if k in REQUIRED_KEYS}
         print("최종 저장할 item:", item)
         create_day_problem(session, **item)
+        
 
 
-def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, assigned_date, student_id, student_level, curriculum_text):
+
+def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, assigned_date, student_id, student_level, curriculum_text, student_interests, student_weak_phonemes):
     type_count_lines = '\n'.join([
         f"- adventure_type_id={item['type_id']}: {item['count']}개 (순서대로)" for item in curriculum_for_day
     ])
     total_count = sum(item['count'] for item in curriculum_for_day)
     cnt_str = ', '.join([str(item['count']) for item in curriculum_for_day])
 
+    interest_word_str = ', '.join(student_interests)
+    weak_phoneme_str  = ', '.join(student_weak_phonemes)
+
+
     prompt = f"""
 아래 커리큘럼과 학생 세부 관심사({small_interest_name}, sub_interest_id={interest_id})를 반영해
 {day_name}({assigned_date})에 정확히 {total_count}개의 문제를 반드시 아래 순서와 규칙에 맞게 JSON 배열로만 반환합니다.
 
+
+- 문제 텍스트(명사)는 반드시 학생 관심사({interest_word_str})와 관련된 명사만 사용
+- 모든 문제 중 최소 60% 이상에서 약점 자모({weak_phoneme_str}) 반드시 포함!
+- 나머지 문제도 해당 관심사 내에서 단어 선정, 제작 시 약점 자모 포함 우선
+- choices에는 blank_phoneme(약점 자모)와 유사한 자모를 포함
+- 관심사 명사 중 {weak_phoneme_str}가 포함된 단어 우선
 
 == [생성 개수/순서] ==
 {type_count_lines}
@@ -466,10 +504,15 @@ def generate_problems_for_one_week(session, student_id):
 
     interest_id = get_interest_id_for_student(session, student_id)
     small_interest_name = get_small_interest_name_for_student(session, student_id)
+    student_interests = get_student_interests(session, student_id)
+    student_weak_phonemes = get_weak_phonemes_for_student(session, student_id)
     DAYS = get_weekdays_for_this_week()
     day_map = {"월요일": "monday", "화요일": "tuesday", "수요일": "wednesday", "목요일": "thursday", "금요일": "friday"}
 
+
+
     all_generated_problems_metadata = [] # 💡 최종 반환할 문제를 담을 리스트
+
 
     for day_name, assigned_date in DAYS:
         day_key = day_map.get(day_name, day_name.lower())
@@ -477,6 +520,9 @@ def generate_problems_for_one_week(session, student_id):
         if not curriculum_for_day:
             print(f"{day_name} 계획 없음, 건너뜀!")
             continue
+
+
+
         prompt = make_prompt(
             curriculum_for_day=curriculum_for_day,
             small_interest_name=small_interest_name,
@@ -485,7 +531,10 @@ def generate_problems_for_one_week(session, student_id):
             assigned_date=assigned_date,
             student_id=student_id,
             student_level=1,  # 실제 레벨 조회 시 적용
-            curriculum_text=curriculum_text
+            curriculum_text=curriculum_text,
+            student_interests=student_interests,
+            student_weak_phonemes=student_weak_phonemes
+
         )
         llm_response = llm_problem(prompt)
         problems_to_process = safe_parse_json(llm_response, day_name) # LLM 결과
@@ -554,6 +603,9 @@ def generate_problems_from_signup(session, student_id, signup_date=None):
 
     all_generated_problems_metadata = []
 
+    student_interests = get_student_interests(session, student_id)
+    student_weak_phonemes = get_weak_phonemes_for_student(session, student_id)
+
     # 요일별 루프: start_date ~ end_date
     current = start_date
     while current <= end_date:
@@ -591,7 +643,10 @@ def generate_problems_from_signup(session, student_id, signup_date=None):
                 assigned_date=assigned_date,
                 student_id=student_id,
                 student_level=1,  # 실제 레벨 적용
-                curriculum_text=curriculum_text
+                curriculum_text=curriculum_text,
+                student_interests=student_interests,         # ← 추가!
+                student_weak_phonemes=student_weak_phonemes  # ← 추가!
+
             )
             llm_response = llm_problem(prompt)
             problems_to_process = safe_parse_json(llm_response, assigned_date)

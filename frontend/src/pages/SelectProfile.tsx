@@ -238,7 +238,7 @@ const SelectProfile = () => {
         const profileList: Profile[] = response.students.map(student => ({
           id: student.studentId,
           name: student.name,
-          imageUrl: student.profileImage || '/selectpage/image 11.png' // 기본 이미지
+          imageUrl: student.profileImage
         }));
 
         // 담긴 정보들을 적용시킨다.
@@ -438,11 +438,19 @@ const SelectProfile = () => {
                   >
                     {/* 프로필 이미지 */}
                     <div className="w-36 h-36 md:w-44 md:h-44 rounded-full bg-white shadow-lg overflow-hidden border-4 border-white transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:shadow-xl group-hover:border-blue-300">
-                      <img
-                        src={profile.imageUrl}
-                        alt={profile.name}
-                        className="w-full h-full object-contain p-5"
-                      />
+                      {profile.imageUrl ? (
+                        <img
+                          src={profile.imageUrl}
+                          alt={profile.name}
+                          className="w-full h-full object-contain p-5"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                          <span className="text-5xl font-bold text-white">
+                            {profile.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     {/* 프로필 이름 */}
                     <span className="text-2xl font-semibold text-gray-800 transition-colors duration-300 group-hover:text-blue-600">

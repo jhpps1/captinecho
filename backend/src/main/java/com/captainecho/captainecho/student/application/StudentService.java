@@ -101,13 +101,18 @@ public class StudentService {
         Protector protector = protectorRepository.findById(command.protectorId())
                 .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
 
-        // 2. 현재 등록된 학생 수 확인 (삭제되지 않은 학생만)
+        // 2. 탈퇴한 회원인지 확인
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
+        }
+
+        // 3. 현재 등록된 학생 수 확인 (삭제되지 않은 학생만)
         List<Student> currentStudents = studentRepository.findActiveStudentsByProtectorId(command.protectorId());
         if (currentStudents.size() >= protector.getMaxStudentCount()) {
             throw new EchoException(StudentErrorCode.MAX_STUDENT_COUNT_EXCEEDED);
         }
 
-        // 3. Long interestId를 Short로 변환 (관심사가 있는 경우에만)
+        // 4. Long interestId를 Short로 변환 (관심사가 있는 경우에만)
         List<Short> shortInterestIds = command.interestIds().stream()
                 .map(id -> {
                     if (id > Short.MAX_VALUE || id < Short.MIN_VALUE) {
@@ -117,7 +122,7 @@ public class StudentService {
                 })
                 .collect(Collectors.toList());
 
-        // 4. SubInterest 유효성 검증 (관심사가 있는 경우에만)
+        // 5. SubInterest 유효성 검증 (관심사가 있는 경우에만)
         List<SubInterest> subInterests = List.of();
         if (!shortInterestIds.isEmpty()) {
             subInterests = subInterestRepository.findAllById(shortInterestIds);
@@ -127,7 +132,7 @@ public class StudentService {
             }
         }
 
-        // 5. Student 엔티티 생성 및 저장 (level=null for initial diagnosis, coin=0, studentPin=0000은 엔티티 기본값)
+        // 6. Student 엔티티 생성 및 저장 (level=null for initial diagnosis, coin=0, studentPin=0000은 엔티티 기본값)
         Student student = Student.builder()
                 .protector(protector)
                 .name(command.studentName())
@@ -139,7 +144,7 @@ public class StudentService {
 
         Student savedStudent = studentRepository.save(student);
 
-        // 6. StudentInterest 엔티티들 생성 및 저장
+        // 7. StudentInterest 엔티티들 생성 및 저장
         List<StudentInterest> studentInterests = subInterests.stream()
                 .map(subInterest -> StudentInterest.builder()
                         .student(savedStudent)
@@ -149,7 +154,7 @@ public class StudentService {
 
         studentInterestRepository.saveAll(studentInterests);
 
-        // 7. phoneme_feature 테이블의 모든 자모로 JamoStat 초기화
+        // 8. phoneme_feature 테이블의 모든 자모로 JamoStat 초기화
         List<PhonemeFeature> allPhonemes = phonemeFeatureRepository.findAll();
         List<JamoStat> initialJamoStats = allPhonemes.stream()
                 .map(phoneme -> JamoStat.builder()
@@ -165,23 +170,28 @@ public class StudentService {
 
         jamoStatRepository.saveAll(initialJamoStats);
 
-        // 8. 결과 반환
+        // 9. 결과 반환
         return new RegisterStudentResult(true);
     }
 
     @Transactional(readOnly = true)
     public GetDailyGoalCountResult getDailyGoalCount(GetDailyGoalCountCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 오늘 할당된 문제 개수 조회
+        // 4. 오늘 할당된 문제 개수 조회
         Integer todayGoalCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDate(
                 command.studentId(),
                 LocalDate.now()
@@ -192,17 +202,22 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public GetDailyCompletedCountResult getDailyCompletedCount(GetDailyCompletedCountCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 오늘 완료한 문제 개수 조회 (isCompleted = true)
+        // 4. 오늘 완료한 문제 개수 조회 (isCompleted = true)
         Integer completedCount = dayProblemRepository.countByStudent_StudentIdAndAssignedDateAndIsCompleted(
                 command.studentId(),
                 LocalDate.now(),
@@ -214,17 +229,22 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public GetWeeklyGoalPercentResult getWeeklyGoalPercent(GetWeeklyGoalPercentCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 이번 주 범위 계산 (월요일 ~ 일요일)
+        // 4. 이번 주 범위 계산 (월요일 ~ 일요일)
         LocalDate now = LocalDate.now();
         LocalDate weekStart = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate weekEnd = now.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
@@ -302,20 +322,25 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public GetStudentInterestResult getStudentInterests(GetStudentInterestCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 학생의 관심사 목록 조회
+        // 4. 학생의 관심사 목록 조회
         List<StudentInterest> studentInterests = studentInterestRepository.findByStudent_StudentId(command.studentId());
 
-        // 4. Result 객체로 변환
+        // 5. Result 객체로 변환
         List<GetStudentInterestResult.StudentInterestInfo> interestInfos = studentInterests.stream()
                 .map(si -> new GetStudentInterestResult.StudentInterestInfo(
                         si.getSubInterest().getSubInterestId(),
@@ -330,44 +355,45 @@ public class StudentService {
 
     @Transactional
     public AddStudentInterestResult addStudentInterest(AddStudentInterestCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        Student student = getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 기존 관심사 조회
+        // 4. 기존 관심사 조회
         List<StudentInterest> existingInterests = studentInterestRepository.findByStudent_StudentId(command.studentId());
         Set<Short> existingSubInterestIds = existingInterests.stream()
                 .map(si -> si.getSubInterest().getSubInterestId())
                 .collect(Collectors.toSet());
 
-        // 4. 중복 체크
+        // 5. 중복 체크
         for (Short subInterestId : command.subInterestIds()) {
             if (existingSubInterestIds.contains(subInterestId)) {
                 throw new EchoException(StudentErrorCode.DUPLICATE_INTEREST);
             }
         }
 
-        // 5. 최대 개수 체크 (기존 + 신규 <= 5)
+        // 6. 최대 개수 체크 (기존 + 신규 <= 5)
         int totalCount = existingInterests.size() + command.subInterestIds().size();
         if (totalCount > 5) {
             throw new EchoException(StudentErrorCode.INTEREST_LIMIT_EXCEEDED);
         }
 
-        // 6. SubInterest 유효성 검증
+        // 7. SubInterest 유효성 검증
         List<SubInterest> subInterests = subInterestRepository.findAllById(command.subInterestIds());
         if (subInterests.size() != command.subInterestIds().size()) {
             throw new EchoException(StudentErrorCode.INVALID_SUB_INTEREST);
         }
-
-        // 7. Student 엔티티 조회
-        Student student = studentRepository.findById(command.studentId())
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
 
         // 8. 새 StudentInterest 엔티티들 생성 및 저장
         List<StudentInterest> newStudentInterests = subInterests.stream()
@@ -385,45 +411,55 @@ public class StudentService {
 
     @Transactional
     public DeleteStudentInterestResult deleteStudentInterest(DeleteStudentInterestCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인 (접근 권한)
+        // 3. 보호자-학생 관계 확인 (접근 권한)
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. StudentInterest 존재 확인
+        // 4. StudentInterest 존재 확인
         StudentInterest studentInterest = studentInterestRepository.findById(command.studentInterestId())
                 .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_INTEREST_NOT_FOUND));
 
-        // 4. StudentInterest가 실제로 해당 학생의 것인지 확인
+        // 5. StudentInterest가 실제로 해당 학생의 것인지 확인
         if (!studentInterest.getStudent().getStudentId().equals(command.studentId())) {
             throw new EchoException(StudentErrorCode.STUDENT_INTEREST_NOT_FOUND);
         }
 
-        // 5. StudentInterest 삭제 (hard delete)
+        // 6. StudentInterest 삭제 (hard delete)
         studentInterestRepository.delete(studentInterest);
 
-        // 6. 성공 결과 반환
+        // 7. 성공 결과 반환
         return new DeleteStudentInterestResult(true);
     }
 
     @Transactional(readOnly = true)
     public GetWeeklyJamoStatResult getWeeklyJamoStat(GetWeeklyJamoStatCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 학생의 가장 최근 주간 자모 통계 조회 (지난주 데이터)
+        // 4. 학생의 가장 최근 주간 자모 통계 조회 (지난주 데이터)
         List<WeeklyJamoStat> weeklyJamoStats = weeklyJamoStatRepository.findLatestWeeklyStatsByStudentId(command.studentId());
 
         log.info("WeeklyJamoStat 조회 결과 - Student ID: {}, 조회된 데이터 개수: {}", command.studentId(), weeklyJamoStats.size());
@@ -434,7 +470,7 @@ public class StudentService {
                 stat.getJamo(), stat.getWeeklyAccuracyRate(), stat.getTotalAttempts())
         );
 
-        // 4. AccuracyRate 리스트로 변환 (이미 자모 순서대로 정렬됨)
+        // 5. AccuracyRate 리스트로 변환 (이미 자모 순서대로 정렬됨)
         List<GetWeeklyJamoStatResult.AccuracyRate> accuracyRates = weeklyJamoStats.stream()
                 .map(stat -> new GetWeeklyJamoStatResult.AccuracyRate(
                         stat.getJamo(),
@@ -455,17 +491,22 @@ public class StudentService {
     public GetTotalJamoStatResult getTotalJamoStat(GetTotalJamoStatCommand command) {
         log.info("전체 학습 분석 조회 시작 - Student ID: {}", command.studentId());
 
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 해당 학생의 모든 주차 자모 통계 조회
+        // 4. 해당 학생의 모든 주차 자모 통계 조회
         List<WeeklyJamoStat> allWeeklyStats = weeklyJamoStatRepository.findAllWeeklyStatsByStudentId(command.studentId());
 
         if (allWeeklyStats.isEmpty()) {
@@ -473,11 +514,11 @@ public class StudentService {
             return GetTotalJamoStatResult.of(List.of());
         }
 
-        // 4. 자모별로 그룹핑하여 합산
+        // 5. 자모별로 그룹핑하여 합산
         Map<String, List<WeeklyJamoStat>> statsByJamo = allWeeklyStats.stream()
                 .collect(Collectors.groupingBy(WeeklyJamoStat::getJamo));
 
-        // 5. 각 자모별로 총 시도 횟수와 평균 정확도 계산
+        // 6. 각 자모별로 총 시도 횟수와 평균 정확도 계산
         List<GetTotalJamoStatResult.AccuracyRate> accuracyRates = statsByJamo.entrySet().stream()
                 .map(entry -> {
                     String jamo = entry.getKey();
@@ -513,21 +554,26 @@ public class StudentService {
     public GetImproveAccuracyResult getImproveAccuracy(GetImproveAccuracyCommand command) {
         log.info("정확도 개선율 조회 시작 - Student ID: {}", command.studentId());
 
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        // 4. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
         List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
                 .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
 
-        // 4. 데이터가 2개 미만이면 null 반환
+        // 5. 데이터가 2개 미만이면 null 반환
         if (recentReports.size() < 2) {
             log.info("정확도 개선율 조회 불가 - Student ID: {}, 리포트 개수: {}",
                     command.studentId(), recentReports.size());
@@ -537,7 +583,7 @@ public class StudentService {
         WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
         WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
 
-        // 5. 지지난주까지의 누적 통계 계산 (첫 리포트 ~ 지지난주 리포트)
+        // 6. 지지난주까지의 누적 통계 계산 (첫 리포트 ~ 지지난주 리포트)
         List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
                 .findAll()
                 .stream()
@@ -547,18 +593,18 @@ public class StudentService {
 
         Integer twoWeeksAgoAccuracy = calculateAccuracy(twoWeeksAgoStats);
 
-        // 6. 지난주 단독 통계 계산 (지난주 리포트만)
+        // 7. 지난주 단독 통계 계산 (지난주 리포트만)
         List<WeeklyJamoStat> lastWeekOnlyStats = weeklyJamoStatRepository
                 .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
 
-        // 7. 지난주 누적 정확도 계산
+        // 8. 지난주 누적 정확도 계산
         int lastWeekTotalAttempts = calculateTotalAttempts(twoWeeksAgoStats) + calculateTotalAttempts(lastWeekOnlyStats);
         int lastWeekTotalFails = calculateTotalFails(twoWeeksAgoStats) + calculateTotalFails(lastWeekOnlyStats);
         Integer lastWeekAccuracy = lastWeekTotalAttempts > 0
                 ? (int) Math.round((lastWeekTotalAttempts - lastWeekTotalFails) * 100.0 / lastWeekTotalAttempts)
                 : null;
 
-        // 8. 개선율 계산
+        // 9. 개선율 계산
         Integer improveRate = (twoWeeksAgoAccuracy != null && lastWeekAccuracy != null)
                 ? lastWeekAccuracy - twoWeeksAgoAccuracy
                 : null;
@@ -606,21 +652,26 @@ public class StudentService {
     public GetBestImproveJamoResult getBestImproveJamo(GetBestImproveJamoCommand command) {
         log.info("개선율 높은 자모 Top 2 조회 시작 - Student ID: {}", command.studentId());
 
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        // 4. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
         List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
                 .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
 
-        // 4. 데이터가 2개 미만이면 null 반환
+        // 5. 데이터가 2개 미만이면 null 반환
         if (recentReports.size() < 2) {
             log.info("개선율 높은 자모 조회 불가 - Student ID: {}, 리포트 개수: {}",
                     command.studentId(), recentReports.size());
@@ -630,21 +681,21 @@ public class StudentService {
         WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
         WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
 
-        // 5. 지지난주 리포트의 자모별 통계 조회
+        // 6. 지지난주 리포트의 자모별 통계 조회
         List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
                 .findAllByWeeklyPersonalReport_ReportId(twoWeeksAgoReport.getReportId());
 
-        // 6. 지난주 리포트의 자모별 통계 조회
+        // 7. 지난주 리포트의 자모별 통계 조회
         List<WeeklyJamoStat> lastWeekStats = weeklyJamoStatRepository
                 .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
 
-        // 7. 자모별로 그룹핑
+        // 8. 자모별로 그룹핑
         Map<String, WeeklyJamoStat> twoWeeksAgoMap = twoWeeksAgoStats.stream()
                 .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
         Map<String, WeeklyJamoStat> lastWeekMap = lastWeekStats.stream()
                 .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
 
-        // 8. 모든 자모에 대해 개선율 계산
+        // 9. 모든 자모에 대해 개선율 계산
         List<GetBestImproveJamoResult.BestJamo> jamoList = new java.util.ArrayList<>();
 
         // 모든 자모 수집 (양쪽 주차에 있는 모든 자모)
@@ -669,7 +720,7 @@ public class StudentService {
             }
         }
 
-        // 9. 개선율 내림차순 정렬 후 상위 2개만 반환 (동점일 경우 자모 이름 순)
+        // 10. 개선율 내림차순 정렬 후 상위 2개만 반환 (동점일 경우 자모 이름 순)
         List<GetBestImproveJamoResult.BestJamo> top2 = jamoList.stream()
                 .sorted(Comparator.comparing(GetBestImproveJamoResult.BestJamo::improveRate).reversed()
                         .thenComparing(GetBestImproveJamoResult.BestJamo::jamo))
@@ -697,21 +748,26 @@ public class StudentService {
     public GetWorstImproveJamoResult getWorstImproveJamo(GetWorstImproveJamoCommand command) {
         log.info("정확도 낮은 자모 Top 2 조회 시작 - Student ID: {}", command.studentId());
 
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
+        // 4. 최근 2개의 리포트 조회 (최신순: [지난주, 지지난주])
         List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
                 .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
 
-        // 4. 데이터가 2개 미만이면 null 반환
+        // 5. 데이터가 2개 미만이면 null 반환
         if (recentReports.size() < 2) {
             log.info("정확도 낮은 자모 조회 불가 - Student ID: {}, 리포트 개수: {}",
                     command.studentId(), recentReports.size());
@@ -721,21 +777,21 @@ public class StudentService {
         WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
         WeeklyPersonalReport twoWeeksAgoReport = recentReports.get(1);  // 지지난주
 
-        // 5. 지지난주 리포트의 자모별 통계 조회
+        // 6. 지지난주 리포트의 자모별 통계 조회
         List<WeeklyJamoStat> twoWeeksAgoStats = weeklyJamoStatRepository
                 .findAllByWeeklyPersonalReport_ReportId(twoWeeksAgoReport.getReportId());
 
-        // 6. 지난주 리포트의 자모별 통계 조회
+        // 7. 지난주 리포트의 자모별 통계 조회
         List<WeeklyJamoStat> lastWeekStats = weeklyJamoStatRepository
                 .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
 
-        // 7. 자모별로 그룹핑
+        // 8. 자모별로 그룹핑
         Map<String, WeeklyJamoStat> twoWeeksAgoMap = twoWeeksAgoStats.stream()
                 .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
         Map<String, WeeklyJamoStat> lastWeekMap = lastWeekStats.stream()
                 .collect(Collectors.toMap(WeeklyJamoStat::getJamo, stat -> stat));
 
-        // 8. 모든 자모에 대해 정확도 및 개선율 계산
+        // 9. 모든 자모에 대해 정확도 및 개선율 계산
         List<GetWorstImproveJamoResult.WorstJamo> jamoList = new java.util.ArrayList<>();
 
         // 모든 자모 수집 (양쪽 주차에 있는 모든 자모)
@@ -760,7 +816,7 @@ public class StudentService {
             }
         }
 
-        // 9. 지난주 정확도 오름차순 정렬 후 하위 2개 반환 (동점일 경우 자모 이름 순)
+        // 10. 지난주 정확도 오름차순 정렬 후 하위 2개 반환 (동점일 경우 자모 이름 순)
         List<GetWorstImproveJamoResult.WorstJamo> bottom2 = jamoList.stream()
                 .sorted(Comparator.comparing(GetWorstImproveJamoResult.WorstJamo::lastWeek)
                         .thenComparing(GetWorstImproveJamoResult.WorstJamo::jamo))
@@ -773,7 +829,8 @@ public class StudentService {
     }
 
     /**
-     * 프로필 이미지를 수정합니다 (PATCH용)
+     * 프로필 이미지를 등록/수정합니다.
+     * 기존 이미지가 없으면 등록, 있으면 수정합니다.
      * 트랜잭션 실패 시 기존 이미지 유지를 보장합니다.
      *
      * @param command 프로필 이미지 업데이트 명령 (protectorId, studentId, file)
@@ -795,53 +852,23 @@ public class StudentService {
 
         // 3. 새 이미지 저장 (실패 시 예외 발생 → 자동 롤백)
         String profilePath = fileStorageProperties.getUpload().getProfileImages().getPath();
-        String storedFilePath = fileStorageService.store(command.file(), profilePath);
+        String storedFilePath = fileStorageService.store(
+                command.file(),
+                profilePath,
+                command.protectorId(),
+                command.studentId()
+        );
 
         // 4. 학생 엔티티 업데이트 (트랜잭션 내)
         student.updateProfileImage(storedFilePath);
         studentRepository.save(student);
 
-        // 5. 트랜잭션 커밋 후 기존 파일 삭제 이벤트 발행
+        // 5. 트랜잭션 커밋 후 기존 파일 삭제 이벤트 발행 (기존 이미지가 있었던 경우만)
         if (oldImagePath != null && !oldImagePath.isEmpty()) {
             eventPublisher.publishEvent(new FileDeleteEvent(oldImagePath));
         }
 
         // 6. URL 생성 및 결과 반환
-        String imageUrl = fileStorageService.getFileUrl(storedFilePath);
-        return new UpdateProfileImageResult(true, imageUrl);
-    }
-    /**
-     * 프로필 이미지를 최초 등록합니다 (POST용)
-     * 이미 프로필 이미지가 있으면 예외를 발생시킵니다.
-     *
-     * @param command 프로필 이미지 등록 명령 (protectorId, studentId, file)
-     * @return 등록 결과 (success, imageUrl)
-     * @throws EchoException 이미 프로필 이미지가 있거나, 학생을 찾을 수 없거나, 접근 권한이 없는 경우
-     */
-    @Transactional
-    public UpdateProfileImageResult registerProfileImage(UpdateProfileImageCommand command) {
-        // 1. 학생 조회 및 권한 확인
-        Student student = studentRepository.findById(command.studentId())
-                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
-
-        if (!student.getProtector().getProtectorId().equals(command.protectorId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
-        }
-
-        // 2. 이미 프로필 이미지가 있으면 예외 발생
-        if (student.getProfileImage() != null && !student.getProfileImage().isEmpty()) {
-            throw new EchoException(StudentErrorCode.PROFILE_IMAGE_ALREADY_EXISTS);
-        }
-
-        // 3. 새 이미지 저장
-        String profilePath = fileStorageProperties.getUpload().getProfileImages().getPath();
-        String storedFilePath = fileStorageService.store(command.file(), profilePath);
-
-        // 4. 학생 엔티티 업데이트
-        student.updateProfileImage(storedFilePath);
-        studentRepository.save(student);
-
-        // 5. URL 생성 및 결과 반환
         String imageUrl = fileStorageService.getFileUrl(storedFilePath);
         return new UpdateProfileImageResult(true, imageUrl);
     }
@@ -880,9 +907,9 @@ public class StudentService {
     /**
      * 학생 PIN을 수정합니다.
      *
-     * @param command PIN 수정 명령 (studentId, currentPin, newPin)
+     * @param command PIN 수정 명령 (studentId, newPin)
      * @return 수정 결과 (success)
-     * @throws EchoException 학생을 찾을 수 없거나, 현재 PIN이 일치하지 않는 경우
+     * @throws EchoException 학생을 찾을 수 없는 경우
      */
     @Transactional
     public UpdatePinResult updatePin(UpdatePinCommand command) {
@@ -890,19 +917,7 @@ public class StudentService {
         Student student = studentRepository.findById(command.studentId())
                 .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
 
-        // 2. PIN 등록 여부 확인
-        String storedPin = student.getStudentPin();
-
-        if (storedPin == null || storedPin.isEmpty()) {
-            throw new EchoException(StudentErrorCode.PIN_NOT_FOUND);
-        }
-
-        // 3. 현재 PIN 검증 (평문 비교)
-        if (!command.currentPin().equals(storedPin)) {
-            throw new EchoException(StudentErrorCode.PIN_NOT_MATCH);
-        }
-
-        // 4. 새 PIN 업데이트 (평문)
+        // 2. 새 PIN 업데이트 (평문)
         student.updateStudentPin(command.newPin());
 
         return new UpdatePinResult(true);
@@ -917,21 +932,26 @@ public class StudentService {
      */
     @Transactional(readOnly = true)
     public GetDailyStreakResult getDailyStreak(GetDailyStreakCommand command) {
-        // 1. 학생 존재 여부 확인
-        if (!studentRepository.existsById(command.studentId())) {
-            throw new EchoException(StudentErrorCode.STUDENT_NOT_FOUND);
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
+
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
         }
 
-        // 2. 보호자-학생 관계 확인
+        // 3. 보호자-학생 관계 확인
         if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 이번 주 월요일 ~ 금요일 날짜 계산 (KST 기준)
+        // 4. 이번 주 월요일 ~ 금요일 날짜 계산 (KST 기준)
         LocalDate today = LocalDate.now();
         LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 
-        // 4. 월~금 각 날짜의 학습 여부 확인
+        // 5. 월~금 각 날짜의 학습 여부 확인
         List<Boolean> weeklyAttendance = new ArrayList<>();
         for (int i = 0; i < 5; i++) {  // 월~금 5일
             LocalDate targetDate = monday.plusDays(i);
@@ -957,13 +977,29 @@ public class StudentService {
             weeklyAttendance.add(isDayCompleted);
         }
 
-        // 5. 현재 연속 학습일 수 계산 (오늘부터 거슬러 올라가며 확인)
+        // 6. 현재 연속 학습일 수 계산 (오늘부터 거슬러 올라가며 확인)
         Integer currentStreak = calculateCurrentStreak(command.studentId(), today);
 
         log.info("일일 연속 학습 기록 조회 완료 - Student ID: {}, Weekly Attendance: {}, Current Streak: {}",
                 command.studentId(), weeklyAttendance, currentStreak);
 
         return GetDailyStreakResult.of(weeklyAttendance, currentStreak);
+    }
+
+    /**
+     * 학생 조회 및 삭제 여부 확인
+     *
+     * @param studentId 학생 ID
+     * @return 활성화된 학생 엔티티
+     * @throws EchoException 학생을 찾을 수 없거나 삭제된 경우
+     */
+    private Student getActiveStudent(Integer studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
+        if (student.getDeletedAt() != null) {
+            throw new EchoException(StudentErrorCode.STUDENT_DELETED);
+        }
+        return student;
     }
 
     /**

@@ -51,7 +51,7 @@ public class LocalFileStorageService implements FileStorageService {
     }
 
     @Override
-    public String store(MultipartFile file, String prefix) {
+    public String store(MultipartFile file, String prefix, Integer protectorId, Integer studentId) {
         // 파일 검증
         validateFile(
                 file,
@@ -63,16 +63,16 @@ public class LocalFileStorageService implements FileStorageService {
         String originalFileName = file.getOriginalFilename();
         String fileExtension = getFileExtension(originalFileName);
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String uniqueFileName = String.format("%s_%s_%s.%s",
-                prefix,
+        String uniqueFileName = String.format("%s_%s.%s",
                 UUID.randomUUID().toString(),
                 timestamp,
                 fileExtension
         );
 
         try {
-            // prefix 디렉토리 생성
-            Path targetLocation = this.fileStorageLocation.resolve(prefix);
+            // 계층 구조 디렉토리 생성: prefix/protector-{id}/student-{id}
+            String hierarchyPath = String.format("%s/protector-%d/student-%d", prefix, protectorId, studentId);
+            Path targetLocation = this.fileStorageLocation.resolve(hierarchyPath);
             Files.createDirectories(targetLocation);
 
             // 파일 저장
@@ -82,7 +82,7 @@ public class LocalFileStorageService implements FileStorageService {
             log.info("파일 저장 완료: {}", targetFile);
 
             // 저장된 파일의 상대 경로 반환 (DB에 저장될 값)
-            return prefix + "/" + uniqueFileName;
+            return hierarchyPath + "/" + uniqueFileName;
         } catch (IOException e) {
             log.error("파일 저장 실패", e);
             throw new EchoException(StudentErrorCode.FILE_UPLOAD_FAILED);
