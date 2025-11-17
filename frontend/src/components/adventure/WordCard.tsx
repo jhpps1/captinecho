@@ -76,7 +76,6 @@ export const WordCard = ({
               transition-all duration-200
               ${!isTutorialMode ? 'hover:scale-105 cursor-pointer' : 'cursor-default pointer-events-none'}
             `}
-            style={{ zIndex: 10 }}
             aria-label="단어 발음 듣기"
           >
             <span

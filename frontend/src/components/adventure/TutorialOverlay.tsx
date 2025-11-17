@@ -6,5 +6,5 @@ type TutorialOverlayProps = {
 export const TutorialOverlay = ({ active }: TutorialOverlayProps) => {
   if (!active) return null;
 
-  return <div className="absolute inset-0 bg-black/60 z-[15]" />;
+  return <div className="absolute inset-0 bg-black/60 z-[1]" />;
 };

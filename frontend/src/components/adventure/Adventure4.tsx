@@ -318,7 +318,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
           showSpeaker={showSpeakerButton}
           onSpeakerClick={handlePlayWordAudio}
           isSpeaking={isSpeaking}
-          isTutorialMode={isTutorialMode} 
+          isTutorialMode={isTutorialMode}
         />
       </div>
 
@@ -327,7 +327,7 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
         isRecording={isRecording}
         isAnalyzing={isAnalyzing}
         onClick={handleMicClick}
-        isTutorialMode={isTutorialMode} 
+        isTutorialMode={isTutorialMode}
       />
 
       {/* 이미지 힌트 모달 (2번째 오답) */}
