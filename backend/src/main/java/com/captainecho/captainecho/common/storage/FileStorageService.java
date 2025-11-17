@@ -13,9 +13,11 @@ public interface FileStorageService {
      *
      * @param file 저장할 파일
      * @param prefix 파일 저장 경로의 접두사 (예: "profiles", "avatars")
+     * @param protectorId 보호자 ID (계층 구조 생성용)
+     * @param studentId 학생 ID (계층 구조 생성용)
      * @return 저장된 파일의 상대 경로
      */
-    String store(MultipartFile file, String prefix);
+    String store(MultipartFile file, String prefix, Integer protectorId, Integer studentId);
 
     /**
      * 파일을 삭제합니다.
