@@ -65,7 +65,7 @@ export default function StudentProfileModal({
     setIsUploading(true);
     try {
       // API 호출
-      const response = await updateStudentProfileImage(studentId, selectedFile);
+      const response = await updateStudentProfileImage(selectedFile);
 
       console.log('✅ 프로필 업로드 성공:', response);
       alert('프로필 사진이 변경되었습니다.');
