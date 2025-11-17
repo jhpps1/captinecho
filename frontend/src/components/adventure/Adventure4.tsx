@@ -293,6 +293,12 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
     }
   };
 
+  // 🔽 개발용: 5번 오답 시 넘어가기 버튼
+  const handleSkip = () => {
+    console.log('⏭️ 개발용 넘어가기 버튼 클릭 - 정답 처리');
+    handleAnswer(true, audioUrl || undefined, 80);
+  };
+
   return (
     <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 pb-16 sm:pb-20">
       {/* 안내문 */}
@@ -346,6 +352,18 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
         isCorrect={isCorrectAnswer}
         message={encouragementMessage || undefined}
       />
+
+      {/* 개발용: 5번 오답 시 넘어가기 버튼 (ProblemRunner 버튼 위에 배치) */}
+      {attemptCount >= 5 && !showFeedback && (
+        <div className="fixed bottom-28 right-4 z-50">
+          <button
+            onClick={handleSkip}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg shadow-md hover:bg-orange-600 transition-colors font-semibold"
+          >
+            ⏭️ 넘어가기
+          </button>
+        </div>
+      )}
     </main>
   );
 };
