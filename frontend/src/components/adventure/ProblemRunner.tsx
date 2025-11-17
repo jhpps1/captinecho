@@ -275,7 +275,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
       {/* 진행도 표시 */}
       <div className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md z-50">
         <span className="text-sm font-semibold">
-          {currentIndex + 1} / {problems.length}
+          {problems[currentIndex]?.seqNo || (currentIndex + 1)} / 10
         </span>
       </div>
 
@@ -289,7 +289,7 @@ export const ProblemRunner = ({ problems, mode, studentId, onAdventureTypeChange
         studentId={studentId}
       />
 
-      {/* 개발용: 문제 네비게이션 버튼 */}
+      {/* 개발용: 문제 네비게이션 버튼 (추후 삭제 예정)*/}
       <div className="fixed bottom-4 right-4 flex gap-2 z-50">
         <button
           onClick={handlePrevProblem}
