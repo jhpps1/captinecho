@@ -70,6 +70,19 @@ export interface CreatePinResponse {
   success: boolean;
 }
 
+// 💡 추가: 학생 정보 수정 요청 타입 (API 명세 기반)
+export interface UpdateStudentRequest {
+  studentName: string;
+  gender: BackendGender;
+  birth: string; // 'yyyy-MM-dd'
+  grade: BackendGrade;
+}
+
+// 💡 추가: 학생 정보 수정 응답 타입 (API 명세 기반)
+export interface UpdateStudentResponse {
+  success: boolean;
+}
+
 // ===== API 함수 =====
 
 /**
@@ -98,6 +111,21 @@ export const registerStudent = async (
  */
 export const deleteStudent = async (studentId: number): Promise<void> => {
   await axiosInstance.delete(`/student/${studentId}`);
+};
+
+/**
+ * 학생 정보 수정
+ * PATCH /api/student/{studentId}
+ */
+export const updateStudent = async (
+  studentId: number,
+  data: UpdateStudentRequest
+): Promise<UpdateStudentResponse> => {
+  const response = await axiosInstance.patch<UpdateStudentResponse>(
+    `/student/${studentId}`,
+    data
+  );
+  return response.data;
 };
 
 /**
