@@ -7,7 +7,8 @@ import AddStudentModal from '../components/protector/modals/AddStudentModal';
 import InterestSelectionModal from '../components/protector/modals/InterestSelectionModal';
 import StudentProfileModal from '../components/protector/modals/StudentProfileModal';
 import AddStudentCompleteModal from '../components/protector/modals/AddStudentCompleteModal';
-import { getStudents, registerStudent, deleteStudent, getStudentCount } from '../api/protectorApi';
+import EditStudentModal from '../components/protector/modals/EditStudentModal';
+import { getStudents, registerStudent, deleteStudent, getStudentCount, updateStudent } from '../api/protectorApi';
 import {
   mapGenderToBackend,
   mapGradeToBackend,
@@ -47,6 +48,8 @@ export default function ManageStudentsPage() {
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null); // 수정할 학생 정보
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isUpdatingStudent, setIsUpdatingStudent] = useState(false);
 
   // 학생 수 조회
   const fetchStudentCount = async () => {
@@ -208,6 +211,48 @@ export default function ManageStudentsPage() {
     }
   };
 
+  // 💡 4. 학생 정보 수정 핸들러
+  const handleUpdateStudent = async (updatedData: {
+    name: string;
+    gender: 'male' | 'female';
+    birthDate: string; // 'yyyy-MM-dd'
+    grade: string;
+  }) => {
+    if (!editingStudent) return;
+
+    setIsUpdatingStudent(true);
+    try {
+      const requestData = {
+        studentName: updatedData.name,
+        gender: mapGenderToBackend(updatedData.gender),
+        birth: formatDateToBackend(updatedData.birthDate), // 'yyyy-MM-dd' 형식
+        grade: mapGradeToBackend(updatedData.grade),
+      };
+
+      console.log('📤 학생 수정 요청 데이터:', requestData);
+      const response = await updateStudent(editingStudent.id, requestData);
+      console.log('📥 학생 수정 응답:', response);
+
+      if (response.success) {
+        alert('학생 정보가 수정되었습니다.');
+        await fetchStudents(); // 학생 목록 새로고침
+        setShowEditModal(false);
+        setEditingStudent(null);
+      } else {
+        alert('학생 수정에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('❌ 학생 수정 실패:', error);
+      let errorMessage = '학생 수정에 실패했습니다.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      alert(errorMessage);
+    } finally {
+      setIsUpdatingStudent(false);
+    }
+  };
+
   // DashboardSidebar용 학생 데이터 변환
   const sidebarStudents = students.map(s => ({
     id: s.id,
@@ -230,6 +275,24 @@ export default function ManageStudentsPage() {
           onOpenInterests={() => setShowInterestModal(true)}
           selectedInterestsCount={selectedInterests.length}
           isLoading={isAddingStudent}
+        />
+      )}
+
+      {/* 💡 5. 학생 수정 모달 렌더링 */}
+      {showEditModal && editingStudent && (
+        <EditStudentModal
+          student={{
+            name: editingStudent.name,
+            gender: editingStudent.gender as 'male' | 'female',
+            birthDate: editingStudent.birthDate,
+            grade: editingStudent.grade,
+          }}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingStudent(null);
+          }}
+          onSubmit={handleUpdateStudent}
+          isLoading={isUpdatingStudent}
         />
       )}
 
@@ -287,8 +350,8 @@ export default function ManageStudentsPage() {
               onClick={() => setShowAddModal(true)}
               disabled={studentCount?.remain === 0}
               className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 ${studentCount?.remain === 0
-                  ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                  : 'bg-primary text-white hover:bg-primary/90'
+                ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                : 'bg-primary text-white hover:bg-primary/90'
                 }`}
             >
               <Users size={20} />+ 학생 추가
@@ -305,8 +368,8 @@ export default function ManageStudentsPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4">
                     {student.profileImage ? (
-                      <img 
-                        src={student.profileImage} 
+                      <img
+                        src={student.profileImage}
                         alt={student.name}
                         className="w-16 h-16 rounded-full object-cover border-2 border-neutral-200"
                       />
@@ -335,10 +398,12 @@ export default function ManageStudentsPage() {
                     {/* 드롭다운 메뉴 */}
                     {openDropdownId === student.id && (
                       <div className="absolute right-0 top-12 bg-white border border-neutral-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                        {/* 💡 6. '수정하기' 버튼 onClick 핸들러 연결 */}
                         <button
                           onClick={() => {
-                            alert('수정 기능은 준비 중입니다.');
-                            setOpenDropdownId(null);
+                            setEditingStudent(student); // 1. 수정할 학생 설정
+                            setShowEditModal(true);     // 2. 수정 모달 열기
+                            setOpenDropdownId(null);    // 3. 드롭다운 닫기
                           }}
                           className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
                         >
