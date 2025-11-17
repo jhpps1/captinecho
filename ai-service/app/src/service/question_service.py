@@ -318,7 +318,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 
 
 [1] adventure_type_id=1 (음소 찾기)
-- problem_text: 한글 자음+모음 1음절 (ex: [translate:가])
+- problem_text: 한글 자음+모음 1음절 (ex: [translate:가], [translate:똥], [translate:퀴])
 - problem_phonemes: ["[translate:ㄱ]", "[translate:ㅏ]"]
 - blank_phoneme: problem_phonemes 중 하나
 - correct_answer: blank_phoneme와 같음
@@ -376,7 +376,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "level": {student_level},
     "interest_id": {interest_id},
     "problem_text": "가",
-    "problem_phonemes": "ㄱ", "ㅏ"],
+    "problem_phonemes": ["ㄱ", "ㅏ"],
     "blank_phoneme": "ㄱ",
     "correct_answer": "ㄱ",
     "choices": ["ㄱ", "ㄴ", "ㄷ"],
@@ -391,14 +391,14 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "assigned_date": "{assigned_date}",
     "level": 2,
     "interest_id": {interest_id},
-    "problem_text": "가방",
-    "problem_phonemes": ["ㄱ", "ㅏ", "ㅂ", "ㅏ", "ㅇ"],
-    "blank_phoneme": "ㅂ",
-    "correct_answer": "ㅂ",
-    "choices": ["ㅂ", "ㅇ", "ㅁ"],
+    "problem_text": "축구공",
+    "problem_phonemes": ["ㅊ", "ㅜ", "ㄱ", "ㄱ", "ㅜ", "ㄱ", "ㅗ", "ㅇ"],
+    "blank_phoneme": "ㄱ",
+    "correct_answer": "ㄱ",
+    "choices": ["ㄱ", "ㅇ", "ㅁ"],
     "blank_position": "INITIAL",
     "student_id": {student_id},
-    "image_url": "problems/image/가방.jpg",
+    "image_url": "problems/image/축구공.jpg",
     "sound_url": "problems/sound/{assigned_date}_yyyyy.mp3"
     }}
 
@@ -412,7 +412,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "problem_phonemes": [],
     "blank_phoneme": null,
     "correct_answer": "코끼리",
-    "choices": ["코끼리", "사자", "호랑이"],
+    "choices": ["코끼리", "고끼리", "포기리"], (correct_answer 반드시 포함,나머지 두 단어는 무의미단어로)
     "blank_position": null,
     "student_id": {student_id},
     "image_url": "problems/image/코끼리.jpg",
@@ -424,12 +424,12 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "assigned_date": "{assigned_date}",
     "level": 3,
     "interest_id": {interest_id},
-    "problem_text": "가방",
+    "problem_text": "가방",(adventure_type_id=4 의 경우, 반드시 2자 이상 구체명사)
     "problem_phonemes": [],
     "blank_phoneme": "",
     "correct_answer": "가방",
     "choices": [],
-    "blank_position": "",
+    "blank_position": null,
     "student_id": {student_id},
     "image_url": "",
     "sound_url": "problems/sound/{assigned_date}_wwwww.mp3"
