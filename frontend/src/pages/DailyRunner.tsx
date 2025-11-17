@@ -12,25 +12,22 @@ import { AdventureLayout } from '../components/adventure/AdventureLayout';
  * - URL에서 idx 추출
  * - Session Storage에서 studentId 추출
  * - 일일탐험 문제 10개 fetch (혼합 타입)
- * - 로딩/에러/세션 복원 처리
+ * - 로딩/에러 처리
  * - ProblemRunner에 데이터 전달
  *
  * @route /daily/:idx?
  */
 export const DailyRunner = () => {
   const navigate = useNavigate();
-  // [수정됨] studentId 제거, idx만 가져옴
   const { idx } = useParams<{ idx?: string }>();
 
-  // [추가됨] studentId를 state로 관리
   const [studentId, setStudentId] = useState<number | null>(null);
-
   const [problems, setProblems] = useState<Problem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentAdventureTypeId, setCurrentAdventureTypeId] = useState<1 | 2 | 3 | 4 | undefined>();
 
-  // 세션 관리 상태 추가
+  // 세션 관리 상태
   const [session, setSession] = useState<SessionState>({
     sessionId: null,
     studyType: null,
@@ -39,84 +36,18 @@ export const DailyRunner = () => {
   });
   const [isStarting, setIsStarting] = useState(false);
 
-  // TODO: API 개발되면 수정 예정
-  // 임시 방편: localStorage로 완료 여부 관리
-  // 추후 백엔드 API (GET /api/student/{studentId}/adventure/daily/status)로 대체
-  const [isCompleted, setIsCompleted] = useState(false);
-
-  // TODO: API 개발되면 수정 예정
-  // localStorage 키 생성 헬퍼 함수들
-  const getTodayString = () => new Date().toISOString().split('T')[0];
-
-  // [수정됨] studentId state를 사용
-  const getCompletionKey = () => {
-    return `daily_completed_${studentId}_${getTodayString()}`;
-  };
-
-  // [수정됨] studentId state를 사용
-  const getSessionKey = () => {
-    return `daily_session_${studentId}_${getTodayString()}`;
-  };
-
-  // TODO: API 개발되면 수정 예정
-  // localStorage에 세션 정보 저장
-  const saveSessionToStorage = (sessionData: SessionState, problemsData: Problem[]) => {
-    const sessionKey = getSessionKey();
-    const data = {
-      session: sessionData,
-      problems: problemsData,
-      savedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(sessionKey, JSON.stringify(data));
-    console.log('💾 세션 정보 localStorage에 저장:', sessionKey);
-  };
-
-  // TODO: API 개발되면 수정 예정
-  // localStorage에서 세션 정보 불러오기
-  const loadSessionFromStorage = () => {
-    const sessionKey = getSessionKey();
-    const saved = localStorage.getItem(sessionKey);
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        console.log('📂 localStorage에서 세션 정보 복원:', data);
-        return data;
-      } catch (error) {
-        console.error('❌ localStorage 파싱 실패:', error);
-        return null;
-      }
-    }
-    return null;
-  };
-
-  // TODO: API 개발되면 수정 예정
-  // localStorage에서 세션 정보 삭제
-  const clearSessionFromStorage = () => {
-    const sessionKey = getSessionKey();
-    localStorage.removeItem(sessionKey);
-    console.log('🗑️ localStorage 세션 정보 삭제:', sessionKey);
-  };
-
-  // TODO: API 개발되면 수정 예정
-  // 문제 완료 시 localStorage 업데이트
-  const handleProblemComplete = (problemId: number) => {
-    console.log(`✅ 문제 ${problemId} 완료, localStorage 업데이트`);
-    // 현재 문제 목록과 세션 정보를 다시 저장
-    saveSessionToStorage(session, problems);
-  };
-
-  // [제거됨] 최상위 스코프의 parsedStudentId 변수
+  // API 기반 완료 여부 (빈 배열이면 완료)
+  const [isAllCompleted, setIsAllCompleted] = useState(false);
 
   // 페이지 이탈 시 세션 종료
   useEffect(() => {
-    // [수정됨] studentId state 사용
     if (!studentId || !session.isActive) return;
 
     // 컴포넌트 언마운트 시 세션 종료 (다른 페이지로 이동)
     const cleanup = async () => {
       try {
         console.log('🚪 페이지 이탈 감지, 세션 종료 중...');
-        await endAdventure(studentId); // [수정됨]
+        await endAdventure(studentId);
       } catch (err) {
         console.error('❌ 페이지 이탈 시 세션 종료 실패:', err);
       }
@@ -126,7 +57,7 @@ export const DailyRunner = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (session.isActive) {
         // 세션이 활성화되어 있으면 동기적으로 종료 시도
-        navigator.sendBeacon(`/api/student/${studentId}/adventure/end`); // [수정됨]
+        navigator.sendBeacon(`/api/student/${studentId}/adventure/end`);
       }
     };
 
@@ -136,12 +67,11 @@ export const DailyRunner = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanup(); // 언마운트 시 세션 종료
     };
-    // [수정됨] 의존성 배열 변경
   }, [session.isActive, studentId]);
 
-  // [수정됨] 1. studentId 검증 (Session Storage)
+  // 1. studentId 검증 (Session Storage)
   useEffect(() => {
-    const storedStudentId = sessionStorage.getItem('studentId'); // "studentId" 키로 가정
+    const storedStudentId = sessionStorage.getItem('studentId');
     const parsedStudentId = storedStudentId ? parseInt(storedStudentId, 10) : null;
 
     if (!parsedStudentId || isNaN(parsedStudentId)) {
@@ -150,71 +80,44 @@ export const DailyRunner = () => {
       return;
     }
 
-    setStudentId(parsedStudentId); // State 설정
-    // 로딩 상태는 아직 true로 둡니다. 세션 복원 로직이 완료되어야 false로 변경됩니다.
-  }, []); // 마운트 시 한 번만 실행
+    setStudentId(parsedStudentId);
+  }, []);
 
-  // [추가됨] 2. 세션 복원 (studentId가 설정된 후 실행)
+  // 2. API 기반 완료 여부 확인 (studentId가 설정된 후 실행)
   useEffect(() => {
-    // studentId가 아직 설정되지 않았으면 (null) 실행하지 않음
     if (!studentId) {
       return;
     }
 
-    // --- 기존 세션 복원 로직 시작 ---
-    // TODO: API 개발되면 수정 예정
-    // 임시: localStorage에서 오늘의 세션 정보 및 완료 여부 확인
-    // 추후 백엔드 API (GET /api/student/{studentId}/adventure/daily/status)로 대체
+    // API로 미완료 문제 조회
+    const checkCompletion = async () => {
+      try {
+        console.log('🔍 API로 일일문제 완료 여부 확인 중...');
+        const data = await getDailyProblems(studentId);
 
-    // 1. 완료 여부 확인
-    const completionKey = getCompletionKey(); // studentId state 사용
-    const completed = localStorage.getItem(completionKey);
-    if (completed === 'true') {
-      console.log('✅ 오늘의 일일문제 이미 완료됨');
-      setIsCompleted(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // 2. 진행 중인 세션 복원 시도
-    const savedData = loadSessionFromStorage(); // studentId state 사용
-    if (savedData && savedData.session && savedData.problems) {
-      console.log('🔄 진행 중인 세션 발견, 새 세션으로 이어하기 시작');
-
-      // 새로운 세션 생성 (이전 세션은 종료되었으므로)
-      startAdventure(studentId, 'DAILY') // studentId state 사용
-        .then((sessionId) => {
-          const newSession = {
-            sessionId,
-            studyType: 'DAILY' as const,
-            isActive: true,
-            startedAt: new Date().toISOString(),
-          };
-
-          setSession(newSession);
-          setProblems(savedData.problems); // 문제는 복원
-
-          // localStorage 업데이트 (새 세션 ID로)
-          saveSessionToStorage(newSession, savedData.problems); // studentId state 사용
-
-          console.log(`✅ 새 세션으로 이어하기 완료 - Session ID: ${sessionId}`);
+        // 빈 배열이면 모두 완료
+        if (!data.problems || data.problems.length === 0) {
+          console.log('✅ 오늘의 일일문제 이미 완료됨');
+          setIsAllCompleted(true);
           setIsLoading(false);
-        })
-        .catch((err) => {
-          console.error('❌ 세션 재시작 실패:', err);
-          setError('이어하기를 시작하는데 실패했습니다. 다시 시도해주세요.');
-          setIsLoading(false);
-        });
-    } else {
-      console.log('📝 새로운 세션 시작 대기');
-      setIsLoading(false); // ID 검증 통과, 세션 복원할 것 없음 -> 시작 대기 화면으로
-    }
-    // [수정됨] 의존성 배열에 studentId 추가
+          return;
+        }
+
+        // 미완료 문제가 있으면 시작 대기 화면으로
+        console.log(`📝 미완료 문제 ${data.problems.length}개 발견, 시작 대기 중`);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('❌ 완료 여부 확인 실패:', err);
+        setError('문제를 불러오는데 실패했습니다. 다시 시도해주세요.');
+        setIsLoading(false);
+      }
+    };
+
+    checkCompletion();
   }, [studentId]);
 
   // 세션 시작 핸들러
   const handleStartAdventure = async () => {
-    // [수정됨] studentId state 사용
     if (!studentId) {
       setError('유효하지 않은 학생 ID입니다.');
       return;
@@ -227,7 +130,7 @@ export const DailyRunner = () => {
       console.log('🚀 일일탐험 세션 시작 중...');
 
       // 1. 세션 생성
-      const sessionId = await startAdventure(studentId, 'DAILY'); // [수정됨]
+      const sessionId = await startAdventure(studentId, 'DAILY');
 
       setSession({
         sessionId,
@@ -239,7 +142,7 @@ export const DailyRunner = () => {
       console.log(`✅ 세션 시작됨 - Session ID: ${sessionId}`);
 
       // 2. 문제 불러오기
-      const data = await getDailyProblems(studentId); // [수정됨]
+      const data = await getDailyProblems(studentId);
 
       if (!data.problems || data.problems.length === 0) {
         setError('오늘의 문제가 없습니다.');
@@ -248,16 +151,6 @@ export const DailyRunner = () => {
 
       setProblems(data.problems);
       console.log(`✅ 일일문제 ${data.problems.length}개 로드 완료`);
-
-      // TODO: API 개발되면 수정 예정
-      // 3. 세션 정보를 localStorage에 저장 (이어하기 기능용)
-      const sessionData: SessionState = {
-        sessionId,
-        studyType: 'DAILY',
-        isActive: true,
-        startedAt: new Date().toISOString(),
-      };
-      saveSessionToStorage(sessionData, data.problems); // [수정됨] (내부적으로 studentId state 사용)
 
     } catch (err) {
       console.error('❌ 세션 시작 실패:', err);
@@ -269,12 +162,11 @@ export const DailyRunner = () => {
 
   // 세션 종료 핸들러
   const handleEndAdventure = async () => {
-    // [수정됨] studentId state 사용
     if (!studentId || !session.isActive) return;
 
     try {
       console.log('🏁 세션 종료 중...');
-      const success = await endAdventure(studentId); // [수정됨]
+      const success = await endAdventure(studentId);
 
       if (success) {
         console.log('✅ 세션 종료 성공');
@@ -285,12 +177,8 @@ export const DailyRunner = () => {
           startedAt: null,
         });
 
-        // TODO: API 개발되면 수정 예정
-        // 임시: localStorage에 완료 표시 및 세션 정보 삭제
-        const completionKey = getCompletionKey(); // [수정됨]
-        localStorage.setItem(completionKey, 'true');
-        clearSessionFromStorage(); // 진행 중인 세션 정보 삭제 // [수정됨]
-        setIsCompleted(true);
+        // 완료 상태 설정 (완료 화면 표시)
+        setIsAllCompleted(true);
       }
     } catch (err) {
       console.error('❌ 세션 종료 실패:', err);
@@ -298,7 +186,7 @@ export const DailyRunner = () => {
   };
 
   // 완료 화면 (모든 문제를 다 풀었을 때)
-  if (isCompleted) {
+  if (isAllCompleted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
         <div className="text-center bg-white p-10 rounded-2xl shadow-xl max-w-md">
@@ -381,6 +269,7 @@ export const DailyRunner = () => {
       </div>
     );
   }
+
   // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
   return (
     <AdventureLayout
@@ -391,12 +280,10 @@ export const DailyRunner = () => {
         <ProblemRunner
           problems={problems}
           mode="daily"
-          // [수정됨] studentId state 사용 (null이 아님을 보장)
           studentId={studentId!}
           onAdventureTypeChange={setCurrentAdventureTypeId}
           isTutorialMode={isTutorialMode}
           onComplete={handleEndAdventure}
-          onProblemComplete={handleProblemComplete}  // TODO: API 개발되면 수정 예정
         />
       )}
     </AdventureLayout>
