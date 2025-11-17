@@ -15,6 +15,7 @@ public enum ProtectorErrorCode implements ErrorCode {
     INVALID_RECOVERY_CODE(HttpStatus.BAD_REQUEST, "PR40004", "인증 코드가 유효하지 않거나 만료되었습니다"),
     EMAIL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "PR40005", "이미 사용 중인 이메일입니다"),
     OAUTH_USER_EMAIL_UPDATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "PR40006", "OAuth 로그인 유저는 이메일을 변경할 수 없습니다"),
+    ALREADY_DELETED(HttpStatus.BAD_REQUEST, "PR40007", "이미 탈퇴한 회원입니다"),
 
     // 404 NOT FOUND
     PROTECTOR_NOT_FOUND(HttpStatus.NOT_FOUND, "PR40400", "보호자를 찾을 수 없습니다"),
