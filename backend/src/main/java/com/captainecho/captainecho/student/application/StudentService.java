@@ -851,9 +851,9 @@ public class StudentService {
     /**
      * 학생 PIN을 수정합니다.
      *
-     * @param command PIN 수정 명령 (studentId, currentPin, newPin)
+     * @param command PIN 수정 명령 (studentId, newPin)
      * @return 수정 결과 (success)
-     * @throws EchoException 학생을 찾을 수 없거나, 현재 PIN이 일치하지 않는 경우
+     * @throws EchoException 학생을 찾을 수 없는 경우
      */
     @Transactional
     public UpdatePinResult updatePin(UpdatePinCommand command) {
@@ -861,19 +861,7 @@ public class StudentService {
         Student student = studentRepository.findById(command.studentId())
                 .orElseThrow(() -> new EchoException(StudentErrorCode.STUDENT_NOT_FOUND));
 
-        // 2. PIN 등록 여부 확인
-        String storedPin = student.getStudentPin();
-
-        if (storedPin == null || storedPin.isEmpty()) {
-            throw new EchoException(StudentErrorCode.PIN_NOT_FOUND);
-        }
-
-        // 3. 현재 PIN 검증 (평문 비교)
-        if (!command.currentPin().equals(storedPin)) {
-            throw new EchoException(StudentErrorCode.PIN_NOT_MATCH);
-        }
-
-        // 4. 새 PIN 업데이트 (평문)
+        // 2. 새 PIN 업데이트 (평문)
         student.updateStudentPin(command.newPin());
 
         return new UpdatePinResult(true);
