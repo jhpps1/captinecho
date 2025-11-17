@@ -166,3 +166,12 @@ export const updatePin = async (currentPin: string, newPin: string): Promise<Upd
   });
   return response.data;
 };
+
+/**
+ * 회원 탈퇴
+ * DELETE /api/protector/withdraw
+ */
+export const withdrawAccount = async () => {
+  const response = await axiosInstance.delete('/protector/withdraw');
+  return response.data;
+};
