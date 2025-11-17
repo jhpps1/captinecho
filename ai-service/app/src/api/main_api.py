@@ -152,15 +152,22 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
         ).filter(LearningSession.student_id == student_id).all()
 
         real_jamo_list = [e.real_jamo for e in error_patterns if e.real_jamo]
+        confusion_jamo_list = [e.confusion_jamo for e in error_patterns if e.confusion_jamo]
 
         if real_jamo_list:
             jamo_counter = Counter(real_jamo_list)
             most_common = jamo_counter.most_common(2)
             real_jamo = most_common[0][0] if len(most_common) > 0 else "ㄱ"
-            confusion_jamo = most_common[1][0] if len(most_common) > 1 else "ㄴ"
+
         else:
             real_jamo = "ㄱ"
-            confusion_jamo = "ㄴ"
+
+        if confusion_jamo_list:
+            confusion_jamo_counter = Counter(confusion_jamo_list)
+            most_confusion = confusion_jamo_counter.most_common(1)
+            confusion_jamo = most_confusion[0][0] if most_confusion else 'ㄴ'
+        else:
+            confusion_jamo = 'ㄴ'
 
         # 5. Student Interest 조회 (JOIN)
         student_interests = db.query(StudentInterest).filter_by(student_id=student_id).all()
