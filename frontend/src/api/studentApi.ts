@@ -44,6 +44,14 @@ export interface AllJamoStatsResponse {
   accuracyRates: JamoStatData[];
 }
 
+interface UpdatePinRequest {
+  newPin: string;
+}
+
+interface UpdatePinResponse {
+  success: boolean;
+}
+
 /**
  * sessionStorage에서 학생 ID를 가져옵니다.
  * @throws {Error} 학생 ID를 찾을 수 없는 경우 (로그인이 필요한 경우)
@@ -158,5 +166,17 @@ export const getAllJamoStats = async (): Promise<AllJamoStatsResponse> => {
   const studentId = getStudentId();
   const url = `/student/${studentId}/dashboard/total/jamo/stat`;
   const response = await axiosInstance.get<AllJamoStatsResponse>(url);
+  return response.data;
+};
+
+/**
+ * 학생 PIN 번호 수정
+ * PATCH /api/student/{student-id}/pin
+ */
+export const updateStudentPin = async (studentId: number, newPin: string): Promise<UpdatePinResponse> => {
+  // currentPin 제거, newPin만 전송
+  const response = await axiosInstance.patch<UpdatePinResponse>(`/student/${studentId}/pin`, {
+    newPin
+  });
   return response.data;
 };

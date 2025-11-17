@@ -8,6 +8,8 @@ import InterestSelectionModal from '../components/protector/modals/InterestSelec
 import StudentProfileModal from '../components/protector/modals/StudentProfileModal';
 import AddStudentCompleteModal from '../components/protector/modals/AddStudentCompleteModal';
 import EditStudentModal from '../components/protector/modals/EditStudentModal';
+import PINStudentModal from '../components/student/PINStudentModal';
+import { updateStudentPin } from '../api/studentApi';
 import { getStudents, registerStudent, deleteStudent, getStudentCount, updateStudent } from '../api/protectorApi';
 import {
   mapGenderToBackend,
@@ -50,6 +52,10 @@ export default function ManageStudentsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null); // 수정할 학생 정보
   const [showEditModal, setShowEditModal] = useState(false);
   const [isUpdatingStudent, setIsUpdatingStudent] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinStep, setPinStep] = useState<'new' | 'confirm'>('new');
+  const [tempNewPin, setTempNewPin] = useState(''); // 첫 번째 입력값 저장용
+  const [targetStudentForPin, setTargetStudentForPin] = useState<Student | null>(null);
 
   // 학생 수 조회
   const fetchStudentCount = async () => {
@@ -137,7 +143,7 @@ export default function ManageStudentsPage() {
         gender: mapGenderToBackend(studentData.gender),
         birth: formatDateToBackend(studentData.birthDate),
         grade: mapGradeToBackend(studentData.grade),
-        pin: "000000", // 기본 PIN 6자리 (학생 관리에서 수정 가능)
+        pin: "0000",
         interests: selectedInterests.map(id => ({ interestId: id }))
       };
 
@@ -178,6 +184,8 @@ export default function ManageStudentsPage() {
     setShowProfileModal(false);
     setEditingStudent(null);
   };
+
+
 
   const handleInterestConfirm = (interestIds: number[]) => {
     setSelectedInterests(interestIds);
@@ -262,6 +270,79 @@ export default function ManageStudentsPage() {
     isActive: s.id === selectedStudentId
   }));
 
+  // 💡 2단계 PIN 변경 프로세스 (새 PIN -> 확인)
+  const handlePinFlow = async (inputPin: string) => {
+    if (!targetStudentForPin) return;
+
+    // [1단계] 새 PIN 입력
+    if (pinStep === 'new') {
+      setTempNewPin(inputPin); // 입력값 임시 저장
+      setPinStep('confirm');   // 확인 단계로 이동
+      return;
+    }
+
+    // [2단계] 새 PIN 확인 (검증)
+    if (pinStep === 'confirm') {
+      // 1. 일치 여부 확인
+      if (inputPin !== tempNewPin) {
+        alert('입력한 비밀번호가 서로 다릅니다.\n새 비밀번호부터 다시 입력해주세요.');
+
+        // 불일치 시: 다시 입력 단계로 리셋
+        setTempNewPin('');
+        setPinStep('new');
+        throw new Error('PIN_MISMATCH'); // 모달 흔들림 효과
+      }
+
+      // 2. 일치하면 API 호출 (newPin만 전송)
+      try {
+        const response = await updateStudentPin(targetStudentForPin.id, inputPin);
+
+        if (response.success) {
+          alert('PIN 번호가 성공적으로 변경되었습니다.');
+          handleClosePinModal();
+        }
+      } catch (error: any) {
+        console.error('PIN 변경 실패:', error);
+        if (error.response?.data?.message) {
+          alert(error.response.data.message);
+        } else {
+          alert('PIN 변경에 실패했습니다.');
+        }
+        throw error;
+      }
+    }
+  };
+
+  // 모달 닫기 및 초기화
+  const handleClosePinModal = () => {
+    setShowPinModal(false);
+    setTargetStudentForPin(null);
+    setTempNewPin('');
+    setPinStep('new'); // 초기 단계는 항상 'new'
+  };
+
+  // 모달 텍스트 설정
+  const getModalContent = () => {
+    switch (pinStep) {
+      case 'new':
+        return {
+          title: "새 PIN 설정",
+          subtitle: `${targetStudentForPin?.name} 학생의 새 비밀번호`,
+          desc: "새로 사용할 비밀번호 4자리를 입력해주세요."
+        };
+      case 'confirm':
+        return {
+          title: "새 PIN 확인",
+          subtitle: "비밀번호 재입력",
+          desc: "확인을 위해 방금 입력한 번호를 한 번 더 입력해주세요."
+        };
+      default:
+        return { title: "", subtitle: "", desc: "" };
+    }
+  };
+
+  const modalContent = getModalContent();
+
   return (
     <div className="min-h-screen bg-neutral-50 flex font-pretendard">
       {/* 학생 추가 모달 */}
@@ -313,6 +394,20 @@ export default function ManageStudentsPage() {
           onClose={() => setShowInterestModal(false)}
           onConfirm={handleInterestConfirm}
           initialSelection={selectedInterests}
+        />
+      )}
+
+      {/* 💡 PIN 변경 모달 */}
+      {showPinModal && targetStudentForPin && (
+        <PINStudentModal
+          // key에 step을 넣어주면 단계가 바뀔 때마다 입력창이 깨끗하게 초기화됩니다.
+          key={pinStep}
+          title={modalContent.title}
+          subtitle={modalContent.subtitle}
+          description={modalContent.desc}
+          maxLength={4} // 4자리 고정
+          onSubmit={handlePinFlow}
+          onClose={handleClosePinModal}
         />
       )}
 
@@ -418,6 +513,18 @@ export default function ManageStudentsPage() {
                           className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
                         >
                           ✏️ 프로필 사진 변경
+                        </button>
+                        {/* 💡 학생 PIN 재설정 버튼 연결 */}
+                        <button
+                          onClick={() => {
+                            setTargetStudentForPin(student);
+                            setPinStep('new'); // 💡 바로 새 비밀번호 입력 단계로 시작
+                            setShowPinModal(true);
+                            setOpenDropdownId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
+                        >
+                          🔒 PIN 번호 변경
                         </button>
                         <button
                           onClick={async () => {
