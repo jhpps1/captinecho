@@ -22,6 +22,7 @@ public enum StudentErrorCode implements ErrorCode {
     PIN_NOT_MATCH(HttpStatus.BAD_REQUEST, "ST40011", "PIN이 일치하지 않습니다"),
     PROFILE_IMAGE_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "ST40012", "프로필 이미지가 이미 등록되어 있습니다"),
     INVALID_RECOVERY_CODE(HttpStatus.BAD_REQUEST, "ST40013", "유효하지 않은 복구 코드입니다"),
+    STUDENT_DELETED(HttpStatus.BAD_REQUEST, "ST40014", "삭제된 학생입니다"),
 
     // 403 FORBIDDEN
     STUDENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "ST40301", "해당 학생에 대한 접근 권한이 없습니다"),
