@@ -9,6 +9,11 @@ public record BestImproveJamoResponse(
         List<BestJamo> bestJamos
 ) {
     public static BestImproveJamoResponse from(GetBestImproveJamoResult result) {
+        // null 체크: 데이터가 없으면 빈 리스트 반환
+        if (result.bestJamos() == null) {
+            return new BestImproveJamoResponse(List.of());
+        }
+
         List<BestJamo> bestJamos = result.bestJamos().stream()
                 .map(bj -> new BestJamo(
                         bj.jamo(),
