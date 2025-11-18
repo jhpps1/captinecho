@@ -381,17 +381,17 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 - blank_phoneme: "" 또는 null
 - correct_answer: problem_text와 반드시 동일
 - choices: ["[translate:가방]", "[translate:공]", "[translate:공룡]"] 등 correct_answer 포함 구체명사 2가지만! (1글자/자모 절대 금지)
-- blank_position: 필드 자체를 "" 또는 null로 (다른 값, 대소문자, 숫자 금지)
+- blank_position: 필드 자체를 null로 (다른 값, 대소문자, 숫자 금지)
 - image_url: 경로 또는 ""
 
 
 [4] adventure_type_id=4 (음성판별)
-- problem_text: 구체명사
+- problem_text: 구체명사(두글자 이상 예: [translate:가방], [translate:코끼리])
 - problem_phonemes: 해당 자모 배열
 - blank_phoneme: "" 또는 null
 - correct_answer: problem_text와 동일
 - choices: [] (항상 빈 배열)
-- blank_position: "" 또는 null만 가능
+- blank_position: 필드 자체를 null로 (다른 값, 대소문자, 숫자 금지)
 - image_url: ""
 - sound_url: 경로/빈 문자열
 
@@ -451,7 +451,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "blank_phoneme": null,
     "correct_answer": "코끼리",
     "choices": ["코끼리", "고끼리", "포기리"], (correct_answer 반드시 포함,나머지 두 단어는 무의미단어로)
-    "blank_position": null,
+    "blank_position": null, (반드시 null 값)
     "student_id": {student_id},
     "image_url": "problems/image/코끼리.jpg",
     "sound_url": ""
@@ -467,7 +467,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "blank_phoneme": "",
     "correct_answer": "가방",
     "choices": [],
-    "blank_position": null,
+    "blank_position": null, (반드시 null 값)
     "student_id": {student_id},
     "image_url": "",
     "sound_url": "problems/sound/{assigned_date}_wwwww.mp3"
