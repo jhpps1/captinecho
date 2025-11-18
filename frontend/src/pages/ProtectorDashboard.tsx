@@ -172,9 +172,9 @@ export default function ProtectorDashboard() {
         setDailyCompletedCount(dailyCompletedData.completedCount);
         setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
         setDailyStreak(dailyStreakData);
-        // ✅ 404 Error 방지를 위한 기본값 설정 (null = 데이터 없음)
-        setDailyAccuracy(null);
-        setWeeklyAccuracy(null);
+        // ✅ 404 Error 방지를 위한 기본값 설정 (0 = 데이터 없음)
+        setDailyAccuracy(0);
+        setWeeklyAccuracy(0);
 
         // 💡 추가: 자모 통계 데이터 설정
         // WeaknessAlert가 기대하는 속성명(accuracy, count)과 API 응답(accuracyRate, count)이 살짝 다를 수 있으므로 매핑
@@ -187,18 +187,18 @@ export default function ProtectorDashboard() {
         }));
         setJamoStats(allJamoStatsData.accuracyRates);
 
-        // 💡 추가: 전체 정확도 데이터 설정
+        // 💡 추가: 전체 정확도 데이터 설정 (null 방어 처리)
         setOverallAccuracy({
-          previous: overallAccuracyData.twoWeeksAgo,
-          current: overallAccuracyData.lastWeek,
+          previous: overallAccuracyData.twoWeeksAgo ?? 0,  // null일 경우 0으로 설정
+          current: overallAccuracyData.lastWeek ?? 0,      // null일 경우 0으로 설정
         });
 
-        // 💡 추가: API 응답을 ImprovementCard가 요구하는 형식으로 매핑
+        // 💡 추가: API 응답을 ImprovementCard가 요구하는 형식으로 매핑 (null 방어 처리)
         const mapJamoData = (apiData: JamoImprovementApiData): JamoImprovementData => ({
           jamo: apiData.jamo,
-          previousAccuracy: apiData.twoWeeksAgo,
-          currentAccuracy: apiData.lastWeek,
-          improvement: apiData.improveRate,
+          previousAccuracy: apiData.twoWeeksAgo ?? 0,  // null일 경우 0으로 설정
+          currentAccuracy: apiData.lastWeek ?? 0,      // null일 경우 0으로 설정
+          improvement: apiData.improveRate ?? 0,        // null일 경우 0으로 설정
         });
 
         // ImprovementCard가 이 배열을 받아 알아서 정렬하여 '개선'과 '부진'을 표시
