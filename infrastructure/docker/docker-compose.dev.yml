@@ -1,3 +1,13 @@
+# ==============================================
+# 공통 로깅 설정
+# ==============================================
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
 services:
   # ==============================================
   # Nginx + Frontend (리버스 프록시 & 웹서버)
@@ -19,6 +29,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
@@ -70,6 +81,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -135,6 +147,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-captain_echo}"]
       interval: 10s
@@ -162,6 +175,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
       interval: 10s
@@ -189,6 +203,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090"]
       interval: 30s
@@ -216,6 +231,7 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "curl -f localhost:3000/api/health || exit 1"]
       interval: 30s

@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
@@ -106,16 +108,22 @@ public class AdventureController {
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable Integer studentId
     ) {
+        log.info(">>> 모험 문제 조회 API 시작: studentId={}", studentId);
+
         if (principal == null) {
+            log.error("인증되지 않은 요청: studentId={}", studentId);
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
         Integer protectorId = principal.getProtectorId();
+        log.debug("보호자 인증 성공: protectorId={}, studentId={}", protectorId, studentId);
 
         GetAdventureProblemsCommand command = new GetAdventureProblemsCommand(studentId, protectorId);
         GetAdventureProblemsResult result = adventureService.getAdventureProblems(command);
         GetAdventureProblemsResponse response = GetAdventureProblemsResponse.from(result);
 
+        log.info("<<< 모험 문제 조회 API 완료: studentId={}, problemCount={}",
+                 studentId, response.dayProblems() != null ? response.dayProblems().size() : 0);
         return ResponseEntity.ok(response);
     }
 
