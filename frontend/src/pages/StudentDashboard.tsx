@@ -212,8 +212,6 @@ export default function StudentDashboard() {
                     (student) => student.studentId === targetStudentId
                 );
 
-                // 학생의 이름과 프로필 사진 정보를 가져오는 코드
-
                 // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
                 if (foundStudent && foundStudent.level === null) {
                     navigate("/initial-assessment");
@@ -349,7 +347,7 @@ export default function StudentDashboard() {
                         <img
                             src={profile.imageUrl}
                             alt="프로필"
-                            className="w-[48px] h-[48px] ms-2.5 rounded-full object-cover border-2 border-yellow-300/50"
+                            className="w-[50px] h-[50px] ms-2.5 rounded-full object-cover border-2 border-yellow-300/50"
                         />
                         {/* 이름 출력 공간 */}
                         <span
