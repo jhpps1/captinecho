@@ -48,7 +48,7 @@ public class Student {
     @Enumerated(EnumType.STRING)
     private Grade grade;
 
-    @Column(name = "level")
+    @Column(name = "level", nullable = true)
     private Short level;
 
     @Column(name = "student_pin", nullable = false, length = 100)
