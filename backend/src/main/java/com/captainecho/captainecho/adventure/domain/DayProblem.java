@@ -62,6 +62,7 @@ public class DayProblem {
 
     @Column(name = "blank_position", length = 20)
     @Enumerated(EnumType.STRING)
+    @Convert(converter = BlankPositionConverter.class)
     private BlankPosition blankPosition;
 
     @Column(name = "blank_phoneme", length = 5)
