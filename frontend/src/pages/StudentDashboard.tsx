@@ -5,7 +5,7 @@ import Cookies from 'js-cookie';
 // 왼쪽 게임 선택창에 들어가는 데이터
 const woodenButtons = [
     { id: 1, label: '자모맞추기', typeId: 1 },
-    { id: 2, label: '글자합치기', typeId: 2 },
+    { id: 2, label: '빈음소찾기', typeId: 2 },
     { id: 3, label: '그림맞히기', typeId: 3 },
     { id: 4, label: '단어읽기', typeId: 4 },
 ];
