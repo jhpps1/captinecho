@@ -27,15 +27,15 @@ const Introduction = () => {
   const adventures = [
     {
       id: 1,
-      name: '음소 분절',
-      description: '소리를 나누는 탐험! 단어를 자음과 모음으로 분리해보세요.',
+      name: '자모맞추기',
+      description: '먼저 자모음과 친해져보자. 힌트에 맞는 음소를 찾아보세요.',
       icon: Sparkles, // 이 아이콘은 이제 사용되지 않습니다.
       color: 'from-purple-500 to-pink-500', // 이 색상값도 사용되지 않습니다.
-      example: '예: "강아지" → "ㄱ-ㅏ-ㅇ-ㅏ-ㅈ-ㅣ"',
+      example: '예: "ㄱ-?" → "ㅏ"',
     },
     {
       id: 2,
-      name: '음소 합성',
+      name: '빈 음소 찾기',
       description: '그림을 보고 빈 자리에 들어갈 음소를 찾아보세요.',
       icon: LinkIcon,
       color: 'from-blue-500 to-cyan-500',
