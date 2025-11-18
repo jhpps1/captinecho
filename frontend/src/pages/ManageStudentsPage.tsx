@@ -66,7 +66,7 @@ export default function ManageStudentsPage() {
         remain: response.remainCount
       });
     } catch (error) {
-      console.error('❌ 학생 수 조회 실패:', error);
+      console.error('학생 수 조회 실패:', error);
     }
   };
 
@@ -75,7 +75,7 @@ export default function ManageStudentsPage() {
     setIsLoadingStudents(true);
     try {
       const response = await getStudents();
-      console.log('📥 학생 목록 조회 응답:', response);
+      console.log('학생 목록 조회 응답:', response);
       const studentList: Student[] = response.students.map(s => ({
         id: s.studentId,
         name: s.name,
@@ -173,14 +173,12 @@ export default function ManageStudentsPage() {
   const handleProfileUploadSuccess = (newImageUrl: string) => {
     if (!editingStudent) return;
 
-    // students 상태 배열에서 해당 학생의 profileImage 업데이트
     setStudents(prevStudents =>
       prevStudents.map(s =>
         s.id === editingStudent.id ? { ...s, profileImage: newImageUrl } : s
       )
     );
 
-    // 모달 닫기 및 상태 초기화
     setShowProfileModal(false);
     setEditingStudent(null);
   };
@@ -502,7 +500,7 @@ export default function ManageStudentsPage() {
                           }}
                           className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
                         >
-                          ✏️ 수정하기
+                          수정하기
                         </button>
                         <button
                           onClick={() => {
@@ -512,19 +510,19 @@ export default function ManageStudentsPage() {
                           }}
                           className="w-full px-4 py-2 text-left text-sm hover:bg-neutral-50 transition-colors first:rounded-t-lg"
                         >
-                          ✏️ 프로필 사진 변경
+                          프로필 사진 변경
                         </button>
                         {/* 💡 학생 PIN 재설정 버튼 연결 */}
                         <button
                           onClick={() => {
                             setTargetStudentForPin(student);
-                            setPinStep('new'); // 💡 바로 새 비밀번호 입력 단계로 시작
+                            setPinStep('new');
                             setShowPinModal(true);
                             setOpenDropdownId(null);
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
                         >
-                          🔒 PIN 번호 변경
+                          PIN 번호 변경
                         </button>
                         <button
                           onClick={async () => {
@@ -535,7 +533,7 @@ export default function ManageStudentsPage() {
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-error hover:bg-error/5 transition-colors last:rounded-b-lg"
                         >
-                          🗑️ 삭제하기
+                          삭제하기
                         </button>
                       </div>
                     )}
@@ -562,11 +560,11 @@ export default function ManageStudentsPage() {
                     </span>
                   </div>
                 </div>
-
+                {/* 학생 삭제 관련 코드 */}
                 {student.deleteTimer && (
                   <div className="mt-4 p-3 bg-error/10 rounded-lg">
                     <p className="text-sm text-error font-medium">
-                      ⏰ 삭제 준비 완료 ({student.deleteTimer})
+                      삭제 준비 완료 ({student.deleteTimer})
                     </p>
                   </div>
                 )}
