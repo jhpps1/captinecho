@@ -248,7 +248,7 @@ const Login = () => {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-4 bg-white/0 backdrop-blur-sm text-neutral-500 bg-white rounded-full">
-                또는 소셜 계정으로 가입 없이 시작
+                또는 소셜 계정으로 시작
               </span>
             </div>
           </div>
