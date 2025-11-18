@@ -123,7 +123,7 @@ public class AdventureController {
         GetAdventureProblemsResponse response = GetAdventureProblemsResponse.from(result);
 
         log.info("<<< 모험 문제 조회 API 완료: studentId={}, problemCount={}",
-                 studentId, response.dayProblems() != null ? response.dayProblems().size() : 0);
+                 studentId, response.problems() != null ? response.problems().size() : 0);
         return ResponseEntity.ok(response);
     }
 
