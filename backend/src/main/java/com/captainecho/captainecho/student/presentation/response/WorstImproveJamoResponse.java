@@ -9,6 +9,11 @@ public record WorstImproveJamoResponse(
         List<WorstJamo> worstJamos
 ) {
     public static WorstImproveJamoResponse from(GetWorstImproveJamoResult result) {
+        // null 체크: 데이터가 없으면 빈 리스트 반환
+        if (result.worstJamos() == null) {
+            return new WorstImproveJamoResponse(List.of());
+        }
+
         List<WorstJamo> worstJamos = result.worstJamos().stream()
                 .map(wj -> new WorstJamo(
                         wj.jamo(),

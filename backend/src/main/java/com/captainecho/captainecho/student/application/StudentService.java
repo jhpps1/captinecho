@@ -671,11 +671,34 @@ public class StudentService {
         List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
                 .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
 
-        // 5. 데이터가 2개 미만이면 null 반환
-        if (recentReports.size() < 2) {
-            log.info("개선율 높은 자모 조회 불가 - Student ID: {}, 리포트 개수: {}",
-                    command.studentId(), recentReports.size());
+        // 5-1. 리포트가 0개면 null 반환
+        if (recentReports.isEmpty()) {
+            log.info("개선율 높은 자모 조회 불가 - Student ID: {}, 리포트 개수: 0", command.studentId());
             return GetBestImproveJamoResult.of(null);
+        }
+
+        // 5-2. 1주치만 있으면 현재 정확도만 반환 (신규 사용자)
+        if (recentReports.size() == 1) {
+            log.info("1주치 데이터로 현재 정확도 반환 - Student ID: {}", command.studentId());
+            WeeklyPersonalReport lastWeekReport = recentReports.get(0);
+            List<WeeklyJamoStat> lastWeekStats = weeklyJamoStatRepository
+                    .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
+
+            // 자모별 현재 정확도 Top 2 반환 (정확도 높은 순)
+            List<GetBestImproveJamoResult.BestJamo> top2 = lastWeekStats.stream()
+                    .map(stat -> new GetBestImproveJamoResult.BestJamo(
+                            stat.getJamo(),
+                            null,  // twoWeeksAgo: 비교 불가
+                            stat.getWeeklyAccuracyRate().intValue(),  // lastWeek: 현재 정확도
+                            null   // improveRate: 비교 불가
+                    ))
+                    .sorted(Comparator.comparing((GetBestImproveJamoResult.BestJamo bj) -> bj.lastWeek()).reversed()
+                            .thenComparing(GetBestImproveJamoResult.BestJamo::jamo))
+                    .limit(2)
+                    .toList();
+
+            log.info("1주치 데이터 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), top2.size());
+            return GetBestImproveJamoResult.of(top2.isEmpty() ? null : top2);
         }
 
         WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
@@ -767,11 +790,34 @@ public class StudentService {
         List<WeeklyPersonalReport> recentReports = weeklyPersonalReportRepository
                 .findTop2ByStudent_StudentIdOrderByCreatedAtDesc(command.studentId());
 
-        // 5. 데이터가 2개 미만이면 null 반환
-        if (recentReports.size() < 2) {
-            log.info("정확도 낮은 자모 조회 불가 - Student ID: {}, 리포트 개수: {}",
-                    command.studentId(), recentReports.size());
+        // 5-1. 리포트가 0개면 null 반환
+        if (recentReports.isEmpty()) {
+            log.info("정확도 낮은 자모 조회 불가 - Student ID: {}, 리포트 개수: 0", command.studentId());
             return GetWorstImproveJamoResult.of(null);
+        }
+
+        // 5-2. 1주치만 있으면 현재 정확도만 반환 (신규 사용자)
+        if (recentReports.size() == 1) {
+            log.info("1주치 데이터로 현재 정확도 반환 - Student ID: {}", command.studentId());
+            WeeklyPersonalReport lastWeekReport = recentReports.get(0);
+            List<WeeklyJamoStat> lastWeekStats = weeklyJamoStatRepository
+                    .findAllByWeeklyPersonalReport_ReportId(lastWeekReport.getReportId());
+
+            // 자모별 현재 정확도 Bottom 2 반환 (정확도 낮은 순)
+            List<GetWorstImproveJamoResult.WorstJamo> bottom2 = lastWeekStats.stream()
+                    .map(stat -> new GetWorstImproveJamoResult.WorstJamo(
+                            stat.getJamo(),
+                            null,  // twoWeeksAgo: 비교 불가
+                            stat.getWeeklyAccuracyRate().intValue(),  // lastWeek: 현재 정확도
+                            null   // improveRate: 비교 불가
+                    ))
+                    .sorted(Comparator.comparing((GetWorstImproveJamoResult.WorstJamo wj) -> wj.lastWeek())
+                            .thenComparing(GetWorstImproveJamoResult.WorstJamo::jamo))
+                    .limit(2)
+                    .toList();
+
+            log.info("1주치 데이터 조회 완료 - Student ID: {}, 자모 개수: {}", command.studentId(), bottom2.size());
+            return GetWorstImproveJamoResult.of(bottom2.isEmpty() ? null : bottom2);
         }
 
         WeeklyPersonalReport lastWeekReport = recentReports.get(0);  // 지난주
