@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface AddStudentModalProps {
   onClose: () => void;
@@ -25,6 +25,7 @@ export default function AddStudentModal({
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [birthDate, setBirthDate] = useState('');
   const [grade, setGrade] = useState('미취학');
+  const [error, setError] = useState(''); // 오류 메시지 상태 추가
 
   const gradeOptions = [
     '미취학',
@@ -36,9 +37,13 @@ export default function AddStudentModal({
     '초등학교 6학년'
   ];
 
+  // 오늘 날짜를 YYYY-MM-DD 형식으로 계산 (max 속성에 사용)
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   const handleSubmit = () => {
+    setError(''); // 이전 오류 메시지 초기화
     if (!name || !birthDate || !grade) {
-      alert('모든 필드를 입력해주세요.');
+      setError('모든 필드를 입력해주세요.'); // alert 대신 오류 상태 설정
       return;
     }
 
@@ -114,6 +119,8 @@ export default function AddStudentModal({
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
+                min="1900-01-01"
+                max={today}
                 className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -151,11 +158,10 @@ export default function AddStudentModal({
               <button
                 onClick={onOpenInterests}
                 disabled={isLoading}
-                className={`px-6 py-3 rounded-lg font-semibold ${
-                  isLoading
+                className={`px-6 py-3 rounded-lg font-semibold ${isLoading
                     ? 'bg-gray-100 cursor-not-allowed'
                     : 'bg-gray-200 hover:bg-gray-300'
-                }`}
+                  }`}
               >
                 ⋯
               </button>
@@ -168,27 +174,30 @@ export default function AddStudentModal({
           </p>
         </div>
 
+        {/* 오류 메시지 표시 */}
+        {error && (
+          <p className="text-sm text-red-600 mt-4 text-center">{error}</p>
+        )}
+
         {/* 버튼들 */}
-        <div className="flex gap-4 mt-8">
+        <div className={`flex gap-4 ${error ? 'mt-4' : 'mt-8'}`}>
           <button
             onClick={handleSubmit}
             disabled={isLoading}
-            className={`flex-1 px-6 py-3 rounded-lg font-semibold ${
-              isLoading
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold ${isLoading
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-500 hover:bg-blue-600'
-            } text-white`}
+              } text-white`}
           >
             {isLoading ? '등록 중...' : '확인'}
           </button>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className={`flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold ${
-              isLoading
+            className={`flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold ${isLoading
                 ? 'bg-gray-100 cursor-not-allowed'
                 : 'bg-white hover:bg-gray-50'
-            }`}
+              }`}
           >
             취소
           </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 // 수정할 학생의 기본 정보 타입
 interface StudentData {
@@ -66,6 +66,8 @@ export default function EditStudentModal({
         });
     };
 
+    const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
@@ -129,6 +131,8 @@ export default function EditStudentModal({
                                 type="date"
                                 value={birthDate}
                                 onChange={(e) => setBirthDate(e.target.value)}
+                                min="1900-01-01"
+                                max={today}
                                 className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none"
                             />
                         </div>
@@ -157,8 +161,8 @@ export default function EditStudentModal({
                         onClick={handleSubmit}
                         disabled={isLoading}
                         className={`flex-1 px-6 py-3 rounded-lg font-semibold ${isLoading
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-blue-500 hover:bg-blue-600'
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-blue-500 hover:bg-blue-600'
                             } text-white`}
                     >
                         {isLoading ? '수정 중...' : '수정 완료'}
@@ -167,8 +171,8 @@ export default function EditStudentModal({
                         onClick={onClose}
                         disabled={isLoading}
                         className={`flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold ${isLoading
-                                ? 'bg-gray-100 cursor-not-allowed'
-                                : 'bg-white hover:bg-gray-50'
+                            ? 'bg-gray-100 cursor-not-allowed'
+                            : 'bg-white hover:bg-gray-50'
                             }`}
                     >
                         취소
