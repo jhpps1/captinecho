@@ -1,5 +1,6 @@
 package com.captainecho.captainecho.stats.domain;
 
+import com.captainecho.captainecho.config.JsonConverter;
 import com.captainecho.captainecho.student.domain.Student;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -10,6 +11,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -33,8 +35,9 @@ public class WeeklyPersonalReport {
     @Column(name = "curriculum", columnDefinition = "TEXT")
     private String curriculum;
 
-    @Column(name = "curriculum_structure", columnDefinition = "json")
-    private String curriculumStructure;
+    @Column(name = "curriculum_structure", columnDefinition = "jsonb")
+    @Convert(converter = JsonConverter.class)
+    private Map<String, Object> curriculumStructure;
 
     @Column(name = "discussion_log", columnDefinition = "json")
     private String discussionLog;
@@ -49,7 +52,7 @@ public class WeeklyPersonalReport {
 
     @Builder
     public WeeklyPersonalReport(Student student, Integer totalTime,
-                                String curriculum, String curriculumStructure,
+                                String curriculum, Map<String, Object> curriculumStructure,
                                 String discussionLog, ProtectorGoal protectorGoal) {
         this.student = student;
         this.totalTime = totalTime != null ? totalTime : 0;

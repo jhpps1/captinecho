@@ -183,14 +183,21 @@ public class DashboardController {
             @AuthenticationPrincipal ProtectorPrincipal principal,
             @PathVariable("studentId") Integer studentId
     ) {
+        log.info(">>> 보호자 학습 목표 조회 API 시작: studentId={}", studentId);
+
         if (principal == null) {
+            log.error("인증되지 않은 요청: studentId={}", studentId);
             throw new EchoException(CommonErrorCode.UNAUTHORIZED);
         }
 
         Integer protectorId = principal.getProtectorId();
+        log.debug("보호자 인증 성공: protectorId={}, studentId={}", protectorId, studentId);
+
         GetProtectorGoalResult result = dashboardService.getProtectorGoal(protectorId, studentId);
         GetProtectorGoalResponse response = GetProtectorGoalResponse.from(result);
 
+        log.info("<<< 보호자 학습 목표 조회 API 완료: studentId={}, goal={}",
+                 studentId, result.protectorGoal());
         return ResponseEntity.ok(response);
     }
 
