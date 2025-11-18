@@ -360,7 +360,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 - problem_phonemes: ["[translate:ㄱ]", "[translate:ㅏ]"]
 - blank_phoneme: problem_phonemes 중 하나
 - correct_answer: blank_phoneme와 같음
-- choices: blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치
+- choices: blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치(순서 랜덤)
 - blank_position: 반드시 "INITIAL", "MEDIAL", "FINAL" (대문자만)
 - 기타 필드는 "" 또는 []
 
@@ -370,7 +370,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 - problem_phonemes: 해당 자모 배열
 - blank_phoneme: problem_phonemes 중 하나
 - correct_answer: blank_phoneme와 같음
-- choices:  blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치
+- choices:  blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치(순서 랜덤)
 - image_url: 연관 그림 경로 또는 ""
 - blank_position: "INITIAL", "MEDIAL", "FINAL" (대문자만)
 
@@ -380,7 +380,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 - problem_phonemes: 해당 자모 배열
 - blank_phoneme: "" 또는 null
 - correct_answer: problem_text와 반드시 동일
-- choices: ["[translate:가방]", "[translate:공]", "[translate:공룡]"] 등 correct_answer 포함 구체명사 2가지만! (1글자/자모 절대 금지)
+- choices: ["[translate:가방]", "[translate:공]", "[translate:공룡]"] 등 correct_answer 포함 구체명사 2가지만! (1글자/자모 절대 금지)(순서 랜덤)
 - blank_position: 필드 자체를 null로 (다른 값, 대소문자, 숫자 금지)
 - image_url: 경로 또는 ""
 
@@ -417,7 +417,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "problem_phonemes": ["ㄱ", "ㅏ"],
     "blank_phoneme": "ㄱ",
     "correct_answer": "ㄱ",
-    "choices": ["ㄱ", "ㄴ", "ㄷ"],
+    "choices": ["ㄴ", "ㄱ", "ㄷ"],
     "blank_position": "INITIAL",
     "student_id": {student_id},
     "image_url": "",
@@ -433,7 +433,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "problem_phonemes": ["ㅊ", "ㅜ", "ㄱ", "ㄱ", "ㅜ", "ㄱ", "ㅗ", "ㅇ"],
     "blank_phoneme": "ㄱ",
     "correct_answer": "ㄱ",
-    "choices": ["ㄱ", "ㅇ", "ㅁ"],
+    "choices": ["ㅇ", "ㅁ", "ㄱ"],
     "blank_position": "INITIAL",
     "student_id": {student_id},
     "image_url": "problems/image/축구공.jpg",
@@ -450,7 +450,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "problem_phonemes": [],
     "blank_phoneme": null,
     "correct_answer": "코끼리",
-    "choices": ["코끼리", "고끼리", "포기리"], (correct_answer 반드시 포함,나머지 두 단어는 무의미단어로)
+    "choices": ["고끼리", "코끼리", "포기리"], (correct_answer 반드시 포함,나머지 두 단어는 무의미단어로)
     "blank_position": null, (반드시 null 값)
     "student_id": {student_id},
     "image_url": "problems/image/코끼리.jpg",
