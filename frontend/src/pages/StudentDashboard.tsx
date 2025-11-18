@@ -213,10 +213,10 @@ export default function StudentDashboard() {
                 );
 
                 // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
-                if (foundStudent && foundStudent.level === null) {
-                    navigate("/initial-assessment");
-                    return;
-                }
+                // if (foundStudent && foundStudent.level === null) {
+                //     navigate("/initial-assessment");
+                //     return;
+                // }
 
                 if (foundStudent) {
                     setProfile({
@@ -249,7 +249,7 @@ export default function StudentDashboard() {
                 } else {
                     // 정상적으로 실행될 경우
                     const streakData: DailyStreakApiResponse = await streakResponse.json(); // 1. DailyStreakApiResponse로 변경
-                    const paddedStreak = [...streakData.weeklyAttendance, ...Array(5).fill(false)].slice(0, 5); 
+                    const paddedStreak = [...streakData.weeklyAttendance, ...Array(5).fill(false)].slice(0, 5);
                     setWeeklyStreak(paddedStreak);
                 }
             } catch (error) {
@@ -344,11 +344,21 @@ export default function StudentDashboard() {
                 >
                     <div className="flex items-center h-full pl-2">
                         {/* 프로필 사진 출력 공간 */}
-                        <img
-                            src={profile.imageUrl}
-                            alt="프로필"
-                            className="w-[50px] h-[50px] ms-2.5 rounded-full object-cover border-2 border-yellow-300/50"
-                        />
+                        <div className="w-[50px] h-[50px] ms-2.5 rounded-full overflow-hidden border-2 border-yellow-300/50 flex-shrink-0">
+                            {profile.imageUrl ? (
+                                <img
+                                    src={profile.imageUrl}
+                                    alt="프로필"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-white">
+                                        {profile.name.charAt(0)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                         {/* 이름 출력 공간 */}
                         <span
                             className="ml-4 text-3xl font-bold text-white"
