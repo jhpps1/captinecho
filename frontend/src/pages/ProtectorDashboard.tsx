@@ -38,7 +38,7 @@ import {
 interface Student {
   id: number;
   name: string;
-  level: number;
+  level: number | null;
   streak: number;
   isActive: boolean;
   profileImage?: string;
@@ -104,7 +104,7 @@ export default function ProtectorDashboard() {
         const studentList: Student[] = response.students.map((s) => ({
           id: s.studentId,
           name: s.name,
-          level: s.level || 0,
+          level: s.level,
           streak: 0, // 초기값, 학습 시간 데이터 로드 후 업데이트
           isActive: false,
           profileImage: s.profileImage,
