@@ -212,22 +212,10 @@ export default function StudentDashboard() {
                     (student) => student.studentId === targetStudentId
                 );
 
-                // 학생의 이름과 프로필 사진 정보를 가져오는 코드
-
-                // 디버깅: 학생 정보 및 level 값 확인
-                console.log("🔍 [DEBUG] 조회된 학생 정보:", foundStudent);
-                console.log("🔍 [DEBUG] level 값:", foundStudent?.level);
-                console.log("🔍 [DEBUG] level 타입:", typeof foundStudent?.level);
-                console.log("🔍 [DEBUG] level === null:", foundStudent?.level === null);
-                console.log("🔍 [DEBUG] level === 0:", foundStudent?.level === 0);
-
-                // 초기진단 체크: level이 null 또는 0이면 초기진단 페이지로 이동
-                if (foundStudent && (foundStudent.level === null || foundStudent.level === 0)) {
-                    console.log("✅ [DEBUG] 초기검사 페이지로 이동합니다. (level:", foundStudent.level, ")");
+                // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
+                if (foundStudent && foundStudent.level === null) {
                     navigate("/initial-assessment");
                     return;
-                } else {
-                    console.log("⚠️ [DEBUG] 초기검사 건너뜀 - level:", foundStudent?.level);
                 }
 
                 if (foundStudent) {
