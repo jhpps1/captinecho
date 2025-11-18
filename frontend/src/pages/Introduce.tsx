@@ -126,7 +126,7 @@ const Introduction = () => {
       <section className="relative z-10 pt-32 pb-20 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-6 font-peach drop-shadow-lg">
-            꼬마선장 에코 서비스 둘러보기
+            꼬마선장 에코 서비스 소개
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto leading-relaxed">
             게임처럼 즐겁게, AI가 맞춤형으로 설계하는
