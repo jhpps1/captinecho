@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "@fontsource/pretendard/index.css";
+
+/* Pretendard 폰트는 index.html CDN에서 로드 (성능 최적화) */
 
 @font-face {
     font-family: 'PeachMarket';
