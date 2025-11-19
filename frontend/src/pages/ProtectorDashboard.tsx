@@ -87,7 +87,7 @@ export default function ProtectorDashboard() {
   const [dailyStreak, setDailyStreak] = useState<DailyStreakResponse | null>(null)
   const [dailyAccuracy, setDailyAccuracy] = useState(0);
   const [weeklyAccuracy, setWeeklyAccuracy] = useState(0);
-  const [dailyGoalCount, setDailyGoalCount] = useState(10);
+  const [dailyGoalCount, setDailyGoalCount] = useState(0);
   const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
   const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
@@ -253,7 +253,7 @@ export default function ProtectorDashboard() {
 
   // 일일 목표 데이터
   const dailyGoals = {
-    problems: { current: dailyCompletedCount, target: dailyGoalCount },
+    problems: { current: dailyCompletedCount, target: 10 },
     time: {
       current: learningTime?.thisWeekLearningTime.daily[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.learningMinutes || 0,
       target: 20, // 고정값 (백엔드에서 제공하지 않음)
