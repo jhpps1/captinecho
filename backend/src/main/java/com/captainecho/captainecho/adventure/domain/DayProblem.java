@@ -48,8 +48,8 @@ public class DayProblem {
     @Column(name = "level", nullable = false)
     private Short level;
 
-    @Column(name = "hint", length = 300)
-    private String hint;
+//    @Column(name = "hint", length = 300)
+//    private String hint;
 
     @Column(name = "image_url", length = 2048)
     private String imageUrl;
@@ -85,7 +85,7 @@ public class DayProblem {
     @Builder
     public DayProblem(Student student, SubInterest subInterest, AdventureType adventureType,
                       LocalDate assignedDate, Short seqNo, Short level, String problemText,
-                      String hint, String imageUrl, String soundUrl, String[] problemPhonemes,
+                      /*String hint,*/ String imageUrl, String soundUrl, String[] problemPhonemes,
                       BlankPosition blankPosition, String blankPhoneme, String[] choices,
                       String correctAnswer) {
         this.student = student;
@@ -95,7 +95,7 @@ public class DayProblem {
         this.seqNo = seqNo;
         this.level = level;
         this.problemText = problemText;
-        this.hint = hint;
+//        this.hint = hint;
         this.imageUrl = imageUrl;
         this.soundUrl = soundUrl;
         this.problemPhonemes = problemPhonemes;
