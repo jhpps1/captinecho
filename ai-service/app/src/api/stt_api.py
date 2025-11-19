@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from ..core.database import get_db
 from ..service.stt_service import stt_service
+from ..service.transcription_service import transcription_service
 
 
 # FastAPI 라우터 생성
@@ -21,6 +22,14 @@ router = APIRouter(prefix="/stt", tags=["STT"])
 
 
 # ===== Pydantic 모델 =====
+
+class TranscriptionResponse(BaseModel):
+    """음성-텍스트 변환 결과 응답 모델 (초기진단용)"""
+    text: str
+
+    class Config:
+        from_attributes = True  # Pydantic V2
+
 
 class PronunciationEvaluationResponse(BaseModel):
     """발음 평가 결과 응답 모델"""
@@ -40,6 +49,91 @@ class PronunciationEvaluationResponse(BaseModel):
 
 
 # ===== API 엔드포인트 =====
+
+@router.post(
+    "/transcribe",
+    response_model=TranscriptionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="음성-텍스트 변환 (초기진단용)",
+    description="WebM 오디오 파일을 받아 Whisper API로 텍스트로 변환 (정답 비교 없이 변환만 수행)"
+)
+async def transcribe_audio(
+    audio_file: UploadFile = File(..., description="녹음된 오디오 파일 (WebM, MP3, WAV 등)")
+):
+    """
+    음성-텍스트 변환 엔드포인트 (초기진단용)
+
+    **프로세스:**
+    1. WebM 오디오 파일 수신
+    2. Whisper API로 음성을 텍스트로 변환
+    3. 변환된 텍스트만 반환 (정답 비교 없음)
+
+    **Parameters:**
+    - `audio_file`: 녹음된 오디오 파일 (WebM, MP3, WAV 등)
+
+    **Returns:**
+    - 변환된 텍스트
+    """
+    # 임시 파일 경로
+    temp_audio_path = None
+
+    try:
+        # 1. 파일 확장자 확인
+        if not audio_file.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="파일 이름이 없습니다."
+            )
+
+        file_extension = Path(audio_file.filename).suffix.lower()
+        allowed_extensions = [".webm", ".mp3", ".wav", ".m4a", ".ogg"]
+
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"지원하지 않는 파일 형식입니다. 허용: {', '.join(allowed_extensions)}"
+            )
+
+        # 2. 임시 파일로 저장
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=file_extension,
+            dir=tempfile.gettempdir()
+        ) as temp_file:
+            # 오디오 파일 내용을 임시 파일에 저장
+            content = await audio_file.read()
+            temp_file.write(content)
+            temp_audio_path = temp_file.name
+
+        # 3. 음성-텍스트 변환만 수행
+        recognized_text = await transcription_service.transcribe_audio(
+            audio_file_path=temp_audio_path,
+            language="ko"
+        )
+
+        # 4. 결과 반환 (텍스트만)
+        return TranscriptionResponse(text=recognized_text)
+
+    except ValueError as e:
+        # 비즈니스 로직 오류
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        # 기타 오류
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"음성 변환 중 오류 발생: {str(e)}"
+        )
+    finally:
+        # 5. 임시 파일 삭제
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.remove(temp_audio_path)
+            except Exception as e:
+                print(f"임시 파일 삭제 실패: {temp_audio_path}, 오류: {e}")
+
 
 @router.post(
     "/evaluate-pronunciation",

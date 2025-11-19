@@ -214,6 +214,14 @@ export function normalizeProblemsResponse(response: ProblemsResponse): {
 // ==================== 발음 평가 관련 타입 ====================
 
 /**
+ * 음성-텍스트 변환 API 응답 (초기진단용)
+ * POST /stt/transcribe
+ */
+export interface TranscriptionResponse {
+  text: string;  // 음성 인식 결과
+}
+
+/**
  * 발음 평가 API 응답
  * POST /stt/evaluate-pronunciation
  */

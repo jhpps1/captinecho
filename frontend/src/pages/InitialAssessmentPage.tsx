@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
+import { transcribeAudio } from '../api/diagnosisApi';
 
 interface DiagnosisProblem {
   problemId: number;
@@ -23,6 +24,15 @@ export const InitialAssessmentPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
   const [answers, setAnswers] = useState<Array<{questionId: number, answer: string}>>([]);
+
+  // 녹음 관련 state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // 녹음 관련 ref
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   // 초기진단 시작
   useEffect(() => {
@@ -73,6 +83,18 @@ export const InitialAssessmentPage = () => {
     startDiagnosis();
   }, [navigate]);
 
+  // 컴포넌트 언마운트 시 녹음/스트림 정리
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
   // 답변 제출 (로컬 저장만, API 호출 X)
   const handleSubmit = async () => {
     if (!selectedAnswer) {
@@ -96,6 +118,99 @@ export const InitialAssessmentPage = () => {
       // 마지막 문제 완료 → 전체 제출 (현재 답변 포함)
       const allAnswers = [...answers, currentAnswer];
       await handleComplete(allAnswers);
+    }
+  };
+
+  // 🔽 녹음 시작 로직
+  const startRecording = async () => {
+    try {
+      // 1) 마이크 권한 요청
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // 2) MediaRecorder 생성 (WebM 형식)
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm',
+      });
+      mediaRecorderRef.current = mediaRecorder;
+
+      // 3) 이전 녹음 조각 초기화
+      chunksRef.current = [];
+
+      // 4) 녹음 중 생기는 데이터 모으기
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      // 5) 녹음 종료 후 (WebM 파일 생성 + STT API 호출)
+      mediaRecorder.onstop = async () => {
+        // 지금까지 모은 조각들로 Blob 생성
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+
+        // Blob → WebM File 생성
+        const file = new File([blob], 'recording.webm', {
+          type: 'audio/webm',
+        });
+
+        // STT 발음 평가 API 호출
+        setIsAnalyzing(true);
+
+        try {
+          // STT API 호출 (초기진단용 - 음성-텍스트 변환만)
+          const result = await transcribeAudio(file);
+          console.log('STT 결과:', result);
+
+          // 변환된 텍스트를 selectedAnswer에 저장 (재녹음 시 덮어씀)
+          setSelectedAnswer(result.text);
+
+          // 자동으로 다음 문제로 이동하지 않음 - 사용자가 "다음 문제" 버튼 클릭 필요
+        } catch (error) {
+          console.error('STT 평가 오류:', error);
+          alert('음성 인식 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
+          setIsAnalyzing(false);
+        }
+
+        // 마이크 스트림 정리
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
+      };
+
+      // 6) 실제 녹음 시작
+      mediaRecorder.start();
+      setIsRecording(true);
+      setIsAnalyzing(false);
+    } catch (error) {
+      console.error('마이크 권한 또는 녹음 시작 실패:', error);
+      alert('마이크 권한을 허용했는지 확인해주세요.');
+      setIsRecording(false);
+    }
+  };
+
+  // 🔽 녹음 종료 로직
+  const stopRecording = () => {
+    const mediaRecorder = mediaRecorderRef.current;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop(); // → onstop 콜백에서 WebM 파일 생성 + STT 호출
+    }
+    setIsRecording(false);
+  };
+
+  // 마이크 버튼 클릭 (녹음 시작/종료 토글)
+  const handleMicClick = () => {
+    // 분석 중일 때는 버튼 무시
+    if (isAnalyzing) return;
+
+    if (isRecording) {
+      // 녹음 종료
+      stopRecording();
+    } else {
+      // 녹음 시작
+      startRecording();
     }
   };
 
@@ -285,23 +400,44 @@ export const InitialAssessmentPage = () => {
             </div>
           )}
 
-          {/* SENTENCE_COMPLETION: 음성 녹음 필요 (임시 스킵) */}
+          {/* SENTENCE_COMPLETION: 음성 녹음 */}
           {currentProblem.diagnosisType === 'SENTENCE_COMPLETION' && (
             <div className="mb-8 text-center">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
-                <p className="text-lg text-yellow-800 mb-2">
-                  🎤 이 문제는 음성 녹음으로 답해야 합니다.
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                <p className="text-lg text-blue-800 mb-2">
+                  🎤 문장을 소리내어 읽어주세요
                 </p>
-                <p className="text-md text-yellow-700">
-                  "<span className="font-bold">{currentProblem.problem}</span>" 를 소리내어 읽어주세요.
+                <p className="text-md text-blue-700">
+                  "<span className="font-bold">{currentProblem.problem}</span>"
                 </p>
               </div>
+
+              {/* 마이크 버튼 */}
               <button
-                onClick={() => setSelectedAnswer(currentProblem.correctAnswer)}
-                className="px-8 py-3 bg-yellow-400 text-yellow-900 rounded-xl font-semibold hover:bg-yellow-500 transition-all"
+                onClick={handleMicClick}
+                disabled={isAnalyzing}
+                className={`relative w-20 h-20 rounded-full transition-all ${
+                  isRecording
+                    ? 'bg-red-500 animate-pulse'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                (임시) STT 구현 전 - 다음 문제로 스킵
+                {isAnalyzing ? (
+                  <span className="text-white text-sm">분석중...</span>
+                ) : isRecording ? (
+                  <span className="text-white text-2xl">⏹️</span>
+                ) : (
+                  <span className="text-white text-2xl">🎤</span>
+                )}
               </button>
+
+              <p className="text-sm text-gray-600 mt-4">
+                {isAnalyzing
+                  ? '음성을 분석 중...'
+                  : isRecording
+                    ? '녹음 중... 다시 클릭하여 종료'
+                    : '마이크를 클릭하여 녹음 시작'}
+              </p>
             </div>
           )}
 
