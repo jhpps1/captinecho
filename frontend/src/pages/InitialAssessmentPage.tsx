@@ -369,14 +369,6 @@ export const InitialAssessmentPage = () => {
               </div>
             )}
 
-            {/* 음성 재생 */}
-            {currentProblem.problemSoundUrl && (
-              <div className="flex justify-center my-6">
-                <audio controls className="w-full max-w-md">
-                  <source src={currentProblem.problemSoundUrl} type="audio/mpeg" />
-                </audio>
-              </div>
-            )}
           </div>
 
           {/* 선택지 */}
