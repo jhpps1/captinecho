@@ -88,6 +88,10 @@ export interface WeeklyJamoStatResponse {
   accuracyRates: JamoAccuracyRate[];
 }
 
+export interface AccuracyResponse {
+  accuracy: number;
+}
+
 // ===== API 함수 =====
 
 /**
@@ -238,6 +242,28 @@ export const getDailyStreak = async (studentId: number): Promise<DailyStreakResp
 export const getWeeklyJamoStat = async (studentId: number): Promise<WeeklyJamoStatResponse> => {
   const response = await axiosInstance.get<WeeklyJamoStatResponse>(
     `/student/${studentId}/dashboard/weekly/jamo/stat`
+  );
+  return response.data;
+};
+
+/**
+ * 금일 평균 정확도 조회 (학습한 자모만 포함)
+ * GET /api/student/{studentId}/dashboard/accuracy/today
+ */
+export const getDailyAccuracy = async (studentId: number): Promise<AccuracyResponse> => {
+  const response = await axiosInstance.get<AccuracyResponse>(
+    `/student/${studentId}/dashboard/accuracy/today`
+  );
+  return response.data;
+};
+
+/**
+ * 금주 평균 정확도 조회 (학습한 자모만 포함)
+ * GET /api/student/{studentId}/dashboard/accuracy/week
+ */
+export const getWeeklyAccuracy = async (studentId: number): Promise<AccuracyResponse> => {
+  const response = await axiosInstance.get<AccuracyResponse>(
+    `/student/${studentId}/dashboard/accuracy/week`
   );
   return response.data;
 };

@@ -7,8 +7,10 @@ import com.captainecho.captainecho.student.application.StudentService;
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetDailyAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
 import com.captainecho.captainecho.student.application.command.GetImproveAccuracyCommand;
+import com.captainecho.captainecho.student.application.command.GetWeeklyAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetCurrentJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
@@ -21,8 +23,10 @@ import com.captainecho.captainecho.student.application.command.UpdateStudentComm
 import com.captainecho.captainecho.student.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetDailyAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
 import com.captainecho.captainecho.student.application.result.GetImproveAccuracyResult;
+import com.captainecho.captainecho.student.application.result.GetWeeklyAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetCurrentJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
@@ -40,6 +44,7 @@ import com.captainecho.captainecho.student.presentation.request.UpdatePinRequest
 import com.captainecho.captainecho.student.presentation.request.UpdateStudentRequest;
 import com.captainecho.captainecho.student.presentation.request.VerifyPinRequest;
 import com.captainecho.captainecho.student.presentation.request.VerifyRecoveryCodeRequest;
+import com.captainecho.captainecho.student.presentation.response.AccuracyResponse;
 import com.captainecho.captainecho.student.presentation.response.AddStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.DailyStreakResponse;
 import com.captainecho.captainecho.student.presentation.response.DeleteStudentInterestResponse;
@@ -269,6 +274,46 @@ public class StudentController {
         GetImproveAccuracyResult result = studentService.getImproveAccuracy(command);
 
         ImproveAccuracyResponse response = ImproveAccuracyResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/accuracy/today")
+    @Operation(summary = "금일 평균 정확도 조회", description = "학습한 자모(count > 0)의 평균 정확도를 조회합니다")
+    public ResponseEntity<AccuracyResponse> getDailyAccuracy(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetDailyAccuracyCommand command = new GetDailyAccuracyCommand(protectorId, studentId);
+        GetDailyAccuracyResult result = studentService.getDailyAccuracy(command);
+
+        AccuracyResponse response = AccuracyResponse.fromDaily(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/accuracy/week")
+    @Operation(summary = "금주 평균 정확도 조회", description = "학습한 자모(count > 0)의 평균 정확도를 조회합니다")
+    public ResponseEntity<AccuracyResponse> getWeeklyAccuracy(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetWeeklyAccuracyCommand command = new GetWeeklyAccuracyCommand(protectorId, studentId);
+        GetWeeklyAccuracyResult result = studentService.getWeeklyAccuracy(command);
+
+        AccuracyResponse response = AccuracyResponse.fromWeekly(result);
 
         return ResponseEntity.ok(response);
     }

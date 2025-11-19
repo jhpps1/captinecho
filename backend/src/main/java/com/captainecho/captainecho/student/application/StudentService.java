@@ -22,9 +22,11 @@ import com.captainecho.captainecho.stats.persistence.WeeklyPersonalReportReposit
 import com.captainecho.captainecho.student.application.command.AddStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentCommand;
 import com.captainecho.captainecho.student.application.command.DeleteStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetDailyAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyCompletedCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyGoalCountCommand;
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
+import com.captainecho.captainecho.student.application.command.GetWeeklyAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetImproveAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
 import com.captainecho.captainecho.student.application.command.GetCurrentJamoStatCommand;
@@ -42,9 +44,11 @@ import com.captainecho.captainecho.student.application.command.UpdateStudentComm
 import com.captainecho.captainecho.student.application.command.VerifyPinCommand;
 import com.captainecho.captainecho.student.application.result.AddStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.DeleteStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetDailyAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetDailyCompletedCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyGoalCountResult;
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
+import com.captainecho.captainecho.student.application.result.GetWeeklyAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetImproveAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
 import com.captainecho.captainecho.student.application.result.GetCurrentJamoStatResult;
@@ -1149,6 +1153,90 @@ public class StudentService {
         }
 
         return streak;
+    }
+
+    /**
+     * 금일 평균 정확도 조회
+     * 학습한 자모(totalAttempts > 0)만 평균 계산
+     */
+    @Transactional(readOnly = true)
+    public GetDailyAccuracyResult getDailyAccuracy(GetDailyAccuracyCommand command) {
+        log.info("금일 평균 정확도 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 접근 권한 확인
+        verifyStudentAccess(command.protectorId(), command.studentId());
+
+        // 2. jamo_stat에서 현재 통계 조회
+        List<JamoStat> currentStats = jamoStatRepository.findAllByStudent_StudentId(command.studentId());
+
+        // 3. 학습한 자모만 필터링 (totalAttempts > 0)
+        List<JamoStat> learnedJamos = currentStats.stream()
+                .filter(stat -> stat.getTotalAttempts() > 0)
+                .toList();
+
+        // 4. 학습한 자모가 없으면 null 반환
+        if (learnedJamos.isEmpty()) {
+            log.info("금일 평균 정확도 - 학습한 자모 없음 - Student ID: {}", command.studentId());
+            return GetDailyAccuracyResult.of(null);
+        }
+
+        // 5. 평균 정확도 계산
+        double averageAccuracy = learnedJamos.stream()
+                .mapToDouble(stat -> {
+                    int total = stat.getTotalAttempts().intValue();
+                    int fails = stat.getFailCount().intValue();
+                    return (double) (total - fails) / total * 100.0;
+                })
+                .average()
+                .orElse(0.0);
+
+        int roundedAccuracy = (int) Math.round(averageAccuracy);
+        log.info("금일 평균 정확도 - Student ID: {}, 학습한 자모 수: {}, 평균 정확도: {}%",
+                command.studentId(), learnedJamos.size(), roundedAccuracy);
+
+        return GetDailyAccuracyResult.of(roundedAccuracy);
+    }
+
+    /**
+     * 금주 평균 정확도 조회
+     * 학습한 자모(totalAttempts > 0)만 평균 계산
+     */
+    @Transactional(readOnly = true)
+    public GetWeeklyAccuracyResult getWeeklyAccuracy(GetWeeklyAccuracyCommand command) {
+        log.info("금주 평균 정확도 조회 시작 - Student ID: {}", command.studentId());
+
+        // 1. 학생 접근 권한 확인
+        verifyStudentAccess(command.protectorId(), command.studentId());
+
+        // 2. jamo_stat에서 현재 통계 조회 (실시간 데이터 사용)
+        List<JamoStat> currentStats = jamoStatRepository.findAllByStudent_StudentId(command.studentId());
+
+        // 3. 학습한 자모만 필터링
+        List<JamoStat> learnedJamos = currentStats.stream()
+                .filter(stat -> stat.getTotalAttempts() > 0)
+                .toList();
+
+        // 4. 학습한 자모가 없으면 null 반환
+        if (learnedJamos.isEmpty()) {
+            log.info("금주 평균 정확도 - 학습한 자모 없음 - Student ID: {}", command.studentId());
+            return GetWeeklyAccuracyResult.of(null);
+        }
+
+        // 5. 평균 정확도 계산
+        double averageAccuracy = learnedJamos.stream()
+                .mapToDouble(stat -> {
+                    int total = stat.getTotalAttempts().intValue();
+                    int fails = stat.getFailCount().intValue();
+                    return (double) (total - fails) / total * 100.0;
+                })
+                .average()
+                .orElse(0.0);
+
+        int roundedAccuracy = (int) Math.round(averageAccuracy);
+        log.info("금주 평균 정확도 - Student ID: {}, 학습한 자모 수: {}, 평균 정확도: {}%",
+                command.studentId(), learnedJamos.size(), roundedAccuracy);
+
+        return GetWeeklyAccuracyResult.of(roundedAccuracy);
     }
 
 }

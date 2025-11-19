@@ -162,13 +162,15 @@ export default function ProtectorDashboard() {
           getDailyCompletedCount(selectedStudentId), // 3
           getWeeklyGoalPercent(selectedStudentId),   // 4
           getDailyStreak(selectedStudentId),         // 5
-          getBestJamos(),                            // 6
-          getWorstJamos(),                           // 7
-          getOverallAccuracy(),                      // 8
-          getAllJamoStats(),                         // 9
-          getCurrentJamoStats(),                     // 10
-          getWeeklyJamoStat(selectedStudentId),      // 11
-          getProtectorGoal(selectedStudentId),       // 12
+          getDailyAccuracy(selectedStudentId),       // 6
+          getWeeklyAccuracy(selectedStudentId),      // 7
+          getBestJamos(),                            // 8
+          getWorstJamos(),                           // 9
+          getOverallAccuracy(),                      // 10
+          getAllJamoStats(),                         // 11
+          getCurrentJamoStats(),                     // 12
+          getWeeklyJamoStat(selectedStudentId),      // 13
+          getProtectorGoal(selectedStudentId),       // 14
         ]);
 
         // 각 결과 추출
@@ -178,13 +180,15 @@ export default function ProtectorDashboard() {
         const dailyCompletedData = results[3].status === 'fulfilled' ? results[3].value : null;
         const weeklyPercentData = results[4].status === 'fulfilled' ? results[4].value : null;
         const dailyStreakData = results[5].status === 'fulfilled' ? results[5].value : null;
-        const bestJamosData = results[6].status === 'fulfilled' ? results[6].value : null;
-        const worstJamosData = results[7].status === 'fulfilled' ? results[7].value : null;
-        const overallAccuracyData = results[8].status === 'fulfilled' ? results[8].value : null;
-        const allJamoStatsData = results[9].status === 'fulfilled' ? results[9].value : null;
-        const currentWeekJamoStatsData = results[10].status === 'fulfilled' ? results[10].value : null;
-        const lastWeekJamoStatsData = results[11].status === 'fulfilled' ? results[11].value : null;
-        const protectorGoalData = results[12].status === 'fulfilled' ? results[12].value : null;
+        const dailyAccuracyData = results[6].status === 'fulfilled' ? results[6].value : null;
+        const weeklyAccuracyData = results[7].status === 'fulfilled' ? results[7].value : null;
+        const bestJamosData = results[8].status === 'fulfilled' ? results[8].value : null;
+        const worstJamosData = results[9].status === 'fulfilled' ? results[9].value : null;
+        const overallAccuracyData = results[10].status === 'fulfilled' ? results[10].value : null;
+        const allJamoStatsData = results[11].status === 'fulfilled' ? results[11].value : null;
+        const currentWeekJamoStatsData = results[12].status === 'fulfilled' ? results[12].value : null;
+        const lastWeekJamoStatsData = results[13].status === 'fulfilled' ? results[13].value : null;
+        const protectorGoalData = results[14].status === 'fulfilled' ? results[14].value : null;
 
         // Protector Goal 데이터 설정
         if (protectorGoalData?.protectorGoal) {
@@ -216,9 +220,9 @@ export default function ProtectorDashboard() {
         if (dailyCompletedData) setDailyCompletedCount(dailyCompletedData.completedCount);
         if (weeklyPercentData) setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
 
-        // 기본값 설정 (정확도는 백엔드 미구현)
-        setDailyAccuracy(0);
-        setWeeklyAccuracy(0);
+        // 평균 정확도 데이터 설정 (학습한 자모만 포함)
+        setDailyAccuracy(dailyAccuracyData?.accuracy ?? 0);
+        setWeeklyAccuracy(weeklyAccuracyData?.accuracy ?? 0);
 
         // 자모 통계 데이터 설정 - currentWeekJamoStatsData 우선, allJamoStatsData는 fall back
         if (currentWeekJamoStatsData) {
