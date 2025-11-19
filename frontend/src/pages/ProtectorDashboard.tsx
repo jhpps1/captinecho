@@ -212,29 +212,37 @@ export default function ProtectorDashboard() {
         setDailyAccuracy(0);
         setWeeklyAccuracy(0);
 
-        // 자모 통계 데이터 설정
-        if (allJamoStatsData && currentWeekJamoStatsData && lastWeekJamoStatsData) {
+        // 자모 통계 데이터 설정 - allJamoStatsData만 있으면 기본 통계 표시
+        if (allJamoStatsData) {
           setJamoStats(allJamoStatsData.accuracyRates);
+          setJamoStatsError(null);
+        } else {
+          setJamoStats([]);
+          setJamoStatsError('자모 통계 데이터 로드 실패');
+        }
 
+        // 이번 주 데이터 (선택적 - 비교 차트용)
+        if (currentWeekJamoStatsData) {
           const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
             count: stat.count
           }));
           setCurrentWeekJamoStats(mappedCurrentWeekStats);
+        } else {
+          setCurrentWeekJamoStats([]);
+        }
 
+        // 저번 주 데이터 (선택적 - 비교 차트용)
+        if (lastWeekJamoStatsData) {
           const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
             count: stat.count
           }));
           setLastWeekJamoStats(mappedLastWeekStats);
-          setJamoStatsError(null);
         } else {
-          setJamoStats([]);
-          setCurrentWeekJamoStats([]);
           setLastWeekJamoStats([]);
-          setJamoStatsError('자모 통계 데이터 로드 실패');
         }
 
         // 개선도 데이터 설정
@@ -316,27 +324,48 @@ export default function ProtectorDashboard() {
     if (!selectedStudentId) return;
     setJamoStatsError(null);
     try {
-      const [allJamoStatsData, currentWeekJamoStatsData, lastWeekJamoStatsData] = await Promise.all([
+      const results = await Promise.allSettled([
         getAllJamoStats(),
         getCurrentJamoStats(),
         getWeeklyJamoStat(selectedStudentId),
       ]);
 
-      setJamoStats(allJamoStatsData.accuracyRates);
+      const allJamoStatsData = results[0].status === 'fulfilled' ? results[0].value : null;
+      const currentWeekJamoStatsData = results[1].status === 'fulfilled' ? results[1].value : null;
+      const lastWeekJamoStatsData = results[2].status === 'fulfilled' ? results[2].value : null;
 
-      const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
-        jamo: stat.jamo,
-        accuracy: stat.accuracyRate,
-        count: stat.count
-      }));
-      setCurrentWeekJamoStats(mappedCurrentWeekStats);
+      // allJamoStatsData만 있으면 기본 통계 표시
+      if (allJamoStatsData) {
+        setJamoStats(allJamoStatsData.accuracyRates);
+        setJamoStatsError(null);
+      } else {
+        setJamoStats([]);
+        setJamoStatsError('자모 통계 데이터 로드 실패');
+      }
 
-      const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
-        jamo: stat.jamo,
-        accuracy: stat.accuracyRate,
-        count: stat.count
-      }));
-      setLastWeekJamoStats(mappedLastWeekStats);
+      // 이번 주 데이터 (선택적)
+      if (currentWeekJamoStatsData) {
+        const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
+          jamo: stat.jamo,
+          accuracy: stat.accuracyRate,
+          count: stat.count
+        }));
+        setCurrentWeekJamoStats(mappedCurrentWeekStats);
+      } else {
+        setCurrentWeekJamoStats([]);
+      }
+
+      // 저번 주 데이터 (선택적)
+      if (lastWeekJamoStatsData) {
+        const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
+          jamo: stat.jamo,
+          accuracy: stat.accuracyRate,
+          count: stat.count
+        }));
+        setLastWeekJamoStats(mappedLastWeekStats);
+      } else {
+        setLastWeekJamoStats([]);
+      }
     } catch (error) {
       setJamoStatsError('자모 통계 데이터 로드 실패');
     }
