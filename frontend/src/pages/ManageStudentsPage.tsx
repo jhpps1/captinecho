@@ -264,8 +264,9 @@ export default function ManageStudentsPage() {
     id: s.id,
     name: s.name,
     level: s.level,
-    streak: 0, // 백엔드 API 미지원 (향후 추가 예정)
-    isActive: s.id === selectedStudentId
+    streak: 0,
+    isActive: s.id === selectedStudentId,
+    profileImage: s.profileImage
   }));
 
   // 💡 2단계 PIN 변경 프로세스 (새 PIN -> 확인)
