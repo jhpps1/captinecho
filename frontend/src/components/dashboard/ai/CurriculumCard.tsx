@@ -84,14 +84,11 @@ export default function CurriculumCard({
       {/* Curriculum Content */}
       <div className="bg-white rounded-lg p-4 mb-4">
         <h4 className="font-bold text-neutral-800 font-pretendard mb-2">
-          {curriculum.title}
-        </h4>
-        <p className="text-sm text-neutral-600 font-pretendard mb-3 whitespace-pre-line">
           {curriculum.description}
-        </p>
+        </h4>
 
         {/* Goals List */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <p className="text-xs font-semibold text-neutral-500 font-pretendard">
             이번 주 학습 목표
           </p>
@@ -108,7 +105,7 @@ export default function CurriculumCard({
               </li>
             ))}
           </ul>
-        </div>
+        </div> */}
 
         {/* Created At */}
         <p className="text-xs text-neutral-400 font-pretendard mt-3">
