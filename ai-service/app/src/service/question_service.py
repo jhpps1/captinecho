@@ -242,21 +242,21 @@ def process_day_problem_items(session, student_id, llm_result):
                     break
         item["blank_position"] = blank_position  # Adventure 3, 4는 None으로 유지
 
-        # if problem_text:
-        #     try:
-        #         generated_sound_path = generate_tts_and_upload(
-        #             problem_text,
-        #             student_id=student_id,
-        #             key_prefix='problems/sound/'
-        #         )
-        #     except Exception as e:
-        #         print(f"❌ TTS 생성 및 업로드 실패: {e}")
-        #         generated_sound_path = ""
-        #     if generated_sound_path:
-        #         item["sound_url"] = generated_sound_path
-        #         print(f"✅ TTS 생성 성공! sound_url: {generated_sound_path}")
+        if problem_text:
+            try:
+                generated_sound_path = generate_tts_and_upload(
+                    problem_text,
+                    student_id=student_id,
+                    key_prefix='problems/sound/'
+                )
+            except Exception as e:
+                print(f"❌ TTS 생성 및 업로드 실패: {e}")
+                generated_sound_path = ""
+            if generated_sound_path:
+                item["sound_url"] = generated_sound_path
+                print(f"✅ TTS 생성 성공! sound_url: {generated_sound_path}")
 
-        item["sound_url"] = "problems/default_tts.mp3"  # 또는 그냥 빈 문자열 "" 임시!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # item["sound_url"] = "problems/default_tts.mp3"  # 또는 그냥 빈 문자열 "" 임시!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         if item.get("adventure_type_id") == 4:
             item["correct_answer"] = item.get("problem_text", "")
@@ -266,31 +266,27 @@ def process_day_problem_items(session, student_id, llm_result):
 
         generated_image_path = ""
 
-        # if adventure_type in [2, 3] and problem_text:
-        #     print(f"✨ Gemini API 호출 시작: '{problem_text}'")
-        #     if GEMINI_API_KEY:
-        #         try:
-        #             generated_image_path = generate_image_with_gemini_flash(problem_text, GEMINI_API_KEY)
-        #         except Exception as e:
-        #             error_msg = str(e).encode('ascii', errors='replace').decode('ascii')
-        #             print(f"[IMAGE] Error occurred: {error_msg}")
-        #             generated_image_path = ""
-        #     else:
-        #         print("❌ Gemini API Key가 없어 이미지 생성을 시도하지 않았습니다.")
-        #         generated_image_path = ""
+        if adventure_type in [2, 3] and problem_text:
+            print(f"✨ Gemini API 호출 시작: '{problem_text}'")
+            if GEMINI_API_KEY:
+                try:
+                    generated_image_path = generate_image_with_gemini_flash(problem_text, GEMINI_API_KEY)
+                except Exception as e:
+                    error_msg = str(e).encode('ascii', errors='replace').decode('ascii')
+                    print(f"[IMAGE] Error occurred: {error_msg}")
+                    generated_image_path = ""
+            else:
+                print("❌ Gemini API Key가 없어 이미지 생성을 시도하지 않았습니다.")
+                generated_image_path = ""
 
-        #     if generated_image_path:
-        #         item["image_url"] = generated_image_path
-        #         print(f"✅ GMS 이미지 생성 성공! URL: {generated_image_path}")
-        #     else:
-        #         print(f"❌ Gemini 이미지 생성 실패! 기본 URL 사용.")
-        #         item["image_url"] = ""
+            if generated_image_path:
+                item["image_url"] = generated_image_path
+                print(f"✅ GMS 이미지 생성 성공! URL: {generated_image_path}")
+            else:
+                print(f"❌ Gemini 이미지 생성 실패! 기본 URL 사용.")
+                item["image_url"] = ""
 
-        item["image_url"] = ""  # 임시!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
+        # item["image_url"] = ""  # 임시!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
