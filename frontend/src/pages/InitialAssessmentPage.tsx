@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
-import { transcribeAudio } from '../api/adventureApi';
+import { transcribeAudio } from '../api/diagnosisApi';
 
 interface DiagnosisProblem {
   problemId: number;
