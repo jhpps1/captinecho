@@ -7,6 +7,7 @@ import PINRecoveryModal from '../components/protector/modals/PINRecoveryModal';
 import { getStudents, verifyPin } from '../api/protectorApi';
 import { sendRecoveryCode, verifyRecoveryCode } from '../api/dashboardApi';
 import { verifyStudentPin } from '../api/studentApi';
+import LoadingScreen from '../components/LoadingScreen'; // [추가] 로딩 스크린 컴포넌트 가져오기
 
 // 프로필 정보를 담당하는 인터페이스
 interface Profile {
@@ -38,8 +39,13 @@ const SelectProfile = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   // 페이지네이션 시 현재 페이지 정보를 저장하는 변수
   const [currentPage, setCurrentPage] = useState(0);
-  // 로딩 관련 변수
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // 로딩 관련 변수 (API)
+  const [isLoading, setIsLoading] = useState(true); // [변경] 초기값을 true로 설정하여 깜빡임 방지
+  
+  // [추가] 비디오 로딩 상태 변수
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+
   // 라우팅 관련
   const navigate = useNavigate();
 
@@ -228,7 +234,7 @@ const SelectProfile = () => {
   useEffect(() => {
     // 학생 목록을 불러오는 API를 담당하는 코드
     const fetchProfiles = async () => {
-      // 로딩중 활성화
+      // 로딩중 활성화 (초기값이 true라 중복이지만 명시적으로 둠)
       setIsLoading(true);
       try {
         // API 호출
@@ -332,13 +338,17 @@ const SelectProfile = () => {
   };
 
 
+  // [추가] API 로딩 혹은 비디오 로딩 중 하나라도 진행 중이면 전체 로딩 상태
+  const isPageLoading = isLoading || !isVideoLoaded;
 
   return (
     // 배경화면 설정 관련 코드
     <div
       className="flex flex-col h-screen relative overflow-hidden font-sans text-gray-800"
-
     >
+      {/* [추가] 로딩 스크린 오버레이 */}
+      {isPageLoading && <LoadingScreen />}
+
       {/* Background 비디오 */}
       <video
         autoPlay
@@ -347,6 +357,11 @@ const SelectProfile = () => {
         playsInline
         className="absolute inset-0 w-full h-full object-cover z-0"
         src="/selectpage/background.mp4"
+        // [추가] 비디오 데이터가 로드되면 로딩 상태 해제
+        onLoadedData={() => {
+            console.log("배경 비디오 로딩 완료");
+            setIsVideoLoaded(true);
+        }}
       />
 
       {/* 헤더*/}
@@ -360,19 +375,19 @@ const SelectProfile = () => {
           value={volume}
           onChange={(e) => setVolume(parseFloat(e.target.value))}
           className="w-72 h-2 bg-black/50 rounded-full cursor-pointer appearance-none
-                       [&::-webkit-slider-thumb]:appearance-none
-                       [&::-webkit-slider-thumb]:h-5
-                       [&::-webkit-slider-thumb]:w-5
-                       [&::-webkit-slider-thumb]:rounded-full
-                       [&::-webkit-slider-thumb]:bg-black
-                       [&::-moz-range-thumb]:h-5
-                       [&::-moz-range-thumb]:w-5
-                       [&::-moz-range-thumb]:rounded-full
-                       [&::-moz-range-thumb]:bg-black
-                       [&::-moz-range-thumb]:border-none
-                       [&::-moz-range-track]:h-2
-                       [&::-moz-range-track]:bg-black/50
-                       [&::-moz-range-track]:rounded-full"
+                        [&::-webkit-slider-thumb]:appearance-none
+                        [&::-webkit-slider-thumb]:h-5
+                        [&::-webkit-slider-thumb]:w-5
+                        [&::-webkit-slider-thumb]:rounded-full
+                        [&::-webkit-slider-thumb]:bg-black
+                        [&::-moz-range-thumb]:h-5
+                        [&::-moz-range-thumb]:w-5
+                        [&::-moz-range-thumb]:rounded-full
+                        [&::-moz-range-thumb]:bg-black
+                        [&::-moz-range-thumb]:border-none
+                        [&::-moz-range-track]:h-2
+                        [&::-moz-range-track]:bg-black/50
+                        [&::-moz-range-track]:rounded-full"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} // Fallback for moz
         />
         <button
@@ -468,8 +483,7 @@ const SelectProfile = () => {
                 disabled={!showPagination}
               >
                 <svg
-                  xmlns="http://www.
-                  w3.org/2000/svg"
+                  xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 text-gray-600"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -560,4 +574,3 @@ const SelectProfile = () => {
 };
 
 export default SelectProfile;
-

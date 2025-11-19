@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'; // useRef 임포트
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
+import LoadingScreen from '../components/LoadingScreen'; // [추가] 로딩 스크린 import
 
 // 학생 정보 관련 인터페이스
 interface Student {
@@ -18,14 +19,14 @@ interface StudentsApiResponse {
     students: Student[];
 }
 
-// BGM 아이콘 (SelectProfile에서 복사)
+// BGM 아이콘
 const SpeakerWaveIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
     </svg>
 );
 
-// 음소거 아이콘 (SelectProfile에서 복사)
+// 음소거 아이콘
 const SpeakerXMarkIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
@@ -42,8 +43,13 @@ const ParrotStore = () => {
     const [profileImg, setProfileImg] = useState<string>('');
     // 코인 갯수를 담당하는 변수
     const [coinCount, setCoinCount] = useState<number>(0);
-    // 로딩중 판정 관련 변수
+    
+    // 로딩중 판정 관련 변수 (API)
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    
+    // [추가] 배경 이미지 로딩 상태 변수
+    const [isImageLoaded, setIsImageLoaded] = useState<boolean>(false);
+
     // 에러 관련 변수
     const [error, setError] = useState<string | null>(null);
 
@@ -137,9 +143,8 @@ const ParrotStore = () => {
         fetchStudentData();
     }, [navigate]);
 
-    // BGM 로드 및 자동재생
+    // BGM 로드 및 자동재생 (기존 코드 유지)
     useEffect(() => {
-        // 경로 수정
         audioRef.current = new Audio('/parrotstore/backgroundmusic.mp3');
         audioRef.current.loop = true;
         audioRef.current.volume = volume;
@@ -159,7 +164,7 @@ const ParrotStore = () => {
                 audioRef.current = null;
             }
         };
-    }, []); // 컴포넌트 마운트 시 1회만 실행
+    }, []); 
 
     // volume state가 변경될 때마다 실제 오디오 볼륨 조절
     useEffect(() => {
@@ -167,9 +172,9 @@ const ParrotStore = () => {
             audioRef.current.volume = volume;
             if (volume > 0) {
                 setLastVolume(volume);
-                audioRef.current.muted = false; // [!!] 볼륨이 0이 아니면 음소거 해제
+                audioRef.current.muted = false;
             } else {
-                audioRef.current.muted = true; // [!!] 볼륨이 0이면 음소거
+                audioRef.current.muted = true;
             }
         }
     }, [volume]);
@@ -201,11 +206,11 @@ const ParrotStore = () => {
             document.removeEventListener('click', handleFirstInteraction);
             document.removeEventListener('keydown', handleFirstInteraction);
         };
-    }, [volume, lastVolume]); // volume, lastVolume 의존성 추가
+    }, [volume, lastVolume]);
 
     // 음소거 토글 핸들러
-    const toggleMute = (e: React.MouseEvent<HTMLButtonElement>) => { // 1. 이벤트 객체(e)를 받도록 수정
-        e.stopPropagation(); // 2. 이벤트 전파(버블링)를 중지시킵니다.
+    const toggleMute = (e: React.MouseEvent<HTMLButtonElement>) => { 
+        e.stopPropagation(); 
 
         if (volume > 0) {
             setVolume(0);
@@ -213,50 +218,51 @@ const ParrotStore = () => {
             setVolume(lastVolume > 0 ? lastVolume : 0.5);
         }
 
-        // (자동재생 실패시) 사용자가 수동으로 눌렀을 때 재생 시도
         if (audioRef.current && audioRef.current.paused) {
             audioRef.current.play().catch(e => console.error("음소거 토글 후 재생 시도 실패:", e));
         }
     };
-
-    // === 핸들러 ===
 
     // 뒤로가기 핸들러
     const handleGoBack = () => {
         navigate(-1);
     };
 
+    // [추가] 전체 페이지 로딩 상태 (API 로딩 중 OR 이미지 로딩 중)
+    const isPageLoading = isLoading || !isImageLoaded;
+
     return (
         // 배경화면 관련 설정
-        <div
-            className="relative min-h-screen w-full overflow-hidden bg-cover bg-center font-sans"
-            style={{ backgroundImage: 'url(/parrotstore/background.png)' }}
-        >
+        // [변경] backgroundImage 스타일 대신 내부 img 태그를 사용하므로 style 속성 제거
+        <div className="relative min-h-screen w-full overflow-hidden font-sans">
+            
+            {/* [추가] 로딩 스크린 오버레이 */}
+            {isPageLoading && <LoadingScreen />}
+
+            {/* [추가/변경] 배경 이미지를 img 태그로 변경하여 로딩 감지 */}
+            <img 
+                src="/parrotstore/background.png"
+                alt="배경"
+                className="absolute inset-0 w-full h-full object-cover -z-10"
+                onLoad={() => {
+                    console.log("배경 이미지 로딩 완료");
+                    setIsImageLoaded(true);
+                }}
+            />
+
             {/* 왼쪽 상단의 뒤로가기 버튼 */}
             <button
                 onClick={handleGoBack}
                 className="absolute top-5 left-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg transition-transform hover:scale-105"
                 aria-label="뒤로가기"
             >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-8 w-8"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={3}
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 19l-7-7 7-7"
-                    />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
 
-            {/* [!!] 우측 상단 UI (BGM 컨트롤러 + 코인)를 flex 컨테이너로 감싸기 */}
+            {/* 우측 상단 UI (BGM 컨트롤러 + 코인) */}
             <div className="absolute top-5 right-5 z-20 flex items-center space-x-4">
-
                 {/* === BGM 컨트롤러 === */}
                 <div className="flex items-center space-x-2">
                     <input
@@ -280,52 +286,40 @@ const ParrotStore = () => {
                                 [&::-moz-range-track]:h-2
                                 [&::-moz-range-track]:bg-white/50
                                 [&::-moz-range-track]:rounded-full"
-                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }} // Fallback
+                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }}
                     />
-                    {/* 음소거 버튼 (h-14 w-14로 크기 조절) */}
                     <button
                         onClick={toggleMute}
                         className="w-14 h-14 bg-white/80 rounded-lg shadow-md flex items-center justify-center transition-all active:scale-95 hover:bg-white"
                     >
-                        {volume === 0 ? (
-                            <SpeakerXMarkIcon className="w-8 h-8 text-gray-700" />
-                        ) : (
-                            <SpeakerWaveIcon className="w-8 h-8 text-gray-700" />
-                        )}
+                        {volume === 0 ? <SpeakerXMarkIcon className="w-8 h-8 text-gray-700" /> : <SpeakerWaveIcon className="w-8 h-8 text-gray-700" />}
                     </button>
                 </div>
 
                 {/* === 기존 코인 갯수 표시 UI === */}
                 <div
-                    // [!!] absolute, top, right, z-20 속성 제거 (부모가 대신 함)
                     className="relative w-[15vw] h-[5vw] min-w-[180px] min-h-[60px] bg-contain bg-no-repeat"
                     style={{ backgroundImage: 'url(/parrotstore/coinslot.png)' }}
                 >
-                    {/* 코인 이미지 */}
                     <div className="flex h-full items-center justify-left pl-[3vw]">
                         <img
                             src="/parrotstore/coin.png"
                             alt="코인"
                             className="h-[2.5vw] w-[2.5vw] min-h-[30px] min-w-[30px] mb-4"
                         />
-                        {/* 코인 갯수 표시 */}
                         <span className="ml-2 text-[1.8vw] font-bold text-white text-shadow-sm xl:text-3xl ms-3 mb-4">
                             {isLoading ? '...' : error ? '!' : coinCount}
                         </span>
                     </div>
                 </div>
             </div>
-            {/* [!!] 우측 상단 UI 끝 */}
 
-
-            {/* 우측 하단의 큼직한 상점 페이지 아이템 표시 관련 코드 (현재는 준비중) */}
+            {/* 우측 하단의 큼직한 상점 페이지 아이템 표시 관련 코드 */}
             <div className="absolute top-[55%] left-[63%] z-11 w-[70vw] h-[52.5vw] -translate-x-1/2 -translate-y-1/2">
-                {/* 보드 배경화면 */}
                 <div
                     className="relative h-full w-full bg-contain bg-center bg-no-repeat"
                     style={{ backgroundImage: 'url(/parrotstore/board.png)' }}
                 >
-                    {/* 보드 내부 텍스트, 추후 판매 아이템들을 아래 div 내부에 위치하게 코드를 짜면 됨 */}
                     <div className="absolute inset-0 flex items-center justify-center">
                         <h1 className="text-[3.5vw] font-extrabold text-[#5A3A22] xl:text-5xl">
                             준비중 입니다.
@@ -337,16 +331,12 @@ const ParrotStore = () => {
             {/* 프로필 바 관련 표시 */}
             <div
                 className="absolute bottom-5 left-5 z-20 w-[400px] h-[80px] bg-contain bg-no-repeat"
-                // [!!] min-w/min-h는 w/h에 의해 덮어쓰므로 제거해도 됩니다.
                 style={{ backgroundImage: 'url(/parrotstore/profilebar.png)' }}
             >
-                {/* [!!] px-[1vw] 대신 고정 패딩 pl-4 (16px)를 줍니다. */}
                 <div className="flex h-full items-center pl-4">
                     {isLoading ? (
-                        // [!!] 이미지 크기를 vw 대신 고정값 h-14 w-14 (56px)로 변경
                         <div className="h-14 w-14 animate-pulse rounded-full bg-gray-400 flex-shrink-0"></div>
                     ) : (
-                        // --- 프로필 사진 수정 ---
                         <>
                             {profileImg ? (
                                 <img
@@ -362,22 +352,18 @@ const ParrotStore = () => {
                                 </div>
                             )}
                         </>
-                        // --- 프로필 사진 수정 끝 ---
                     )}
-                    {/* 프로필 이름 표시 */}
-                    {/* [!!] 텍스트 크기도 text-[1.8vw] 대신 고정 크기(예: text-2xl)로 변경 */}
                     <span className="ml-3 truncate text-2xl font-bold text-white text-shadow-sm">
                         {isLoading ? '로딩중...' : error ? '오류' : studentName}
                     </span>
                 </div>
             </div>
 
-            {/* 로딩 및 오류 오버레이 */}
-            {(isLoading || error) && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/30"> {/* z-30 (최상단) */}
+            {/* [변경] 기존 로딩/에러 오버레이 제거하고, LoadingScreen이 없는데 에러만 발생했을 경우를 위한 처리 */}
+            {!isPageLoading && error && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/30">
                     <div className="rounded-lg bg-white p-6 shadow-xl">
-                        {isLoading && <div className="text-xl">데이터를 불러오는 중...</div>}
-                        {error && <div className="text-xl text-red-500">{error}</div>}
+                        <div className="text-xl text-red-500">{error}</div>
                     </div>
                 </div>
             )}
