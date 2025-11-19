@@ -256,7 +256,7 @@ export default function ProtectorDashboard() {
     problems: { current: dailyCompletedCount, target: dailyGoalCount },
     time: {
       current: learningTime?.thisWeekLearningTime.daily[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.learningMinutes || 0,
-      target: 10, // 고정값 (백엔드에서 제공하지 않음)
+      target: 20, // 고정값 (백엔드에서 제공하지 않음)
     },
     accuracy: { current: dailyAccuracy },
   };
@@ -266,7 +266,7 @@ export default function ProtectorDashboard() {
     problems: { current: weeklyGoalPercent, target: 50 },
     time: {
       current: learningTime?.thisWeekLearningTime.totalMinutes || 0,
-      target: 400, // 고정값
+      target: 100, // 고정값
     },
     accuracy: { current: weeklyAccuracy },
   };
