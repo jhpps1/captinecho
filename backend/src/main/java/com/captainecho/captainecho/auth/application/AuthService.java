@@ -108,7 +108,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public String localLogin(LocalLoginCommand command) {
+    public LoginResult localLogin(LocalLoginCommand command) {
         // 1. 사용자 조회
         Protector protector = protectorRepository.findById(command.username())
                 .orElseThrow(() -> new EchoException(AuthErrorCode.USER_NOT_FOUND));
@@ -126,8 +126,12 @@ public class AuthService {
         // 4. JWT 토큰 생성
         String accessToken = jwtUtil.generateAccessToken(protector.getProtectorId());
 
-        log.info("일반 로그인 성공 - Protector ID: {}, Username: {}", protector.getProtectorId(), protector.getId());
+        // 5. 신규 사용자 여부 판단 (약관 미동의 = 신규 사용자)
+        boolean isNewUser = !Boolean.TRUE.equals(protector.getTermsAgreed());
 
-        return accessToken;
+        log.info("일반 로그인 성공 - Protector ID: {}, Username: {}, isNewUser: {}",
+                 protector.getProtectorId(), protector.getId(), isNewUser);
+
+        return new LoginResult(protector.getProtectorId(), accessToken, isNewUser);
     }
 }
