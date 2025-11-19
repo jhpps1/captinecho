@@ -212,8 +212,13 @@ export default function ProtectorDashboard() {
         setDailyAccuracy(0);
         setWeeklyAccuracy(0);
 
-        // 자모 통계 데이터 설정 - allJamoStatsData만 있으면 기본 통계 표시
-        if (allJamoStatsData) {
+        // 자모 통계 데이터 설정 - currentWeekJamoStatsData 우선, allJamoStatsData는 fall back
+        if (currentWeekJamoStatsData) {
+          // 신규 학생 또는 이번 주 실시간 데이터가 있는 경우 (jamo_stat 테이블)
+          setJamoStats(currentWeekJamoStatsData.accuracyRates);
+          setJamoStatsError(null);
+        } else if (allJamoStatsData) {
+          // fall back: weekly_jamo_stat 데이터 사용 (배치 실행 완료된 기존 학생)
           setJamoStats(allJamoStatsData.accuracyRates);
           setJamoStatsError(null);
         } else {
@@ -223,7 +228,7 @@ export default function ProtectorDashboard() {
 
         // 이번 주 데이터 (선택적 - 비교 차트용)
         if (currentWeekJamoStatsData) {
-          // weekly_jamo_stat에서 가져온 데이터 사용
+          // jamo_stat 테이블에서 가져온 실시간 데이터 사용
           const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
@@ -231,7 +236,7 @@ export default function ProtectorDashboard() {
           }));
           setCurrentWeekJamoStats(mappedCurrentWeekStats);
         } else if (allJamoStatsData) {
-          // 신규 학생: jamo_stat에서 가져온 전체 데이터를 이번 주 데이터로 사용
+          // fall back: weekly_jamo_stat 테이블 데이터를 이번 주 데이터로 사용
           const mappedAllStats = allJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
@@ -343,8 +348,13 @@ export default function ProtectorDashboard() {
       const currentWeekJamoStatsData = results[1].status === 'fulfilled' ? results[1].value : null;
       const lastWeekJamoStatsData = results[2].status === 'fulfilled' ? results[2].value : null;
 
-      // allJamoStatsData만 있으면 기본 통계 표시
-      if (allJamoStatsData) {
+      // currentWeekJamoStatsData 우선, allJamoStatsData는 fall back
+      if (currentWeekJamoStatsData) {
+        // 신규 학생 또는 이번 주 실시간 데이터가 있는 경우 (jamo_stat 테이블)
+        setJamoStats(currentWeekJamoStatsData.accuracyRates);
+        setJamoStatsError(null);
+      } else if (allJamoStatsData) {
+        // fall back: weekly_jamo_stat 데이터 사용 (배치 실행 완료된 기존 학생)
         setJamoStats(allJamoStatsData.accuracyRates);
         setJamoStatsError(null);
       } else {
