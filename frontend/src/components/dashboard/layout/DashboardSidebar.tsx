@@ -11,6 +11,7 @@ interface Student {
   level: number;
   streak: number;
   isActive?: boolean;
+  profileImage?: string;
 }
 
 interface DashboardSidebarProps {
