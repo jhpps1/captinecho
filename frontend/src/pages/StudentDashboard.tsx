@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
+import LoadingScreen from '../components/LoadingScreen';
 
 // 왼쪽 게임 선택창에 들어가는 데이터
 const woodenButtons = [
@@ -69,7 +70,10 @@ export default function StudentDashboard() {
     const [profile, setProfile] = useState<StudentProfile | null>(null);
 
     // 로딩 관련 변수
-    const [isLoading, setIsLoading] = useState(true);
+    const [isApiLoading, setIsApiLoading] = useState(true);
+    
+    // 비디오/이미지 리소스 로딩 상태
+    const [isVideoLoaded, setIsVideoLoaded] = useState(false);
 
     // 메뉴 토글 관련 변수
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -213,10 +217,10 @@ export default function StudentDashboard() {
                 );
 
                 // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
-                if (foundStudent && foundStudent.level === null) {
-                    navigate("/initial-assessment");
-                    return;
-                }
+                // if (foundStudent && foundStudent.level === null) {
+                //     navigate("/initial-assessment");
+                //     return;
+                // }
 
                 if (foundStudent) {
                     setProfile({
@@ -258,8 +262,7 @@ export default function StudentDashboard() {
                 alert('학생 정보를 불러오는 데 실패했습니다.');
                 navigate('/select-profile');
             } finally {
-                // 결과가 어떻든 일단 모든 API가 처리된 후 로딩 종료.
-                setIsLoading(false);
+                setIsApiLoading(false);
             }
         };
 
@@ -307,22 +310,17 @@ export default function StudentDashboard() {
     };
 
     // 로딩 중 화면
-    if (isLoading || !profile) {
-        return (
-            <div className="w-full min-h-screen flex items-center justify-center bg-gray-100 font-sans">
-                <div className="text-2xl font-semibold text-gray-700">
-                    학생 정보를 불러오는 중...
-                </div>
-            </div>
-        );
-    }
+    const isLoading = isApiLoading || !profile || !isVideoLoaded;
 
     // 오늘의 탐험 목표 (최대 10개) 스탬프 배열 생성
     const dailyStamps = Array.from({ length: 10 }, (_, i) => i < solvedProblemCount);
 
     return (
         <>
-            <div
+
+            {isLoading && <LoadingScreen />}
+
+            <div 
                 className="w-full min-h-screen bg-black overflow-hidden relative font-sans"
             >
                 {/* Background 비디오 */}
@@ -332,266 +330,264 @@ export default function StudentDashboard() {
                     muted
                     playsInline
                     className="absolute inset-0 w-full h-full object-cover z-0"
+                    onLoadedData={() => {
+                        console.log("배경 비디오 로딩 완료");
+                        setIsVideoLoaded(true);
+                    }}
                 >
                     <source src="/studentboard/background.mp4" type="video/mp4" />
                     브라우저가 비디오 태그를 지원하지 않습니다.
                 </video>
 
                 {/* 오른쪽 하단 프로필 바 */}
-                <header
-                    className="absolute bottom-5 right-5 w-[400px] h-[80px] bg-contain bg-no-repeat z-20"
-                    style={{ backgroundImage: `url('/studentboard/profilebar.png')` }}
-                >
-                    <div className="flex items-center h-full pl-2">
-                        {/* 프로필 사진 출력 공간 */}
-                        <div className="w-[50px] h-[50px] ms-2.5 rounded-full overflow-hidden border-2 border-yellow-300/50 flex-shrink-0">
-                            {profile.imageUrl ? (
-                                <img
-                                    src={profile.imageUrl}
-                                    alt="프로필"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                                    <span className="text-2xl font-bold text-white">
-                                        {profile.name.charAt(0)}
+                {profile && (
+                    <div>
+                            {/* 오른쪽 하단 프로필 바 */}
+                            <header
+                                className="absolute bottom-5 right-5 w-[400px] h-[80px] bg-contain bg-no-repeat z-20"
+                                style={{ backgroundImage: `url('/studentboard/profilebar.png')` }}
+                            >
+                                {/* ... (내용 동일) ... */}
+                                <div className="flex items-center h-full pl-2">
+                                    <div className="w-[50px] h-[50px] ms-2.5 rounded-full overflow-hidden border-2 border-yellow-300/50 flex-shrink-0">
+                                        {profile.imageUrl ? (
+                                            <img src={profile.imageUrl} alt="프로필" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                                                <span className="text-2xl font-bold text-white">{profile.name.charAt(0)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="ml-4 text-3xl font-bold text-white" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }}>
+                                        {profile.name}
                                     </span>
                                 </div>
-                            )}
-                        </div>
-                        {/* 이름 출력 공간 */}
-                        <span
-                            className="ml-4 text-3xl font-bold text-white"
-                            style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }}
-                        >
-                            {profile.name}
-                        </span>
-                    </div>
-                </header>
+                            </header>
 
-                {/* 오른쪽 상단 버튼 영역 */}
-                <div className="absolute top-5 right-5 z-20 flex items-center space-x-4">
-                    {/* 음량 조절 슬라이더 */}
-                    <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={volume}
-                        onChange={(e) => setVolume(parseFloat(e.target.value))}
-                        className="w-72 h-2 bg-white/50 rounded-full cursor-pointer appearance-none
-                                [&::-webkit-slider-thumb]:appearance-none
-                                [&::-webkit-slider-thumb]:h-5
-                                [&::-webkit-slider-thumb]:w-5
-                                [&::-webkit-slider-thumb]:rounded-full
-                                [&::-webkit-slider-thumb]:bg-white
-                                [&::-moz-range-thumb]:h-5
-                                [&::-moz-range-thumb]:w-5
-                                [&::-moz-range-thumb]:rounded-full
-                                [&::-moz-range-thumb]:bg-white
-                                [&::-moz-range-thumb]:border-none
-                                [&::-moz-range-track]:h-2
-                                [&::-moz-range-track]:bg-white/50
-                                [&::-moz-range-track]:rounded-full"
-                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }} // Fallback for moz
-                    />
-
-                    {/* 음소거 버튼 */}
-                    <button
-                        onClick={toggleMute}
-                        className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 hover:bg-gray-100"
-                    >
-                        {volume === 0 ? (
-                            <SpeakerXMarkIcon className="w-12 h-12 text-gray-700" />
-                        ) : (
-                            <SpeakerWaveIcon className="w-12 h-12 text-gray-700" />
-                        )}
-                    </button>
-
-                    {/* 나가기 버튼 */}
-                    <button
-                        onClick={() => navigate('/select-profile')}
-                        className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-100 transition-all active:scale-95"
-                    >
-                        <ExitIcon className="w-12 h-12 text-gray-700" />
-                    </button>
-                </div>
-
-                {/* 왼쪽 상단의 앵무새 상점 버튼 */}
-                <button
-                    onClick={() => { navigate('/parrot-store') }}
-                    className="absolute top-5 left-5 w-20 h-20 z-20 hover:scale-105 active:scale-95 transition-transform"
-                >
-                    <img
-                        src="/studentboard/parrot.png"
-                        alt="앵무새"
-                        className="w-full h-full object-contain"
-                    />
-                </button>
-
-
-                {/* 중앙 아래쪽의 배(+캐릭터) 상호작용 관련 이미지 */}
-                <div
-                    className={`absolute bottom-[-20px] left-1/2 w-[450px] h-[525px]
-                            transition-transform duration-[2000ms] ease-in-out z-20`
-                    }
-                    style={{
-                        transform: isStartingGame
-                            ? 'translate(-50%, -110vh)'
-                            : 'translate(-50%, 0)'
-                    }}
-                >
-                    {/* 말풍선 */}
-                    <div
-                        className={`absolute top-[60px] left-1/2 -translate-x-1/2 w-max max-w-xs
-                        bg-white rounded-xl shadow-lg p-4 z-30
-                        transition-all duration-300 ease-in-out
-                        ${isBubbleVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
-                    >
-                        <span className="text-gray-800 font-semibold text-lg">
-                            지금 {solvedProblemCount}개의 문제를 해결했어!
-                        </span>
-                        {/* 말풍선 꼬리 */}
-                        <div
-                            className="absolute left-1/2 -translate-x-1/2 top-full 
-                            w-0 h-0 border-[10px] border-solid
-                            border-t-white border-l-transparent
-                            border-r-transparent border-b-transparent"
-                        ></div>
-                    </div>
-
-                    {/* 배와 캐릭터 사진 */}
-                    <img
-                        src="/studentboard/ship.png"
-                        alt="배와 캐릭터"
-                        className="absolute bottom-0 left-0 w-full z-0 cursor-pointer"
-                        onClick={handleShipClick}
-                    />
-
-                    {/* 게임 시작 버튼 관련 */}
-                    <button
-                        onClick={isDailyComplete ? handleShowCompletionMessage : handleStartGame}
-                        disabled={isStartingGame}
-                        className={`absolute bottom-[30px] left-1/2 -translate-x-1/2 w-42 h-42 z-20
-                        transition-all duration-500 ease-out
-                        hover:scale-110 active:scale-100
-                        ${isStartingGame ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
-                    >
-                        {/* 완료 여부에 따라 이미지 변경 */}
-                        <img
-                            src={isDailyComplete ? "/studentboard/completebutton.png" : "/studentboard/playbutton.png"}
-                            alt={isDailyComplete ? "탐험 완료" : "시작하기"}
+                    {/* 오른쪽 상단 버튼 영역 */}
+                    <div className="absolute top-5 right-5 z-20 flex items-center space-x-4">
+                        {/* 음량 조절 슬라이더 */}
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            onChange={(e) => setVolume(parseFloat(e.target.value))}
+                            className="w-72 h-2 bg-white/50 rounded-full cursor-pointer appearance-none
+                                    [&::-webkit-slider-thumb]:appearance-none
+                                    [&::-webkit-slider-thumb]:h-5
+                                    [&::-webkit-slider-thumb]:w-5
+                                    [&::-webkit-slider-thumb]:rounded-full
+                                    [&::-webkit-slider-thumb]:bg-white
+                                    [&::-moz-range-thumb]:h-5
+                                    [&::-moz-range-thumb]:w-5
+                                    [&::-moz-range-thumb]:rounded-full
+                                    [&::-moz-range-thumb]:bg-white
+                                    [&::-moz-range-thumb]:border-none
+                                    [&::-moz-range-track]:h-2
+                                    [&::-moz-range-track]:bg-white/50
+                                    [&::-moz-range-track]:rounded-full"
+                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)' }} // Fallback for moz
                         />
-                    </button>
-                </div>
 
-                {/* 왼쪽 게임시작 관련 사이드 바 */}
-                <aside
-                    className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
-                            transition-transform duration-500 ease-in-out
-                            ${isMenuOpen ? 'translate-x-0' : '-translate-x-48'}`}
-                >
-                    {/* 메뉴 버튼 컨테이너 */}
-                    <div
-                        className="w-64 h-full flex flex-col justify-around items-center py-5"
-                    >
-                        {/* 버튼 관련 정보들 */}
-                        {woodenButtons.map((button) => (
-                            <button
-                                key={button.id}
-                                onClick={() => {
-                                    navigate(`/adventure/${button.typeId}`);
-                                }}
-                                className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white hover:scale-105 transition-transform"
-                                style={{
-                                    backgroundImage: `url('/studentboard/button.png')`,
-                                    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
-                                }}
-                            >
-                                {/* 버튼의 이름들이 저장되는 공간 */}
-                                {button.label}
-                            </button>
-                        ))}
+                        {/* 음소거 버튼 */}
+                        <button
+                            onClick={toggleMute}
+                            className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 hover:bg-gray-100"
+                        >
+                            {volume === 0 ? (
+                                <SpeakerXMarkIcon className="w-12 h-12 text-gray-700" />
+                            ) : (
+                                <SpeakerWaveIcon className="w-12 h-12 text-gray-700" />
+                            )}
+                        </button>
+
+                        {/* 나가기 버튼 */}
+                        <button
+                            onClick={() => navigate('/select-profile')}
+                            className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center hover:bg-gray-100 transition-all active:scale-95"
+                        >
+                            <ExitIcon className="w-12 h-12 text-gray-700" />
+                        </button>
                     </div>
 
-                    {/* 메뉴 토글 버튼 */}
+                    {/* 왼쪽 상단의 앵무새 상점 버튼 */}
                     <button
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="w-20 h-24 flex items-center justify-center z-10 transition-transform duration-300 hover:scale-105 active:scale-95"
+                        onClick={() => { navigate('/parrot-store') }}
+                        className="absolute top-5 left-5 w-20 h-20 z-20 hover:scale-105 active:scale-95 transition-transform"
                     >
                         <img
-                            src={isMenuOpen ? "/studentboard/closebutton.png" : "/studentboard/openbutton.png"}
-                            alt={isMenuOpen ? "닫기" : "열기"}
+                            src="/studentboard/parrot.png"
+                            alt="앵무새"
                             className="w-full h-full object-contain"
                         />
                     </button>
-                </aside>
 
-                {/* 오른쪽 현황판 */}
-                <div
-                    className="fixed top-1/2 -translate-y-1/2 right-0 h-[450px] z-50 me-10 w-72 bg-contain bg-no-repeat bg-center p-5"
-                    // 이미지 정보
-                    style={{ backgroundImage: `url('/studentboard/woodenstats.png')` }}
-                >
-                    <h2
-                        className="text-center text-3xl font-bold text-white pt-10"
-                        style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }}
-                    >
-                        현황
-                    </h2>
 
-                    {/* 양피지 배경 정보 */}
+                    {/* 중앙 아래쪽의 배(+캐릭터) 상호작용 관련 이미지 */}
                     <div
-                        className="w-full h-[calc(100%-170px)] mt-3 bg-contain bg-no-repeat bg-center p-4"
-                        style={{ backgroundImage: `url('/studentboard/statspaper.png')` }}
+                        className={`absolute bottom-[-20px] left-1/2 w-[450px] h-[525px]
+                                transition-transform duration-[2000ms] ease-in-out z-20`
+                        }
+                        style={{
+                            transform: isStartingGame
+                                ? 'translate(-50%, -110vh)'
+                                : 'translate(-50%, 0)'
+                        }}
                     >
-                        {/* 이번 주 탐험 완료 streak 관련 */}
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-800 mt-1 mb-1">이번 주 목표 탐험 완료</h3>
-                            <div className="flex justify-around items-center px-1">
-                                {weeklyStreak.map((isCompleted, index) => (
-                                    <img
-                                        key={`weeklyAttendance-${index}`}
-                                        // 값이 True 라면 파랑색 스탬프, 값이 False라면 회색 스탬프
-                                        // 배열의 True/False 값을 인식하여 판단한다.
-                                        src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
-                                        alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
-                                        className="w-9 h-9"
-                                    />
-                                ))}
-                            </div>
+                        {/* 말풍선 */}
+                        <div
+                            className={`absolute top-[60px] left-1/2 -translate-x-1/2 w-max max-w-xs
+                            bg-white rounded-xl shadow-lg p-4 z-30
+                            transition-all duration-300 ease-in-out
+                            ${isBubbleVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
+                        >
+                            <span className="text-gray-800 font-semibold text-lg">
+                                지금 {solvedProblemCount}개의 문제를 해결했어!
+                            </span>
+                            {/* 말풍선 꼬리 */}
+                            <div
+                                className="absolute left-1/2 -translate-x-1/2 top-full 
+                                w-0 h-0 border-[10px] border-solid
+                                border-t-white border-l-transparent
+                                border-r-transparent border-b-transparent"
+                            ></div>
                         </div>
 
-                        {/* 오늘의 탐험 문제 풀이 수 관련 */}
-                        <div className="mt-6">
-                            <h3 className="text-lg font-bold text-gray-800 mb-1">오늘의 탐험 목표</h3>
-                            <div className="grid grid-cols-5 gap-y-1 justify-items-center px-1">
-                                {dailyStamps.map((isCompleted, index) => (
-                                    <img
-                                        key={`today-${index}`}
-                                        // 풀이 문제 수 만큼 파랑 스탬프가 찍히게 한다. 위의 streak과 다르게 순서대로 찍힌다.
-                                        src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
-                                        alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
-                                        className="w-9 h-9"
-                                    />
-                                ))}
+                        {/* 배와 캐릭터 사진 */}
+                        <img
+                            src="/studentboard/ship.png"
+                            alt="배와 캐릭터"
+                            className="absolute bottom-0 left-0 w-full z-0 cursor-pointer"
+                            onClick={handleShipClick}
+                        />
+
+                        {/* 게임 시작 버튼 관련 */}
+                        <button
+                            onClick={isDailyComplete ? handleShowCompletionMessage : handleStartGame}
+                            disabled={isStartingGame}
+                            className={`absolute bottom-[30px] left-1/2 -translate-x-1/2 w-42 h-42 z-20
+                            transition-all duration-500 ease-out
+                            hover:scale-110 active:scale-100
+                            ${isStartingGame ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
+                        >
+                            {/* 완료 여부에 따라 이미지 변경 */}
+                            <img
+                                src={isDailyComplete ? "/studentboard/completebutton.png" : "/studentboard/playbutton.png"}
+                                alt={isDailyComplete ? "탐험 완료" : "시작하기"}
+                            />
+                        </button>
+                    </div>
+
+                    {/* 왼쪽 게임시작 관련 사이드 바 */}
+                    <aside
+                        className={`fixed top-1/2 -translate-y-1/2 left-0 flex items-center h-[450px] z-50
+                                transition-transform duration-500 ease-in-out
+                                ${isMenuOpen ? 'translate-x-0' : '-translate-x-48'}`}
+                    >
+                        {/* 메뉴 버튼 컨테이너 */}
+                        <div
+                            className="w-64 h-full flex flex-col justify-around items-center py-5"
+                        >
+                            {/* 버튼 관련 정보들 */}
+                            {woodenButtons.map((button) => (
+                                <button
+                                    key={button.id}
+                                    onClick={() => {
+                                        navigate(`/adventure/${button.typeId}`);
+                                    }}
+                                    className="w-52 h-20 bg-contain bg-no-repeat bg-center text-xl font-bold text-white hover:scale-105 transition-transform"
+                                    style={{
+                                        backgroundImage: `url('/studentboard/button.png')`,
+                                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)'
+                                    }}
+                                >
+                                    {/* 버튼의 이름들이 저장되는 공간 */}
+                                    {button.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* 메뉴 토글 버튼 */}
+                        <button
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            className="w-20 h-24 flex items-center justify-center z-10 transition-transform duration-300 hover:scale-105 active:scale-95"
+                        >
+                            <img
+                                src={isMenuOpen ? "/studentboard/closebutton.png" : "/studentboard/openbutton.png"}
+                                alt={isMenuOpen ? "닫기" : "열기"}
+                                className="w-full h-full object-contain"
+                            />
+                        </button>
+                    </aside>
+
+                    {/* 오른쪽 현황판 */}
+                    <div
+                        className="fixed top-1/2 -translate-y-1/2 right-0 h-[450px] z-50 me-10 w-72 bg-contain bg-no-repeat bg-center p-5"
+                        // 이미지 정보
+                        style={{ backgroundImage: `url('/studentboard/woodenstats.png')` }}
+                    >
+                        <h2
+                            className="text-center text-3xl font-bold text-white pt-10"
+                            style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.7)' }}
+                        >
+                            현황
+                        </h2>
+
+                        {/* 양피지 배경 정보 */}
+                        <div
+                            className="w-full h-[calc(100%-170px)] mt-3 bg-contain bg-no-repeat bg-center p-4"
+                            style={{ backgroundImage: `url('/studentboard/statspaper.png')` }}
+                        >
+                            {/* 이번 주 탐험 완료 streak 관련 */}
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800 mt-1 mb-1">이번 주 목표 탐험 완료</h3>
+                                <div className="flex justify-around items-center px-1">
+                                    {weeklyStreak.map((isCompleted, index) => (
+                                        <img
+                                            key={`weeklyAttendance-${index}`}
+                                            // 값이 True 라면 파랑색 스탬프, 값이 False라면 회색 스탬프
+                                            // 배열의 True/False 값을 인식하여 판단한다.
+                                            src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
+                                            alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
+                                            className="w-9 h-9"
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 오늘의 탐험 문제 풀이 수 관련 */}
+                            <div className="mt-6">
+                                <h3 className="text-lg font-bold text-gray-800 mb-1">오늘의 탐험 목표</h3>
+                                <div className="grid grid-cols-5 gap-y-1 justify-items-center px-1">
+                                    {dailyStamps.map((isCompleted, index) => (
+                                        <img
+                                            key={`today-${index}`}
+                                            // 풀이 문제 수 만큼 파랑 스탬프가 찍히게 한다. 위의 streak과 다르게 순서대로 찍힌다.
+                                            src={isCompleted ? "/studentboard/onstamp.png" : "/studentboard/offstamp.png"}
+                                            alt={isCompleted ? "완료 스탬프" : "미완료 스탬프"}
+                                            className="w-9 h-9"
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div
-                    className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                            bg-white/95 rounded-2xl shadow-xl p-8 max-w-sm w-11/12
-                            text-center text-gray-800 text-2xl font-semibold z-[60]
-                            transition-all duration-300 ease-in-out
-                            ${isCompletionMessageVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
-                >
-                    오늘 탐험은 완료했어요. <br />
-                    더 탐험하고 싶으면 <br />
-                    화면 왼쪽의 추가탐험을 해보는게 어때요?
+                    <div
+                        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+                                bg-white/95 rounded-2xl shadow-xl p-8 max-w-sm w-11/12
+                                text-center text-gray-800 text-2xl font-semibold z-[60]
+                                transition-all duration-300 ease-in-out
+                                ${isCompletionMessageVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}
+                    >
+                        오늘 탐험은 완료했어요. <br />
+                        더 탐험하고 싶으면 <br />
+                        화면 왼쪽의 추가탐험을 해보는게 어때요?
+                    </div>
                 </div>
-
+                )}
                 {/* 게임 시작 시 페이드 아웃 오버레이 */}
                 <div
                     className={`absolute inset-0 bg-sky-600 transition-opacity duration-1500 z-40

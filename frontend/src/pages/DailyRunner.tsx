@@ -1,22 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; // [수정] useRef 추가
 import { useParams, useNavigate } from 'react-router-dom';
 import { getDailyProblems, startAdventure, endAdventure } from '../api/adventureApi';
 import type { Problem, SessionState } from '../types/adventure';
 import { ProblemRunner } from '../components/adventure/ProblemRunner';
 import { AdventureLayout } from '../components/adventure/AdventureLayout';
 import { ErrorModal } from '../components/adventure/modals/ErrorModal';
+import LoadingScreen from '../components/LoadingScreen';
 
 /**
  * DailyRunner - 일일탐험 문제 관리 페이지
- *
- * @description
- * - URL에서 idx 추출
- * - Session Storage에서 studentId 추출
- * - 일일탐험 문제 10개 fetch (혼합 타입)
- * - 로딩/에러 처리
- * - ProblemRunner에 데이터 전달
- *
- * @route /daily/:idx?
  */
 export const DailyRunner = () => {
   const navigate = useNavigate();
@@ -28,7 +20,11 @@ export const DailyRunner = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentAdventureTypeId, setCurrentAdventureTypeId] = useState<1 | 2 | 3 | 4 | undefined>();
 
-  // 세션 관리 상태
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+
+  // [추가] BGM 관련 Ref
+  const bgmRef = useRef<HTMLAudioElement | null>(null);
+
   const [session, setSession] = useState<SessionState>({
     sessionId: null,
     studyType: null,
@@ -36,15 +32,35 @@ export const DailyRunner = () => {
     startedAt: null,
   });
   const [isStarting, setIsStarting] = useState(false);
-
-  // API 기반 완료 여부 (빈 배열이면 완료)
   const [isAllCompleted, setIsAllCompleted] = useState(false);
 
-  // 페이지 이탈 시 세션 종료
+  // [추가] BGM 재생 로직 (마운트 시 실행)
+  useEffect(() => {
+    // 오디오 객체 생성
+    bgmRef.current = new Audio('/adventurepage/wave.mp3');
+    bgmRef.current.loop = true; // 반복 재생
+    bgmRef.current.volume = 0.5; // 볼륨 설정 (필요시 조절)
+
+    // 재생 시도
+    const playPromise = bgmRef.current.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((error) => {
+        console.warn("BGM 자동 재생 실패 (사용자 인터랙션 필요):", error);
+      });
+    }
+
+    // 언마운트 시 정리 (Cleanup)
+    return () => {
+      if (bgmRef.current) {
+        bgmRef.current.pause();
+        bgmRef.current = null;
+      }
+    };
+  }, []);
+
+  // ... (페이지 이탈 감지 useEffect 기존과 동일) ...
   useEffect(() => {
     if (!studentId || !session.isActive) return;
-
-    // 컴포넌트 언마운트 시 세션 종료 (다른 페이지로 이동)
     const cleanup = async () => {
       try {
         console.log('🚪 페이지 이탈 감지, 세션 종료 중...');
@@ -53,24 +69,19 @@ export const DailyRunner = () => {
         console.error('❌ 페이지 이탈 시 세션 종료 실패:', err);
       }
     };
-
-    // 브라우저 닫기/새로고침 감지
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (session.isActive) {
-        // 세션이 활성화되어 있으면 동기적으로 종료 시도
         navigator.sendBeacon(`/api/student/${studentId}/adventure/end`);
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      cleanup(); // 언마운트 시 세션 종료
+      cleanup();
     };
   }, [session.isActive, studentId]);
 
-  // 1. studentId 검증 (Session Storage)
+  // 1. studentId 검증
   useEffect(() => {
     const storedStudentId = sessionStorage.getItem('studentId');
     const parsedStudentId = storedStudentId ? parseInt(storedStudentId, 10) : null;
@@ -80,23 +91,18 @@ export const DailyRunner = () => {
       setIsLoading(false);
       return;
     }
-
     setStudentId(parsedStudentId);
   }, []);
 
-  // 2. API 기반 완료 여부 확인 (studentId가 설정된 후 실행)
+  // 2. API 기반 완료 여부 확인
   useEffect(() => {
-    if (!studentId) {
-      return;
-    }
+    if (!studentId) return;
 
-    // API로 미완료 문제 조회
     const checkCompletion = async () => {
       try {
         console.log('🔍 API로 일일문제 완료 여부 확인 중...');
         const data = await getDailyProblems(studentId);
 
-        // 빈 배열이면 문제 데이터가 없는 것으로 판단
         if (!data.problems || data.problems.length === 0) {
           console.log('❌ 일일문제 데이터가 없음');
           setError('일일문제가 아직 준비되지 않았습니다.');
@@ -104,7 +110,6 @@ export const DailyRunner = () => {
           return;
         }
 
-        // 미완료 문제가 있으면 시작 대기 화면으로
         console.log(`📝 미완료 문제 ${data.problems.length}개 발견, 시작 대기 중`);
         setIsLoading(false);
       } catch (err) {
@@ -117,58 +122,55 @@ export const DailyRunner = () => {
     checkCompletion();
   }, [studentId]);
 
-  // 세션 시작 핸들러
   const handleStartAdventure = async () => {
     if (!studentId) {
       setError('유효하지 않은 학생 ID입니다.');
       return;
     }
+    
+    // [추가] 시작 버튼 클릭 시 BGM 즉시 정지
+    if (bgmRef.current) {
+      bgmRef.current.pause();
+    }
 
     try {
       setIsStarting(true);
       setError(null);
-
       console.log('🚀 일일탐험 세션 시작 중...');
 
-      // 1. 세션 생성
       const sessionId = await startAdventure(studentId, 'DAILY');
-
       setSession({
         sessionId,
         studyType: 'DAILY',
         isActive: true,
         startedAt: new Date().toISOString(),
       });
-
       console.log(`✅ 세션 시작됨 - Session ID: ${sessionId}`);
 
-      // 2. 문제 불러오기
       const data = await getDailyProblems(studentId);
-
       if (!data.problems || data.problems.length === 0) {
         setError('오늘의 문제가 없습니다.');
         return;
       }
-
       setProblems(data.problems);
       console.log(`✅ 일일문제 ${data.problems.length}개 로드 완료`);
 
     } catch (err) {
       console.error('❌ 세션 시작 실패:', err);
       setError('탐험을 시작하는데 실패했습니다. 다시 시도해주세요.');
+      
+      // [선택] 에러가 나서 시작을 못한 경우 다시 BGM을 틀고 싶다면 아래 주석 해제
+      // if (bgmRef.current) bgmRef.current.play();
     } finally {
       setIsStarting(false);
     }
   };
 
-  // 세션 종료 핸들러
   const handleEndAdventure = async () => {
     if (!studentId || !session.isActive) return;
-
     try {
       console.log('🏁 세션 종료 중...');
       const success = await endAdventure(studentId);
-
       if (success) {
         console.log('✅ 세션 종료 성공');
         setSession({
@@ -177,8 +179,6 @@ export const DailyRunner = () => {
           isActive: false,
           startedAt: null,
         });
-
-        // 완료 상태 설정 (완료 화면 표시)
         setIsAllCompleted(true);
       }
     } catch (err) {
@@ -186,7 +186,7 @@ export const DailyRunner = () => {
     }
   };
 
-  // 완료 화면 (모든 문제를 다 풀었을 때)
+  // ... (렌더링 로직 기존과 동일) ...
   if (isAllCompleted) {
     return (
       <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
@@ -222,77 +222,74 @@ export const DailyRunner = () => {
     );
   }
 
-  // 시작 대기 화면 (세션이 활성화되지 않았을 때) - 동영상 배경 추가
-  if (!session.isActive && !isLoading) {
+  if (session.isActive) {
     return (
-      <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
-        <video
-          autoPlay
-          loop
-          muted
-          className="absolute inset-0 w-full h-full object-cover z-0"
-          src="/adventurepage/todaysgamebackground.mp4"
-        >
-          Your browser does not support the video tag.
-        </video>
+      <AdventureLayout
+        adventureTypeId={currentAdventureTypeId}
+        onExitConfirm={handleEndAdventure}
+      >
+        {(isTutorialMode) => (
+          <ProblemRunner
+            problems={problems}
+            mode="daily"
+            studentId={studentId!}
+            onAdventureTypeChange={setCurrentAdventureTypeId}
+            isTutorialMode={isTutorialMode}
+            onComplete={handleEndAdventure}
+          />
+        )}
+      </AdventureLayout>
+    );
+  }
+
+  const showLoadingScreen = isLoading || !isVideoLoaded;
+
+  return (
+    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden">
+      {showLoadingScreen && <LoadingScreen />}
+
+      <video
+        autoPlay
+        loop
+        muted
+        className="absolute inset-0 w-full h-full object-cover z-0"
+        src="/adventurepage/todaysgamebackground.mp4"
+        onLoadedData={() => {
+            console.log("배경 비디오 로딩 완료");
+            setIsVideoLoaded(true);
+        }}
+      >
+        Your browser does not support the video tag.
+      </video>
+
+      {!isLoading && (
         <div
-          className="relative text-center p-25 rounded-2xl z-10"
-          style={{
+            className="relative text-center p-25 rounded-2xl z-10"
+            style={{
             backgroundImage: `url('/adventurepage/layoutmap.png')`,
             backgroundSize: 'contain',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            // Tailwind bg-white 대신 투명 배경으로
             backgroundColor: 'transparent'
-          }}
-        > {/* z-index를 줘서 동영상 위에 오도록 */}
-          <h1 className="text-4xl font-bold text-blue-900 mb-4">일일탐험</h1>
-          <h2 className="text-xl text-[#623d14] mb-8">오늘의 모험을 시작할 준비가 되셨나요?</h2>
-          <button
+            }}
+        >
+            <h1 className="text-4xl font-bold text-blue-900 mb-4">일일탐험</h1>
+            <h2 className="text-xl text-[#623d14] mb-8">오늘의 모험을 시작할 준비가 되셨나요?</h2>
+            <button
             onClick={handleStartAdventure}
             disabled={isStarting}
             className="px-8 py-4 bg-blue-500 text-white text-xl font-bold rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
+            >
             {isStarting ? '시작 중...' : '탐험 시작하기'}
-          </button>
+            </button>
         </div>
-
-        {/* 에러 모달 */}
-        <ErrorModal
-          isOpen={!!error}
-          errorMessage={error || ''}
-          onConfirm={() => navigate('/student')}
-        />
-      </div>
-    );
-  }
-
-  // 로딩 화면
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
-        <p className="text-xl text-gray-600">문제를 불러오는 중...</p>
-      </div>
-    );
-  }
-
-  // ProblemRunner에 데이터 전달 (AdventureLayout으로 감싸기)
-  return (
-    <AdventureLayout
-      adventureTypeId={currentAdventureTypeId}
-      onExitConfirm={handleEndAdventure}
-    >
-      {(isTutorialMode) => (
-        <ProblemRunner
-          problems={problems}
-          mode="daily"
-          studentId={studentId!}
-          onAdventureTypeChange={setCurrentAdventureTypeId}
-          isTutorialMode={isTutorialMode}
-          onComplete={handleEndAdventure}
-        />
       )}
-    </AdventureLayout>
+
+      <ErrorModal
+        isOpen={!!error}
+        errorMessage={error || ''}
+        onConfirm={() => navigate('/student')}
+      />
+    </div>
   );
 };
