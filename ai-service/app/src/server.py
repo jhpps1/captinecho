@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.src.core.config import settings
-# from app.src.api.scheduler.batch_scheduler import start_scheduler, stop_scheduler  # Spring 스케줄러로 이전
+from app.src.api.scheduler.batch_scheduler import start_scheduler, stop_scheduler
 from app.src.api import main_api
 from app.src.api.stt_api import router as stt_router  # develop 브랜치에서 추가된 STT API
 
@@ -44,18 +44,20 @@ async def lifespan(app: FastAPI):
     logger.info(f"[ENV] Environment: {settings.ENVIRONMENT}")
     logger.info(f"[AI] OpenAI Model: {settings.OPENAI_MODEL}")
     logger.info(f"[DB] Database: {settings.DB_NAME}@{settings.DB_HOST}:{settings.DB_PORT}")
-    logger.info("[SCHEDULER] Batch scheduling moved to Spring Boot service")
+    logger.info("[SCHEDULER] Starting batch scheduler...")
 
-    # 배치 스케줄러는 Spring Boot 서버에서 처리 (매주 일요일 23:00)
-    # Spring이 다음 API를 호출:
-    # - POST /api/curriculum/generate/{student_id}
-    # - POST /api/problems/generate/{student_id}
+    # 배치 스케줄러 시작 (매주 일요일 23:00 KST 자동 실행)
+    start_scheduler()
+    logger.info("[SCHEDULER] Batch scheduler started successfully")
+    logger.info("[SCHEDULER] Weekly report generation: Every Sunday 23:00 KST")
 
     yield
 
     # Shutdown
     logger.info("[SHUTDOWN] Captain Echo AI Service stopping...")
-    # Batch scheduler는 Spring Boot에서 관리
+    logger.info("[SCHEDULER] Stopping batch scheduler...")
+    stop_scheduler()
+    logger.info("[SCHEDULER] Batch scheduler stopped")
 
 # ============================================
 # FastAPI 앱 생성
