@@ -223,12 +223,21 @@ export default function ProtectorDashboard() {
 
         // 이번 주 데이터 (선택적 - 비교 차트용)
         if (currentWeekJamoStatsData) {
+          // weekly_jamo_stat에서 가져온 데이터 사용
           const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
             count: stat.count
           }));
           setCurrentWeekJamoStats(mappedCurrentWeekStats);
+        } else if (allJamoStatsData) {
+          // 신규 학생: jamo_stat에서 가져온 전체 데이터를 이번 주 데이터로 사용
+          const mappedAllStats = allJamoStatsData.accuracyRates.map(stat => ({
+            jamo: stat.jamo,
+            accuracy: stat.accuracyRate,
+            count: stat.count
+          }));
+          setCurrentWeekJamoStats(mappedAllStats);
         } else {
           setCurrentWeekJamoStats([]);
         }
