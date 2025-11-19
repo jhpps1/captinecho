@@ -203,12 +203,6 @@ export default function AIAgentLogPage() {
                             : 'bg-neutral-50 border-l-4 border-neutral-400'
                         }`}
                       >
-                        {log.timestamp && (
-                          <div className="text-xs text-neutral-500 mb-2 font-medium">
-                            {log.timestamp}
-                          </div>
-                        )}
-
                         <div className="mb-2">
                           <span className="font-bold text-sm text-neutral-800">
                             {log.role}
