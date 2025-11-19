@@ -4,7 +4,9 @@ import {
   TrendingDown,
   ChevronDown,
   ChevronUp,
-  Info, // 1. Info 아이콘 추가
+  Info,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import {
   BarChart,
@@ -28,12 +30,40 @@ interface WeaknessAlertProps {
   allJamoData: JamoData[];
   currentWeekData?: JamoData[];  // 이번 주 데이터
   lastWeekData?: JamoData[];     // 저번 주 데이터
+  error?: string | null;
+  onRetry?: () => void;
 }
 
-export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekData }: WeaknessAlertProps) {
+export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekData, error, onRetry }: WeaknessAlertProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // 2. [수정] 빈 데이터 상태(Empty State)를 먼저 처리
+  // 에러 상태 처리
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl p-6 border border-neutral-200">
+        <div className="flex flex-col items-center justify-center py-12 bg-red-50 rounded-lg border border-red-200">
+          <AlertCircle size={48} className="text-red-400 mb-4" />
+          <p className="text-red-700 font-semibold font-pretendard mb-2">
+            데이터를 불러올 수 없습니다
+          </p>
+          <p className="text-sm text-red-600 font-pretendard mb-4">
+            {error}
+          </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold font-pretendard hover:bg-red-700 transition-colors"
+            >
+              <RefreshCw size={16} />
+              다시 시도
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 빈 데이터 상태(Empty State)를 먼저 처리
   if (!allJamoData || allJamoData.length === 0) {
     return (
       <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">

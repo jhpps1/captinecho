@@ -1,4 +1,4 @@
-import { TrendingUp, ArrowUp, ArrowDown, Minus, FileQuestion } from 'lucide-react'; // 💡 FileQuestion 아이콘 추가
+import { TrendingUp, ArrowUp, ArrowDown, Minus, Info, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface ImprovementData {
   jamo: string;
@@ -9,20 +9,28 @@ interface ImprovementData {
 
 interface ImprovementCardProps {
   overallImprovement: {
-    previous: number;
-    current: number;
+    previous: number | null;
+    current: number | null;
   };
   jamoImprovements: ImprovementData[];
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export default function ImprovementCard({
   overallImprovement,
   jamoImprovements,
+  error,
+  onRetry,
 }: ImprovementCardProps) {
-  const overallChange = overallImprovement.current - overallImprovement.previous;
-
   // 데이터 존재 여부 확인
-  const hasData = jamoImprovements && jamoImprovements.length > 0;
+  const hasOverallData = overallImprovement.previous !== null && overallImprovement.current !== null;
+  const hasJamoData = jamoImprovements && jamoImprovements.length > 0;
+  const hasData = hasOverallData && hasJamoData;
+
+  const overallChange = hasOverallData
+    ? overallImprovement.current! - overallImprovement.previous!
+    : 0;
 
   // 가장 많이 개선된 자모 (상위 2개)
   const topImproved = [...jamoImprovements]
@@ -64,18 +72,44 @@ export default function ImprovementCard({
         </div>
       </div>
 
-      {/* 💡 데이터가 없을 경우 (Empty State) */}
-      {!hasData ? (
-        <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-80">
-          <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-            <FileQuestion size={32} className="text-neutral-400" />
+      {/* Error State */}
+      {error ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-12 bg-red-50 rounded-lg border border-red-200">
+          <AlertCircle size={48} className="text-red-400 mb-4" />
+          <p className="text-red-700 font-semibold font-pretendard mb-2">
+            데이터를 불러올 수 없습니다
+          </p>
+          <p className="text-sm text-red-600 font-pretendard mb-4">
+            {error}
+          </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold font-pretendard hover:bg-red-700 transition-colors"
+            >
+              <RefreshCw size={16} />
+              다시 시도
+            </button>
+          )}
+        </div>
+      ) : !hasData ? (
+        /* 💡 데이터가 없을 경우 (Empty State) - WeaknessAlert 스타일 */
+        <div className="flex-1 flex items-center">
+          <div className="w-full bg-neutral-50 rounded-xl p-4 border border-neutral-200">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-neutral-200 flex items-center justify-center flex-shrink-0">
+                <Info size={24} className="text-neutral-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-neutral-700 font-pretendard">
+                  아직 학습 데이터가 부족합니다
+                </h3>
+                <p className="text-sm text-neutral-500 font-pretendard mt-1">
+                  최소 2주간 학습해야 개선도를 확인할 수 있어요.
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-neutral-600 font-semibold font-pretendard mb-1">
-            아직 학습 데이터가 없습니다
-          </p>
-          <p className="text-xs text-neutral-400 font-pretendard text-center max-w-[200px]">
-            꾸준히 학습하면 분석 데이터를<br />확인할 수 있어요!
-          </p>
         </div>
       ) : (
         /* 💡 데이터가 있을 경우 (기존 로직) */

@@ -94,10 +94,16 @@ export default function ProtectorDashboard() {
   const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
   const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
-  const [overallAccuracy, setOverallAccuracy] = useState({ previous: 0, current: 0 });
+  const [overallAccuracy, setOverallAccuracy] = useState<{ previous: number | null; current: number | null }>({ previous: null, current: null });
   const [jamoStats, setJamoStats] = useState<JamoStatData[]>([]);
   const [currentWeekJamoStats, setCurrentWeekJamoStats] = useState<JamoStatData[]>([]);  // 이번 주 데이터
   const [lastWeekJamoStats, setLastWeekJamoStats] = useState<JamoStatData[]>([]);      // 저번 주 데이터
+
+  // 개별 에러 상태
+  const [learningTimeError, setLearningTimeError] = useState<string | null>(null);
+  const [jamoStatsError, setJamoStatsError] = useState<string | null>(null);
+  const [improvementError, setImprovementError] = useState<string | null>(null);
+  const [curriculumError, setCurriculumError] = useState<string | null>(null);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
@@ -140,98 +146,123 @@ export default function ProtectorDashboard() {
 
     const fetchDashboardData = async () => {
       setIsLoading(true);
+      // 에러 상태 초기화
+      setLearningTimeError(null);
+      setJamoStatsError(null);
+      setImprovementError(null);
+      setCurriculumError(null);
+
       try {
-        // API 병렬 호출
-        const [
-          curriculumData,
-          learningTimeData,
-          dailyGoalData,
-          dailyCompletedData,
-          weeklyPercentData,
-          dailyStreakData,
-          // dailyAccuracyData,    // ❌ 404 Error - 백엔드 API 미구현
-          // weeklyAccuracyData,   // ❌ 404 Error - 백엔드 API 미구현
-          bestJamosData,
-          worstJamosData,
-          overallAccuracyData,
-          allJamoStatsData,
-          currentWeekJamoStatsData,  // 이번 주 자모 통계
-          lastWeekJamoStatsData,     // 저번 주 자모 통계
-        ] = await Promise.all([
-          getCurriculum(selectedStudentId),
-          getLearningTime(selectedStudentId),
-          getDailyGoalCount(selectedStudentId),
-          getDailyCompletedCount(selectedStudentId),
-          getWeeklyGoalPercent(selectedStudentId),
-          getDailyStreak(selectedStudentId),
-          // getDailyAccuracy(),   // ❌ 404 Error - 임시 주석 처리
-          // getWeeklyAccuracy(),  // ❌ 404 Error - 임시 주석 처리
-          getBestJamos(),
-          getWorstJamos(),
-          getOverallAccuracy(),
-          getAllJamoStats(),
-          getCurrentJamoStats(),               // 이번 주 데이터 (jamo_stat)
-          getWeeklyJamoStat(selectedStudentId), // 저번 주 데이터 (weekly_jamo_stat)
+        // API 병렬 호출 - Promise.allSettled 사용 (일부 실패해도 계속 진행)
+        const results = await Promise.allSettled([
+          getCurriculum(selectedStudentId),          // 0
+          getLearningTime(selectedStudentId),        // 1
+          getDailyGoalCount(selectedStudentId),      // 2
+          getDailyCompletedCount(selectedStudentId), // 3
+          getWeeklyGoalPercent(selectedStudentId),   // 4
+          getDailyStreak(selectedStudentId),         // 5
+          getBestJamos(),                            // 6
+          getWorstJamos(),                           // 7
+          getOverallAccuracy(),                      // 8
+          getAllJamoStats(),                         // 9
+          getCurrentJamoStats(),                     // 10
+          getWeeklyJamoStat(selectedStudentId),      // 11
         ]);
 
-        // 데이터 설정
-        setCurriculum(curriculumData.curriculam || '커리큘럼 데이터가 없습니다.');
-        setLearningTime(learningTimeData);
-        setDailyGoalCount(dailyGoalData.todayGoalCount);
-        setDailyCompletedCount(dailyCompletedData.completedCount);
-        setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
-        setDailyStreak(dailyStreakData);
-        // ✅ 404 Error 방지를 위한 기본값 설정 (0 = 데이터 없음)
+        // 각 결과 추출
+        const curriculumData = results[0].status === 'fulfilled' ? results[0].value : null;
+        const learningTimeData = results[1].status === 'fulfilled' ? results[1].value : null;
+        const dailyGoalData = results[2].status === 'fulfilled' ? results[2].value : null;
+        const dailyCompletedData = results[3].status === 'fulfilled' ? results[3].value : null;
+        const weeklyPercentData = results[4].status === 'fulfilled' ? results[4].value : null;
+        const dailyStreakData = results[5].status === 'fulfilled' ? results[5].value : null;
+        const bestJamosData = results[6].status === 'fulfilled' ? results[6].value : null;
+        const worstJamosData = results[7].status === 'fulfilled' ? results[7].value : null;
+        const overallAccuracyData = results[8].status === 'fulfilled' ? results[8].value : null;
+        const allJamoStatsData = results[9].status === 'fulfilled' ? results[9].value : null;
+        const currentWeekJamoStatsData = results[10].status === 'fulfilled' ? results[10].value : null;
+        const lastWeekJamoStatsData = results[11].status === 'fulfilled' ? results[11].value : null;
+
+        // Curriculum 데이터 설정
+        if (curriculumData) {
+          setCurriculum(curriculumData.curriculam || '커리큘럼 데이터가 없습니다.');
+          setCurriculumError(null);
+        } else {
+          setCurriculum('데이터를 불러올 수 없습니다.');
+          setCurriculumError(results[0].status === 'rejected' ? results[0].reason?.message || '커리큘럼 로드 실패' : null);
+        }
+
+        // Learning Time 관련 데이터 설정
+        if (learningTimeData && dailyStreakData) {
+          setLearningTime(learningTimeData);
+          setDailyStreak(dailyStreakData);
+          setLearningTimeError(null);
+        } else {
+          setLearningTime(null);
+          setDailyStreak(null);
+          setLearningTimeError('학습 시간 데이터 로드 실패');
+        }
+
+        // Daily Goals 데이터 설정
+        if (dailyGoalData) setDailyGoalCount(dailyGoalData.todayGoalCount);
+        if (dailyCompletedData) setDailyCompletedCount(dailyCompletedData.completedCount);
+        if (weeklyPercentData) setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
+
+        // 기본값 설정 (정확도는 백엔드 미구현)
         setDailyAccuracy(0);
         setWeeklyAccuracy(0);
 
-        // 💡 추가: 자모 통계 데이터 설정
-        // WeaknessAlert가 기대하는 속성명(accuracy, count)과 API 응답(accuracyRate, count)이 살짝 다를 수 있으므로 매핑
-        // 하지만 WeaknessAlert의 JamoData 인터페이스를 보니 `accuracy`를 쓰고 있음.
-        // API는 `accuracyRate`를 줌. 따라서 매핑 필요.
-        const mappedJamoStats = allJamoStatsData.accuracyRates.map(stat => ({
-          jamo: stat.jamo,
-          accuracy: stat.accuracyRate, // 매핑: accuracyRate -> accuracy
-          count: stat.count
-        }));
-        setJamoStats(allJamoStatsData.accuracyRates);
+        // 자모 통계 데이터 설정
+        if (allJamoStatsData && currentWeekJamoStatsData && lastWeekJamoStatsData) {
+          setJamoStats(allJamoStatsData.accuracyRates);
 
-        // 💡 추가: 이번 주 vs 저번 주 자모 통계 데이터 설정
-        const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
-          jamo: stat.jamo,
-          accuracy: stat.accuracyRate,
-          count: stat.count
-        }));
-        setCurrentWeekJamoStats(mappedCurrentWeekStats);
+          const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
+            jamo: stat.jamo,
+            accuracy: stat.accuracyRate,
+            count: stat.count
+          }));
+          setCurrentWeekJamoStats(mappedCurrentWeekStats);
 
-        const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
-          jamo: stat.jamo,
-          accuracy: stat.accuracyRate,
-          count: stat.count
-        }));
-        setLastWeekJamoStats(mappedLastWeekStats);
+          const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
+            jamo: stat.jamo,
+            accuracy: stat.accuracyRate,
+            count: stat.count
+          }));
+          setLastWeekJamoStats(mappedLastWeekStats);
+          setJamoStatsError(null);
+        } else {
+          setJamoStats([]);
+          setCurrentWeekJamoStats([]);
+          setLastWeekJamoStats([]);
+          setJamoStatsError('자모 통계 데이터 로드 실패');
+        }
 
-        // 💡 추가: 전체 정확도 데이터 설정 (null 방어 처리)
-        setOverallAccuracy({
-          previous: overallAccuracyData.twoWeeksAgo ?? 0,  // null일 경우 0으로 설정
-          current: overallAccuracyData.lastWeek ?? 0,      // null일 경우 0으로 설정
-        });
+        // 개선도 데이터 설정
+        if (overallAccuracyData && bestJamosData && worstJamosData) {
+          setOverallAccuracy({
+            previous: overallAccuracyData.twoWeeksAgo,
+            current: overallAccuracyData.lastWeek,
+          });
 
-        // 💡 추가: API 응답을 ImprovementCard가 요구하는 형식으로 매핑 (null 방어 처리)
-        const mapJamoData = (apiData: JamoImprovementApiData): JamoImprovementData => ({
-          jamo: apiData.jamo,
-          previousAccuracy: apiData.twoWeeksAgo ?? 0,  // null일 경우 0으로 설정
-          currentAccuracy: apiData.lastWeek ?? 0,      // null일 경우 0으로 설정
-          improvement: apiData.improveRate ?? 0,        // null일 경우 0으로 설정
-        });
+          const mapJamoData = (apiData: JamoImprovementApiData): JamoImprovementData => ({
+            jamo: apiData.jamo,
+            previousAccuracy: apiData.twoWeeksAgo ?? 0,
+            currentAccuracy: apiData.lastWeek ?? 0,
+            improvement: apiData.improveRate ?? 0,
+          });
 
-        // ImprovementCard가 이 배열을 받아 알아서 정렬하여 '개선'과 '부진'을 표시
-        const bestJamos = bestJamosData.bestJamos.map(mapJamoData);
-        const worstJamos = worstJamosData.worstJamos.map(mapJamoData);
-        setJamoImprovements([...bestJamos, ...worstJamos]);
+          const bestJamos = bestJamosData.bestJamos.map(mapJamoData);
+          const worstJamos = worstJamosData.worstJamos.map(mapJamoData);
+          setJamoImprovements([...bestJamos, ...worstJamos]);
+          setImprovementError(null);
+        } else {
+          setOverallAccuracy({ previous: null, current: null });
+          setJamoImprovements([]);
+          setImprovementError('개선도 데이터 로드 실패');
+        }
 
         // Streak 계산 및 업데이트
-        const streak = dailyStreakData.currentStreak;
+        const streak = dailyStreakData?.currentStreak || 0;
 
         setStudents((prev) =>
           prev.map((student) =>
@@ -244,15 +275,11 @@ export default function ProtectorDashboard() {
         console.log('✅ 대시보드 데이터 로드 완료');
       } catch (error) {
         console.error('❌ 대시보드 데이터 로드 실패:', error);
-        // 에러 발생 시 기본값 설정
-        setCurriculum('데이터를 불러올 수 없습니다.');
-        setLearningTime(null);
-        setDailyStreak(null);
-        setDailyAccuracy(0);
-        setWeeklyAccuracy(0);
-        setJamoImprovements([]);
-        setOverallAccuracy({ previous: 0, current: 0 });
-        setJamoStats([]);
+        // 전체 실패 시 모든 에러 상태 설정
+        setCurriculumError('커리큘럼 로드 실패');
+        setLearningTimeError('학습 시간 로드 실패');
+        setJamoStatsError('자모 통계 로드 실패');
+        setImprovementError('개선도 로드 실패');
       } finally {
         setIsLoading(false);
       }
@@ -260,6 +287,100 @@ export default function ProtectorDashboard() {
 
     fetchDashboardData();
   }, [selectedStudentId]);
+
+  // 재시도 함수들
+  const handleRetryLearningTime = async () => {
+    if (!selectedStudentId) return;
+    setLearningTimeError(null);
+    try {
+      const [learningTimeData, dailyStreakData] = await Promise.all([
+        getLearningTime(selectedStudentId),
+        getDailyStreak(selectedStudentId),
+      ]);
+      setLearningTime(learningTimeData);
+      setDailyStreak(dailyStreakData);
+
+      // Streak 업데이트
+      const streak = dailyStreakData.currentStreak;
+      setStudents((prev) =>
+        prev.map((student) =>
+          student.id === selectedStudentId ? { ...student, streak } : student
+        )
+      );
+    } catch (error) {
+      setLearningTimeError('학습 시간 데이터 로드 실패');
+    }
+  };
+
+  const handleRetryJamoStats = async () => {
+    if (!selectedStudentId) return;
+    setJamoStatsError(null);
+    try {
+      const [allJamoStatsData, currentWeekJamoStatsData, lastWeekJamoStatsData] = await Promise.all([
+        getAllJamoStats(),
+        getCurrentJamoStats(),
+        getWeeklyJamoStat(selectedStudentId),
+      ]);
+
+      setJamoStats(allJamoStatsData.accuracyRates);
+
+      const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
+        jamo: stat.jamo,
+        accuracy: stat.accuracyRate,
+        count: stat.count
+      }));
+      setCurrentWeekJamoStats(mappedCurrentWeekStats);
+
+      const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
+        jamo: stat.jamo,
+        accuracy: stat.accuracyRate,
+        count: stat.count
+      }));
+      setLastWeekJamoStats(mappedLastWeekStats);
+    } catch (error) {
+      setJamoStatsError('자모 통계 데이터 로드 실패');
+    }
+  };
+
+  const handleRetryImprovement = async () => {
+    setImprovementError(null);
+    try {
+      const [bestJamosData, worstJamosData, overallAccuracyData] = await Promise.all([
+        getBestJamos(),
+        getWorstJamos(),
+        getOverallAccuracy(),
+      ]);
+
+      setOverallAccuracy({
+        previous: overallAccuracyData.twoWeeksAgo,
+        current: overallAccuracyData.lastWeek,
+      });
+
+      const mapJamoData = (apiData: JamoImprovementApiData): JamoImprovementData => ({
+        jamo: apiData.jamo,
+        previousAccuracy: apiData.twoWeeksAgo ?? 0,
+        currentAccuracy: apiData.lastWeek ?? 0,
+        improvement: apiData.improveRate ?? 0,
+      });
+
+      const bestJamos = bestJamosData.bestJamos.map(mapJamoData);
+      const worstJamos = worstJamosData.worstJamos.map(mapJamoData);
+      setJamoImprovements([...bestJamos, ...worstJamos]);
+    } catch (error) {
+      setImprovementError('개선도 데이터 로드 실패');
+    }
+  };
+
+  const handleRetryCurriculum = async () => {
+    if (!selectedStudentId) return;
+    setCurriculumError(null);
+    try {
+      const curriculumData = await getCurriculum(selectedStudentId);
+      setCurriculum(curriculumData.curriculam || '커리큘럼 데이터가 없습니다.');
+    } catch (error) {
+      setCurriculumError('커리큘럼 로드 실패');
+    }
+  };
 
   // 학습 시간 데이터를 차트 형식으로 변환
   const weeklyTimeData = learningTime
@@ -361,7 +482,11 @@ export default function ProtectorDashboard() {
                 {/* Left Column - 2 stacked cards */}
                 <div className="lg:col-span-2 space-y-6">
                   {/* Weekly Time Chart */}
-                  <WeeklyTimeChart data={weeklyTimeData} />
+                  <WeeklyTimeChart
+                    data={weeklyTimeData}
+                    error={learningTimeError}
+                    onRetry={handleRetryLearningTime}
+                  />
 
                   {/* Weakness Alert with Expandable Chart */}
                   <WeaknessAlert
@@ -372,6 +497,8 @@ export default function ProtectorDashboard() {
                     }))}
                     currentWeekData={currentWeekJamoStats}
                     lastWeekData={lastWeekJamoStats}
+                    error={jamoStatsError}
+                    onRetry={handleRetryJamoStats}
                   />
                 </div>
 
@@ -380,6 +507,8 @@ export default function ProtectorDashboard() {
                   <ImprovementCard
                     overallImprovement={overallAccuracy}
                     jamoImprovements={jamoImprovements}
+                    error={improvementError}
+                    onRetry={handleRetryImprovement}
                   />
                 </div>
               </div>
@@ -390,6 +519,8 @@ export default function ProtectorDashboard() {
                 currentGoal={parentGoal}
                 onGoalChange={handleGoalChange}
                 onViewAgentLog={handleViewAgentLog}
+                error={curriculumError}
+                onRetry={handleRetryCurriculum}
               />
             </>
           ) : (
