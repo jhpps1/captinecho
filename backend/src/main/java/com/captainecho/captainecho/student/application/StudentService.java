@@ -156,7 +156,7 @@ public class StudentService {
 
         studentInterestRepository.saveAll(studentInterests);
 
-        // 8. phoneme_feature 테이블의 모든 자모로 JamoStat 초기화
+        // 8. phoneme_feature 테이블의 모든 자모로 JamoStat 초기화 (40개)
         List<PhonemeFeature> allPhonemes = phonemeFeatureRepository.findAll();
         List<JamoStat> initialJamoStats = allPhonemes.stream()
                 .map(phoneme -> JamoStat.builder()
@@ -165,7 +165,7 @@ public class StudentService {
                         .totalAttempts((short) 0)
                         .failCount((short) 0)
                         .weeklyFailRate(0.0)
-                        .weeklyAccuracyRate(100.0)
+                        .weeklyAccuracyRate(0.0)  // 초기값 0.0 (학습 전)
                         .updatedAt(java.time.LocalDateTime.now())
                         .build())
                 .toList();
