@@ -479,7 +479,10 @@ export default function ProtectorDashboard() {
   // 커리큘럼 객체 생성
   const curriculumObject = {
     title: curriculum.split('\n')[0] || '이번 주 학습 계획',
-    description: curriculum,
+    description: curriculum.split('\n')
+      .filter((line) => !line.trim().startsWith('-'))
+      .join('\n')
+      .trim(),
     goals: curriculum.split('\n').filter((line) => line.trim().startsWith('-')),
     createdAt: new Date().toISOString(),
   };
