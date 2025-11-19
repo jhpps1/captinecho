@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from sqlalchemy import text
 from app.src.core.config import settings
 from app.src.api.scheduler.batch_scheduler import start_scheduler, stop_scheduler
 from app.src.api import main_api
@@ -132,7 +133,7 @@ async def health_check():
         # DB 연결 확인 (선택사항)
         from app.src.core.database import SessionLocal
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         db_status = "healthy"
     except Exception as e:
