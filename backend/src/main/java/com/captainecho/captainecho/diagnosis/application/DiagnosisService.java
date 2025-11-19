@@ -22,7 +22,7 @@ import com.captainecho.captainecho.exception.code.StudentErrorCode;
 import com.captainecho.captainecho.student.domain.Student;
 import com.captainecho.captainecho.student.persistence.StudentRepository;
 import com.captainecho.captainecho.ai.application.AiService;
-// import com.captainecho.captainecho.common.storage.S3FileStorageService;
+import com.captainecho.captainecho.common.storage.S3FileStorageService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +45,7 @@ public class DiagnosisService {
     private final InitialDiagnosisProblemRepository initialDiagnosisProblemRepository;
     private final InitialDiagnosisResultRepository initialDiagnosisResultRepository;
     private final AiService aiService;
-    // private final S3FileStorageService s3FileStorageService;
+    private final S3FileStorageService s3FileStorageService;
 
     @Transactional
     public StartInitialDiagnosisResult startInitialDiagnosis(StartInitialDiagnosisCommand command) {
@@ -267,21 +267,20 @@ public class DiagnosisService {
         if (url == null || url.isEmpty()) {
             return null;
         }
-        return url;
 
-        // // 이미 HTTPS/HTTP URL이면 그대로 반환
-        // if (url.startsWith("https://") || url.startsWith("http://")) {
-        //     return url;
-        // }
+        // 이미 HTTPS/HTTP URL이면 그대로 반환
+        if (url.startsWith("https://") || url.startsWith("http://")) {
+            return url;
+        }
 
-        // // s3:// 프로토콜 제거하고 S3 Key 추출
-        // if (url.startsWith("s3://")) {
-        //     // s3://bucket-name/path/to/file.jpg → path/to/file.jpg
-        //     String s3Key = url.replaceFirst("^s3://[^/]+/", "");
-        //     return s3FileStorageService.getFileUrl(s3Key);
-        // }
+        // s3:// 프로토콜 제거하고 S3 Key 추출
+        if (url.startsWith("s3://")) {
+            // s3://bucket-name/path/to/file.jpg → path/to/file.jpg
+            String s3Key = url.replaceFirst("^s3://[^/]+/", "");
+            return s3FileStorageService.getFileUrl(s3Key);
+        }
 
-        // // S3 Key라고 가정하고 HTTPS URL 생성
-        // return s3FileStorageService.getFileUrl(url);
+        // S3 Key라고 가정하고 HTTPS URL 생성
+        return s3FileStorageService.getFileUrl(url);
     }
 }
