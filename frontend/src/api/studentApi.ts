@@ -170,6 +170,17 @@ export const getAllJamoStats = async (): Promise<AllJamoStatsResponse> => {
 };
 
 /**
+ * 이번 주 학습 분석 조회 (jamo_stat 실시간 데이터)
+ * GET /api/student/{student-id}/dashboard/current/jamo/stat
+ */
+export const getCurrentJamoStats = async (): Promise<AllJamoStatsResponse> => {
+  const studentId = getStudentId();
+  const url = `/student/${studentId}/dashboard/current/jamo/stat`;
+  const response = await axiosInstance.get<AllJamoStatsResponse>(url);
+  return response.data;
+};
+
+/**
  * 학생 PIN 번호 수정
  * PATCH /api/student/{student-id}/pin
  */

@@ -182,6 +182,23 @@ def generate_fallback_problems(adventure_type_id: int, problem_count: int) -> li
 
     return result
 
+
+def split_korean_phonemes(text):
+    phonemes_list = []
+    for syllable in text:
+        if not ('가' <= syllable <= '힣'):
+            continue
+        # 유니코드 계산
+        code = ord(syllable) - 0xAC00
+        cho = CHOSEONG_LIST[code // 588]
+        jung = JUNGSEONG_LIST[(code % 588) // 28]
+        jong = JONGSEONG_LIST[code % 28]
+        phonemes_list.extend([cho, jung])
+        if jong:
+            phonemes_list.append(jong)
+    return phonemes_list
+
+
 def process_day_problem_items(session, student_id, llm_result):
     def is_likely_placeholder(data):
         if not data:
@@ -211,6 +228,9 @@ def process_day_problem_items(session, student_id, llm_result):
         generated_sound_path = ""
         blank_position = None
         problem_text = item.get("problem_text")
+        item["problem_phonemes"] = split_korean_phonemes(problem_text)
+
+
 
         if adventure_type in [1, 2]:
             problem_text = item.get("problem_text", "")
@@ -236,8 +256,10 @@ def process_day_problem_items(session, student_id, llm_result):
                 item["sound_url"] = generated_sound_path
                 print(f"✅ TTS 생성 성공! sound_url: {generated_sound_path}")
 
+        # item["sound_url"] = "problems/default_tts.mp3"  # 또는 그냥 빈 문자열 "" 임시!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         if item.get("adventure_type_id") == 4:
-            item["correct_answer"] = ""
+            item["correct_answer"] = item.get("problem_text", "")
             if item.get("choices") is None or len(item.get("choices", [])) > 0:
                 item["choices"] = []
             item["image_url"] = ""
@@ -263,6 +285,11 @@ def process_day_problem_items(session, student_id, llm_result):
             else:
                 print(f"❌ Gemini 이미지 생성 실패! 기본 URL 사용.")
                 item["image_url"] = ""
+
+        # item["image_url"] = ""  # 임시!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
 
         if isinstance(item.get("choices"), str):
             item["choices"] = [x.strip() for x in item["choices"].split(',') if x.strip()]
@@ -319,6 +346,7 @@ def process_day_problem_items(session, student_id, llm_result):
 
 
 
+
 def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, assigned_date, student_id, student_level, curriculum_text, student_interests, student_weak_phonemes):
     type_count_lines = '\n'.join([
         f"- adventure_type_id={item['type_id']}: {item['count']}개 (순서대로)" for item in curriculum_for_day
@@ -336,10 +364,12 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 
 
 - 문제 텍스트(명사)는 반드시 학생 관심사({interest_word_str})와 관련된 명사만 사용
-- 모든 문제 중 최소 60% 이상에서 약점 자모({weak_phoneme_str}) 반드시 포함!
+- 모든 문제 중 최소 70% 이상에서 약점 자모({weak_phoneme_str}) 반드시 포함!
 - 나머지 문제도 해당 관심사 내에서 단어 선정, 제작 시 약점 자모 포함 우선
 - choices에는 blank_phoneme(약점 자모)와 유사한 자모를 포함
 - 관심사 명사 중 {weak_phoneme_str}가 포함된 단어 우선
+- 10개 문제 중 동일 관심사 단어가 3번 이상 연속하지 않도록 만드시오.
+
 
 == [생성 개수/순서] ==
 {type_count_lines}
@@ -360,7 +390,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 - problem_phonemes: ["[translate:ㄱ]", "[translate:ㅏ]"]
 - blank_phoneme: problem_phonemes 중 하나
 - correct_answer: blank_phoneme와 같음
-- choices: blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치(순서 랜덤)
+- choices: blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한, 실제 한글 자모 2가지를 함께 배치(순서 랜덤)
 - blank_position: 반드시 "INITIAL", "MEDIAL", "FINAL" (대문자만)
 - 기타 필드는 "" 또는 []
 
@@ -370,17 +400,17 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 - problem_phonemes: 해당 자모 배열
 - blank_phoneme: problem_phonemes 중 하나
 - correct_answer: blank_phoneme와 같음
-- choices:  blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한 자모 2가지를 함께 배치(순서 랜덤)
+- choices:  blank_position에 해당되는 자모 중 하나를 선택해 그와 유사한, 실제 한글 자모 2가지를 함께 배치(순서 랜덤)
 - image_url: 연관 그림 경로 또는 ""
 - blank_position: "INITIAL", "MEDIAL", "FINAL" (대문자만)
 
 
 [3] adventure_type_id=3 (이미지+단어)
-- problem_text: 구체 명사 (예: [translate:가방])
+- problem_text: 구체 명사 (예: [translate:가방]) (명확한 이미지로 생성될 수 있는 명사)
 - problem_phonemes: 해당 자모 배열
-- blank_phoneme: "" 또는 null
+- blank_phoneme: null
 - correct_answer: problem_text와 반드시 동일
-- choices: ["[translate:가방]", "[translate:공]", "[translate:공룡]"] 등 correct_answer 포함 구체명사 2가지만! (1글자/자모 절대 금지)(순서 랜덤)
+- choices: ["[translate:가방]", "[translate:카방]", "[translate:카빵]"] 등 correct_answer 포함 단어 2가지만! (1글자/자모 절대 금지)(순서 랜덤)(problem_tet와 비슷한  무의미 단어 출제)
 - blank_position: 필드 자체를 null로 (다른 값, 대소문자, 숫자 금지)
 - image_url: 경로 또는 ""
 
@@ -388,8 +418,8 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 [4] adventure_type_id=4 (음성판별)
 - problem_text: 구체명사(두글자 이상 예: [translate:가방], [translate:코끼리])
 - problem_phonemes: 해당 자모 배열
-- blank_phoneme: "" 또는 null
-- correct_answer: problem_text와 동일
+- blank_phoneme: null
+- correct_answer: problem_text와 동일(반드시 포함)
 - choices: [] (항상 빈 배열)
 - blank_position: 필드 자체를 null로 (다른 값, 대소문자, 숫자 금지)
 - image_url: ""
@@ -401,8 +431,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 - assigned_date는 반드시 "{assigned_date}"  
 - interest_id는 "{interest_id}", student_id는 "{student_id}", level은 학생 난이도 사용  
 - seq_no는 1~{total_count}까지 순차 부여, 배열 내 위치와 일치
-- 오직 한글자모, 구체 명사만(로마자/영어/1글자명사/모음 등 금지)
-- 모든 배열 외 자연어, 설명, 주석, 공백줄 없이 오직 JSON 배열 한 개만 반환
+- 모든 타입의 adventure에서 correct_answer 반드시 포함
 
 
 [예시]
@@ -433,7 +462,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "problem_phonemes": ["ㅊ", "ㅜ", "ㄱ", "ㄱ", "ㅜ", "ㄱ", "ㅗ", "ㅇ"],
     "blank_phoneme": "ㄱ",
     "correct_answer": "ㄱ",
-    "choices": ["ㅇ", "ㅁ", "ㄱ"],
+    "choices": ["ㅇ", "ㅁ", "ㄱ"], (반드시 자모만 포함)
     "blank_position": "INITIAL",
     "student_id": {student_id},
     "image_url": "problems/image/축구공.jpg",
@@ -447,7 +476,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "level": {student_level},
     "interest_id": {interest_id},
     "problem_text": "코끼리",
-    "problem_phonemes": [],
+    "problem_phonemes": ["ㅋ", "ㅗ", "ㄲ", "ㅣ", "ㄹ", "ㅣ"],
     "blank_phoneme": null,
     "correct_answer": "코끼리",
     "choices": ["고끼리", "코끼리", "포기리"], (correct_answer 반드시 포함,나머지 두 단어는 무의미단어로)
@@ -462,10 +491,10 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
     "assigned_date": "{assigned_date}",
     "level": 3,
     "interest_id": {interest_id},
-    "problem_text": "가방",(adventure_type_id=4 의 경우, 반드시 2자 이상 구체명사)
-    "problem_phonemes": [],
+    "problem_text": "드래곤",(adventure_type_id=4 의 경우, 반드시 2자 이상 구체명사)
+    "problem_phonemes": ["ㄷ", "ㅡ", "ㄹ", "ㅐ", "ㄱ", "ㅗ", "ㄴ"],
     "blank_phoneme": "",
-    "correct_answer": "가방",
+    "correct_answer": "드래곤", (반드시 포함)
     "choices": [],
     "blank_position": null, (반드시 null 값)
     "student_id": {student_id},
@@ -479,6 +508,7 @@ def make_prompt(curriculum_for_day, small_interest_name, interest_id, day_name, 
 
 == [마지막] ==
 - 반드시 위 구조와 규칙만 지켜, key 누락/오타/불필요 필드 없이 오로지 이 포맷의 문제 배열만 반환!
+- 실제 사용하는 한글 자모 ㄱ,ㄴ,ㄷ,ㄹ,ㅁ,ㅂ,ㅅ,ㅇ,ㅈ,ㅊ,ㅋ,ㅌ,ㅍ,ㅎ,ㄲ,ㄸ,ㅃ,ㅆ,ㅉ,ㄳ,ㄵ,ㄶ,ㄺ,ㄻ,ㄼ,ㄽ,ㄾ,ㄿ,ㅀ,ㅄ,ㅏ,ㅐ,ㅑ,ㅓ,ㅔ,ㅕ,ㅖ,ㅗ,ㅘ,ㅙ,ㅚ,ㅛ,ㅜ,ㅝ,ㅞ,ㅟ,ㅠ,ㅡ,ㅢ,ㅣ,ㅒ
 
 """
     return prompt

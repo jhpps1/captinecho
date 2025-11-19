@@ -4,7 +4,9 @@ import {
   TrendingDown,
   ChevronDown,
   ChevronUp,
-  Info, // 1. Info 아이콘 추가
+  Info,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import {
   BarChart,
@@ -26,12 +28,42 @@ interface JamoData {
 
 interface WeaknessAlertProps {
   allJamoData: JamoData[];
+  currentWeekData?: JamoData[];  // 이번 주 데이터
+  lastWeekData?: JamoData[];     // 저번 주 데이터
+  error?: string | null;
+  onRetry?: () => void;
 }
 
-export default function WeaknessAlert({ allJamoData }: WeaknessAlertProps) {
+export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekData, error, onRetry }: WeaknessAlertProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // 2. [수정] 빈 데이터 상태(Empty State)를 먼저 처리
+  // 에러 상태 처리
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl p-6 border border-neutral-200">
+        <div className="flex flex-col items-center justify-center py-12 bg-red-50 rounded-lg border border-red-200">
+          <AlertCircle size={48} className="text-red-400 mb-4" />
+          <p className="text-red-700 font-semibold font-pretendard mb-2">
+            데이터를 불러올 수 없습니다
+          </p>
+          <p className="text-sm text-red-600 font-pretendard mb-4">
+            {error}
+          </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold font-pretendard hover:bg-red-700 transition-colors"
+            >
+              <RefreshCw size={16} />
+              다시 시도
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 빈 데이터 상태(Empty State)를 먼저 처리
   if (!allJamoData || allJamoData.length === 0) {
     return (
       <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
@@ -142,6 +174,114 @@ export default function WeaknessAlert({ allJamoData }: WeaknessAlertProps) {
       {/* Expanded Chart View */}
       {isExpanded && (
         <div className="mt-6 pt-6 border-t border-warning/20">
+          {/* 이번 주 vs 저번 주 비교 차트 */}
+          {currentWeekData && currentWeekData.length > 0 ? (
+            <div className="mb-8">
+              <h4 className="text-md font-bold text-neutral-800 font-pretendard mb-4">
+                📊 이번 주 vs 저번 주 비교
+              </h4>
+
+              {lastWeekData && lastWeekData.length > 0 ? (
+                <>
+                  {/* 저번 주 정확도 낮은 순으로 정렬 */}
+                  {(() => {
+                    // 저번 주 데이터를 정확도 낮은 순으로 정렬
+                    const sortedByLastWeek = [...lastWeekData].sort((a, b) => a.accuracy - b.accuracy);
+
+                    // 이번 주 데이터와 매칭 (자모로 조인)
+                    const comparisonData = sortedByLastWeek.map(lastWeekJamo => {
+                      const currentWeekJamo = currentWeekData.find(c => c.jamo === lastWeekJamo.jamo);
+                      return {
+                        jamo: lastWeekJamo.jamo,
+                        lastWeek: lastWeekJamo.accuracy,
+                        thisWeek: currentWeekJamo?.accuracy ?? 0,
+                        count: currentWeekJamo?.count ?? lastWeekJamo.count,
+                      };
+                    });
+
+                    return (
+                      <>
+                        <ResponsiveContainer
+                          width="100%"
+                          height={Math.max(comparisonData.length * 30, 300)}
+                        >
+                          <BarChart
+                            data={comparisonData}
+                            layout="vertical"
+                            margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#E5E7EB"
+                              horizontal={false}
+                            />
+                            <XAxis
+                              type="number"
+                              domain={[0, 100]}
+                              tick={{ fill: '#6B7280', fontFamily: 'Pretendard', fontSize: 12 }}
+                              tickLine={false}
+                              axisLine={{ stroke: '#E5E7EB' }}
+                              label={{
+                                value: '정확도 (%)',
+                                position: 'insideBottom',
+                                offset: -5,
+                                style: {
+                                  fill: '#6B7280',
+                                  fontFamily: 'Pretendard',
+                                  fontSize: 12,
+                                },
+                              }}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="jamo"
+                              tick={{
+                                fill: '#1F2937',
+                                fontFamily: 'Pretendard',
+                                fontWeight: 600,
+                                fontSize: 14,
+                              }}
+                              tickLine={false}
+                              axisLine={false}
+                              width={50}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '8px',
+                                fontFamily: 'Pretendard',
+                              }}
+                              formatter={(value: number) => [`${value}%`, '']}
+                              labelStyle={{ color: '#1F2937', fontWeight: 600 }}
+                            />
+                            <Bar dataKey="lastWeek" name="저번 주" fill="#9CA3AF" radius={[0, 8, 8, 0]} />
+                            <Bar dataKey="thisWeek" name="이번 주" fill="#3B82F6" radius={[0, 8, 8, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                        <p className="text-xs text-neutral-500 text-center mt-4 font-pretendard">
+                          저번 주 정확도 낮은 순으로 정렬 • 파란색: 이번 주 • 회색: 저번 주
+                        </p>
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-6">
+                  <p className="text-sm text-blue-700 font-pretendard text-center">
+                    저번 주 데이터가 없어 이번 주 데이터만 표시됩니다.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-6">
+              <p className="text-sm text-blue-700 font-pretendard text-center">
+                이번 주 학습을 시작해보세요!
+              </p>
+            </div>
+          )}
+
           <h4 className="text-md font-bold text-neutral-800 font-pretendard mb-4">
             📊 전체 자모별 정확도
           </h4>

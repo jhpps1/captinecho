@@ -74,6 +74,16 @@ export interface DailyStreakResponse {
   currentStreak: number;
 }
 
+export interface JamoAccuracyRate {
+  jamo: string;
+  accuracyRate: number;
+  count: number;
+}
+
+export interface WeeklyJamoStatResponse {
+  accuracyRates: JamoAccuracyRate[];
+}
+
 // ===== API 함수 =====
 
 /**
@@ -200,6 +210,17 @@ export const verifyRecoveryCode = async (code: string): Promise<VerifyRecoveryCo
 export const getDailyStreak = async (studentId: number): Promise<DailyStreakResponse> => {
   const response = await axiosInstance.get<DailyStreakResponse>(
     `/student/${studentId}/dashboard/daily-streak`
+  );
+  return response.data;
+};
+
+/**
+ * 저번 주 학습 분석 조회 (weekly_jamo_stat 가장 최근 데이터)
+ * GET /api/student/{studentId}/dashboard/weekly/jamo/stat
+ */
+export const getWeeklyJamoStat = async (studentId: number): Promise<WeeklyJamoStatResponse> => {
+  const response = await axiosInstance.get<WeeklyJamoStatResponse>(
+    `/student/${studentId}/dashboard/weekly/jamo/stat`
   );
   return response.data;
 };

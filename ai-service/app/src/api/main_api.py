@@ -190,7 +190,7 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
             "real_jamo": real_jamo,
             "confusion_jamo": confusion_jamo,
             "weekly_accuracy_rate": avg_accuracy,
-            "weekly_fail_rate": avg_fail
+            "weekly_fail_rate": avg_fail 
         }
 
         # 7. Hierarchical CrewAI 실행
@@ -239,39 +239,7 @@ def generate_curriculum(student_id: int, db: Session = Depends(get_db)):
                 "timestamp": datetime.now().isoformat()
             }]
 
-
-
-    # curriculum_text는 오로지 '협의 대화/요약'만 포함!
-        def render_discussion_log_to_korean_internal(dialogue: list) -> str:
-            result = ""
-            for msg in dialogue:
-                role_kor = role_map.get(msg.get("role"), msg.get("role"))
-                raw_message = msg.get("message", "")
-                
-                # 유니코드 -> 한글 디코딩 로직 보강
-                try:
-                    # raw_message를 'latin1'로 인코딩하여 바이트화 한 후, 'unicode_escape'로 디코딩
-                    message_bytes = raw_message.encode('latin1')
-                    message = message_bytes.decode('unicode_escape')
-                except Exception:
-                    message = raw_message # 이미 디코드된 경우는 그대로
-                
-                result += f"{role_kor}: {message}\n\n"
-            return result.strip()
-        
-        # 수정된 함수를 호출하여 실제 한글 대화 내용을 가져옴
-        discussion_log_korean = render_discussion_log_to_korean_internal(dialogue)
-        
-        curriculum_text = f"""
-    ======================== 협의 대화 ========================
-
-    {discussion_log_korean}
-
-    ================= 협의 요약 ======================
-
-        {discussion_summary}
-""".strip()
-
+        curriculum_text = discussion_summary
 
         # 11. DB 저장 (Manager 생성 dialogue 사용)
         if latest_report:
