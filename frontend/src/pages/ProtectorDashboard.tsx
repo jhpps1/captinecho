@@ -16,6 +16,7 @@ import {
   getDailyGoalCount,
   getDailyCompletedCount,
   getWeeklyGoalPercent,
+  getProtectorGoal,
   setProtectorGoal as setProtectorGoalApi,
   type LearningTimeResponse,
   getDailyStreak,
@@ -81,7 +82,7 @@ export default function ProtectorDashboard() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-  const [parentGoal, setParentGoal] = useState<string>('BALANCED');
+  const [parentGoal, setParentGoal] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // API 데이터 상태
@@ -167,6 +168,7 @@ export default function ProtectorDashboard() {
           getAllJamoStats(),                         // 9
           getCurrentJamoStats(),                     // 10
           getWeeklyJamoStat(selectedStudentId),      // 11
+          getProtectorGoal(selectedStudentId),       // 12
         ]);
 
         // 각 결과 추출
@@ -182,6 +184,12 @@ export default function ProtectorDashboard() {
         const allJamoStatsData = results[9].status === 'fulfilled' ? results[9].value : null;
         const currentWeekJamoStatsData = results[10].status === 'fulfilled' ? results[10].value : null;
         const lastWeekJamoStatsData = results[11].status === 'fulfilled' ? results[11].value : null;
+        const protectorGoalData = results[12].status === 'fulfilled' ? results[12].value : null;
+
+        // Protector Goal 데이터 설정
+        if (protectorGoalData?.protectorGoal) {
+          setParentGoal(protectorGoalData.protectorGoal);
+        }
 
         // Curriculum 데이터 설정
         if (curriculumData) {

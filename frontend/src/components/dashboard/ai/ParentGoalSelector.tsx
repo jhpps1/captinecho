@@ -10,7 +10,7 @@ const GOAL_ICONS: Record<string, string> = {
 };
 
 interface ParentGoalSelectorProps {
-  currentGoal?: string;
+  currentGoal?: string | null;
   onChange: (goal: string) => void;
 }
 

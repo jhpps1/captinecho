@@ -9,7 +9,7 @@ interface CurriculumCardProps {
     goals: string[];
     createdAt: string;
   };
-  currentGoal?: string;
+  currentGoal?: string | null;
   onGoalChange: (goal: string) => void;
   onViewAgentLog?: () => void;
   error?: string | null;
