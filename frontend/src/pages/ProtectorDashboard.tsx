@@ -20,6 +20,8 @@ import {
   type LearningTimeResponse,
   getDailyStreak,
   type DailyStreakResponse,
+  getWeeklyJamoStat,
+  type WeeklyJamoStatResponse,
 } from '../api/dashboardApi';
 
 import {
@@ -32,6 +34,7 @@ import {
   getOverallAccuracy,
   type OverallAccuracyResponse,
   getAllJamoStats,
+  getCurrentJamoStats,
   type JamoStatData,
 } from '../api/studentApi'
 
@@ -93,6 +96,8 @@ export default function ProtectorDashboard() {
   const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
   const [overallAccuracy, setOverallAccuracy] = useState({ previous: 0, current: 0 });
   const [jamoStats, setJamoStats] = useState<JamoStatData[]>([]);
+  const [currentWeekJamoStats, setCurrentWeekJamoStats] = useState<JamoStatData[]>([]);  // 이번 주 데이터
+  const [lastWeekJamoStats, setLastWeekJamoStats] = useState<JamoStatData[]>([]);      // 저번 주 데이터
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
@@ -136,7 +141,7 @@ export default function ProtectorDashboard() {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-        // 6개 API 병렬 호출
+        // API 병렬 호출
         const [
           curriculumData,
           learningTimeData,
@@ -150,6 +155,8 @@ export default function ProtectorDashboard() {
           worstJamosData,
           overallAccuracyData,
           allJamoStatsData,
+          currentWeekJamoStatsData,  // 이번 주 자모 통계
+          lastWeekJamoStatsData,     // 저번 주 자모 통계
         ] = await Promise.all([
           getCurriculum(selectedStudentId),
           getLearningTime(selectedStudentId),
@@ -163,6 +170,8 @@ export default function ProtectorDashboard() {
           getWorstJamos(),
           getOverallAccuracy(),
           getAllJamoStats(),
+          getCurrentJamoStats(),               // 이번 주 데이터 (jamo_stat)
+          getWeeklyJamoStat(selectedStudentId), // 저번 주 데이터 (weekly_jamo_stat)
         ]);
 
         // 데이터 설정
@@ -186,6 +195,21 @@ export default function ProtectorDashboard() {
           count: stat.count
         }));
         setJamoStats(allJamoStatsData.accuracyRates);
+
+        // 💡 추가: 이번 주 vs 저번 주 자모 통계 데이터 설정
+        const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
+          jamo: stat.jamo,
+          accuracy: stat.accuracyRate,
+          count: stat.count
+        }));
+        setCurrentWeekJamoStats(mappedCurrentWeekStats);
+
+        const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
+          jamo: stat.jamo,
+          accuracy: stat.accuracyRate,
+          count: stat.count
+        }));
+        setLastWeekJamoStats(mappedLastWeekStats);
 
         // 💡 추가: 전체 정확도 데이터 설정 (null 방어 처리)
         setOverallAccuracy({
@@ -346,6 +370,8 @@ export default function ProtectorDashboard() {
                       accuracy: stat.accuracyRate, // 여기서 'accuracyRate'를 'accuracy'로 변경
                       count: stat.count,
                     }))}
+                    currentWeekData={currentWeekJamoStats}
+                    lastWeekData={lastWeekJamoStats}
                   />
                 </div>
 
