@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
-import { evaluatePronunciation } from '../api/adventureApi';
+import { transcribeAudio } from '../api/adventureApi';
 
 interface DiagnosisProblem {
   problemId: number;
@@ -158,32 +158,14 @@ export const InitialAssessmentPage = () => {
         setIsAnalyzing(true);
 
         try {
-          const currentProblem = problems[currentIndex];
-          const studentId = parseInt(sessionStorage.getItem('studentId')!);
-
-          // STT API 호출
-          const result = await evaluatePronunciation(file, currentProblem.problemId, studentId);
+          // STT API 호출 (초기진단용 - 음성-텍스트 변환만)
+          const result = await transcribeAudio(file);
           console.log('STT 결과:', result);
 
-          // 변환된 텍스트를 답변으로 저장
-          const userAnswer = result.user_text;
+          // 변환된 텍스트를 selectedAnswer에 저장 (재녹음 시 덮어씀)
+          setSelectedAnswer(result.text);
 
-          // 다음 문제로 (정답/오답 판정 없이)
-          if (currentIndex < problems.length - 1) {
-            // 답변 저장하고 다음 문제
-            setAnswers(prev => [...prev, {
-              questionId: currentProblem.problemId,
-              answer: userAnswer
-            }]);
-            setCurrentIndex(prev => prev + 1);
-          } else {
-            // 마지막 문제 완료 → 전체 제출 (현재 답변 포함)
-            const allAnswers = [...answers, {
-              questionId: currentProblem.problemId,
-              answer: userAnswer
-            }];
-            await handleComplete(allAnswers);
-          }
+          // 자동으로 다음 문제로 이동하지 않음 - 사용자가 "다음 문제" 버튼 클릭 필요
         } catch (error) {
           console.error('STT 평가 오류:', error);
           alert('음성 인식 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -451,7 +433,7 @@ export const InitialAssessmentPage = () => {
 
               <p className="text-sm text-gray-600 mt-4">
                 {isAnalyzing
-                  ? '음성을 분석하고 있습니다...'
+                  ? '음성을 분석 중...'
                   : isRecording
                     ? '녹음 중... 다시 클릭하여 종료'
                     : '마이크를 클릭하여 녹음 시작'}
@@ -459,24 +441,22 @@ export const InitialAssessmentPage = () => {
             </div>
           )}
 
-          {/* 답변 제출 버튼 (SENTENCE_COMPLETION 제외) */}
-          {currentProblem.diagnosisType !== 'SENTENCE_COMPLETION' && (
-            <div className="flex justify-center mt-8">
-              <button
-                onClick={handleSubmit}
-                disabled={!selectedAnswer}
-                className={`
-                  px-12 py-4 rounded-2xl text-xl font-bold transition-all duration-200
-                  ${selectedAnswer
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }
-                `}
-              >
-                {currentIndex < problems.length - 1 ? '다음 문제' : '완료하기'}
-              </button>
-            </div>
-          )}
+          {/* 답변 제출 버튼 */}
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleSubmit}
+              disabled={!selectedAnswer}
+              className={`
+                px-12 py-4 rounded-2xl text-xl font-bold transition-all duration-200
+                ${selectedAnswer
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }
+              `}
+            >
+              {currentIndex < problems.length - 1 ? '다음 문제' : '완료하기'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

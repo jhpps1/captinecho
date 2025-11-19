@@ -18,7 +18,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # update → validate (프로덕션 안전, 스키마 자동 변경 금지)
+      ddl-auto: update  # update → validate (프로덕션 안전, 스키마 자동 변경 금지)
     show-sql: true
     properties:
       hibernate:
