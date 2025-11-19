@@ -25,8 +25,14 @@ export default function LearningGoals({ dailyGoals, weeklyGoals }: LearningGoals
   const [viewMode, setViewMode] = useState<'today' | 'week'>('today');
 
   const currentGoals = viewMode === 'today' ? dailyGoals : weeklyGoals;
-  const problemsProgress = (currentGoals.problems.current / currentGoals.problems.target) * 100;
-  const timeProgress = (currentGoals.time.current / currentGoals.time.target) * 100;
+
+  // Division by Zero 방어 - target이 0이면 0% 반환
+  const problemsProgress = currentGoals.problems.target > 0
+    ? (currentGoals.problems.current / currentGoals.problems.target) * 100
+    : 0;
+  const timeProgress = currentGoals.time.target > 0
+    ? (currentGoals.time.current / currentGoals.time.target) * 100
+    : 0;
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
