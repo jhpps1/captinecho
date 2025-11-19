@@ -196,7 +196,9 @@ export default function ManageStudentsPage() {
   };
 
   const handleStudentSelect = (studentId: number) => {
-    setSelectedStudentId(studentId);
+    // 학생 선택 시 해당 학생의 대시보드로 이동
+    sessionStorage.setItem('studentId', studentId.toString());
+    navigate('/protector-dashboard');
   };
 
   const handleDeleteStudent = async (studentId: number) => {
