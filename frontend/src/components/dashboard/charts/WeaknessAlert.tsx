@@ -84,16 +84,46 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
     );
   }
 
-  // --- 기존 로직 (데이터가 하나 이상 있을 때만 실행됨) ---
+  // --- 학습한 자모만 필터링 (옵션 A: 학습 전 자모 제외) ---
 
-  // 정확도 낮은 순으로 정렬
-  const sortedData = [...allJamoData].sort((a, b) => a.accuracy - b.accuracy);
+  // 학습한 자모만 필터링 (count > 0)
+  const learnedJamos = allJamoData.filter((j) => j.count > 0);
 
-  // 80% 미만만 필터링
-  const weaknesses = sortedData.filter((j) => j.accuracy < 80);
+  // 학습한 자모가 없으면 Empty State (아직 학습 시작 안 함)
+  if (learnedJamos.length === 0) {
+    return (
+      <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-neutral-200 flex items-center justify-center flex-shrink-0">
+            <Info size={24} className="text-neutral-500" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-neutral-700 font-pretendard">
+              아직 학습 데이터가 없습니다
+            </h3>
+            <p className="text-sm text-neutral-500 font-pretendard mt-1">
+              학습을 시작하면 분석 데이터를 볼 수 있어요.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 학습한 자모를 정확도 낮은 순으로 정렬
+  const sortedLearnedJamos = [...learnedJamos].sort((a, b) => a.accuracy - b.accuracy);
+
+  // 80% 미만인 취약 자모 필터링
+  const weaknesses = sortedLearnedJamos.filter((j) => j.accuracy < 80);
   const topWeaknesses = weaknesses.slice(0, 5);
 
-  // 성공 상태 (모든 자모 80% 이상)
+  // 차트용 데이터: 학습한 자모(정확도 낮은 순) + 학습 안한 자모(자모 순)
+  const unlearnedJamos = allJamoData
+    .filter(j => j.count === 0)
+    .sort((a, b) => a.jamo.localeCompare(b.jamo, 'ko'));
+  const chartData = [...sortedLearnedJamos, ...unlearnedJamos];
+
+  // 성공 상태 (학습한 자모가 있고, 모두 80% 이상)
   if (weaknesses.length === 0) {
     return (
       <div className="bg-success/5 rounded-xl p-6 border border-success/20">
@@ -103,7 +133,7 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-bold text-success font-pretendard">
-              모든 자모를 잘 학습하고 있어요!
+              학습한 모든 자모를 잘하고 있어요!
             </h3>
             <p className="text-sm text-success/80 font-pretendard mt-1">
               이대로 계속 열심히 해봐요 🎉
@@ -283,15 +313,15 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
           )}
 
           <h4 className="text-md font-bold text-neutral-800 font-pretendard mb-4">
-            📊 전체 자모별 정확도
+            📊 전체 자모별 정확도 (40개)
           </h4>
 
           <ResponsiveContainer
             width="100%"
-            height={Math.max(sortedData.length * 30, 300)}
+            height={Math.max(chartData.length * 30, 300)}
           >
             <BarChart
-              data={sortedData}
+              data={chartData}
               layout="vertical"
               margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
             >
@@ -337,10 +367,12 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
                   borderRadius: '8px',
                   fontFamily: 'Pretendard',
                 }}
-                formatter={(value: number, name: string, props: any) => [
-                  `${value}% (${props.payload.count}회 학습)`,
-                  '정확도',
-                ]}
+                formatter={(value: number, name: string, props: any) => {
+                  if (props.payload.count === 0) {
+                    return ['학습 전', ''];
+                  }
+                  return [`${value}% (${props.payload.count}회 학습)`, '정확도'];
+                }}
                 labelStyle={{ color: '#1F2937', fontWeight: 600 }}
               />
               <Bar
@@ -348,10 +380,13 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
                 radius={[0, 8, 8, 0]}
                 background={{ fill: '#F3F4F6', radius: [0, 8, 8, 0] }}
               >
-                {sortedData.map((entry, index) => (
+                {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.accuracy < 80 ? '#EF4444' : '#3B82F6'}
+                    fill={
+                      entry.count === 0 ? '#D1D5DB' :  // 회색 (학습 전)
+                      entry.accuracy < 80 ? '#EF4444' : '#3B82F6'
+                    }
                   />
                 ))}
               </Bar>
@@ -359,7 +394,7 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
           </ResponsiveContainer>
 
           <p className="text-xs text-neutral-500 text-center mt-4 font-pretendard">
-            전체 {sortedData.length}개 자모 • 빨간색: 80% 미만 (집중 학습 필요)
+            전체 40개 자모 • 빨간색: 80% 미만 • 파란색: 80% 이상 • 회색: 학습 전
           </p>
         </div>
       )}
