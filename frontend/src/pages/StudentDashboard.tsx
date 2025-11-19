@@ -217,10 +217,10 @@ export default function StudentDashboard() {
                 );
 
                 // 초기진단 체크: level이 null이면 초기진단 페이지로 이동
-                // if (foundStudent && foundStudent.level === null) {
-                //     navigate("/initial-assessment");
-                //     return;
-                // }
+                if (foundStudent && foundStudent.level === null) {
+                    navigate("/initial-assessment");
+                    return;
+                }
 
                 if (foundStudent) {
                     setProfile({
