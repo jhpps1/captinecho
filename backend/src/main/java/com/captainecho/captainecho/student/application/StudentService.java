@@ -1163,24 +1163,36 @@ public class StudentService {
     public GetDailyAccuracyResult getDailyAccuracy(GetDailyAccuracyCommand command) {
         log.info("금일 평균 정확도 조회 시작 - Student ID: {}", command.studentId());
 
-        // 1. 학생 접근 권한 확인
-        verifyStudentAccess(command.protectorId(), command.studentId());
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
 
-        // 2. jamo_stat에서 현재 통계 조회
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
+        }
+
+        // 3. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 4. jamo_stat에서 현재 통계 조회
         List<JamoStat> currentStats = jamoStatRepository.findAllByStudent_StudentId(command.studentId());
 
-        // 3. 학습한 자모만 필터링 (totalAttempts > 0)
+        // 5. 학습한 자모만 필터링 (totalAttempts > 0)
         List<JamoStat> learnedJamos = currentStats.stream()
                 .filter(stat -> stat.getTotalAttempts() > 0)
                 .toList();
 
-        // 4. 학습한 자모가 없으면 null 반환
+        // 6. 학습한 자모가 없으면 null 반환
         if (learnedJamos.isEmpty()) {
             log.info("금일 평균 정확도 - 학습한 자모 없음 - Student ID: {}", command.studentId());
             return GetDailyAccuracyResult.of(null);
         }
 
-        // 5. 평균 정확도 계산
+        // 7. 평균 정확도 계산
         double averageAccuracy = learnedJamos.stream()
                 .mapToDouble(stat -> {
                     int total = stat.getTotalAttempts().intValue();
@@ -1205,24 +1217,36 @@ public class StudentService {
     public GetWeeklyAccuracyResult getWeeklyAccuracy(GetWeeklyAccuracyCommand command) {
         log.info("금주 평균 정확도 조회 시작 - Student ID: {}", command.studentId());
 
-        // 1. 학생 접근 권한 확인
-        verifyStudentAccess(command.protectorId(), command.studentId());
+        // 1. 학생 존재 여부 및 삭제 여부 확인
+        getActiveStudent(command.studentId());
 
-        // 2. jamo_stat에서 현재 통계 조회 (실시간 데이터 사용)
+        // 2. 보호자 탈퇴 여부 확인
+        Protector protector = protectorRepository.findById(command.protectorId())
+                .orElseThrow(() -> new EchoException(ProtectorErrorCode.PROTECTOR_NOT_FOUND));
+        if (protector.getIsDeleted()) {
+            throw new EchoException(ProtectorErrorCode.ALREADY_DELETED);
+        }
+
+        // 3. 보호자-학생 관계 확인
+        if (!studentRepository.existsByStudentIdAndProtectorId(command.studentId(), command.protectorId())) {
+            throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
+        }
+
+        // 4. jamo_stat에서 현재 통계 조회 (실시간 데이터 사용)
         List<JamoStat> currentStats = jamoStatRepository.findAllByStudent_StudentId(command.studentId());
 
-        // 3. 학습한 자모만 필터링
+        // 5. 학습한 자모만 필터링
         List<JamoStat> learnedJamos = currentStats.stream()
                 .filter(stat -> stat.getTotalAttempts() > 0)
                 .toList();
 
-        // 4. 학습한 자모가 없으면 null 반환
+        // 6. 학습한 자모가 없으면 null 반환
         if (learnedJamos.isEmpty()) {
             log.info("금주 평균 정확도 - 학습한 자모 없음 - Student ID: {}", command.studentId());
             return GetWeeklyAccuracyResult.of(null);
         }
 
-        // 5. 평균 정확도 계산
+        // 7. 평균 정확도 계산
         double averageAccuracy = learnedJamos.stream()
                 .mapToDouble(stat -> {
                     int total = stat.getTotalAttempts().intValue();
