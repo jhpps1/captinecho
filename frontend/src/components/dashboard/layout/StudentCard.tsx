@@ -1,4 +1,4 @@
-import { User, Flame, Droplet } from 'lucide-react';
+import { Flame, Droplet } from 'lucide-react';
 
 interface Student {
   id: number;
@@ -6,6 +6,7 @@ interface Student {
   level: number;
   streak: number;
   isActive?: boolean;
+  profileImage?: string;
 }
 
 interface StudentCardProps {
@@ -37,19 +38,32 @@ export default function StudentCard({
       `}
     >
       {isExpanded ? (
+        /* 펼쳐진 상태 */
         <div className="flex items-center gap-3">
-          {/* Profile Image */}
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <User size={20} className="text-primary" />
+          
+          <div className="flex-shrink-0">
+            {student.profileImage ? (
+              <img
+                src={student.profileImage}
+                alt={student.name}
+                className="w-10 h-10 rounded-full object-cover border border-neutral-200"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                <span className="text-sm font-bold text-white">
+                  {student.name.charAt(0)}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Student Info */}
-          <div className="flex-1 text-left">
+          {/* 학생 정보 */}
+          <div className="flex-1 text-left overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold font-pretendard text-sm text-neutral-800">
+              <span className="font-semibold font-pretendard text-sm text-neutral-800 truncate">
                 {student.name}
               </span>
-              <span className="text-xs text-neutral-500 font-pretendard">
+              <span className="text-xs text-neutral-500 font-pretendard flex-shrink-0">
                 Lv.{student.level}
               </span>
             </div>
@@ -73,13 +87,27 @@ export default function StudentCard({
           </div>
         </div>
       ) : (
-        /* Collapsed View - Icon Only */
+        /* 접힌 상태 */
         <div className="flex flex-col items-center gap-1">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <User size={16} className="text-primary" />
+          
+          <div className="flex-shrink-0">
+            {student.profileImage ? (
+              <img
+                src={student.profileImage}
+                alt={student.name}
+                className="w-8 h-8 rounded-full object-cover border border-neutral-200"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
+                <span className="text-xs font-bold text-white">
+                  {student.name.charAt(0)}
+                </span>
+              </div>
+            )}
           </div>
+
           {hasStreak && (
-            <Flame size={12} className="text-warning" />
+            <Flame size={12} className="text-warning mt-1" />
           )}
         </div>
       )}
