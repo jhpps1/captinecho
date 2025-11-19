@@ -16,8 +16,8 @@ interface Student {
 }
 
 interface ParsedLog {
-  timestamp: string;
-  speaker: string;
+  timestamp?: string;
+  role: string;
   message: string;
 }
 
@@ -25,51 +25,13 @@ interface ParsedLog {
 const parseDiscussionLog = (log: string): ParsedLog[] => {
   if (!log) return [];
 
-  const lines = log.split('\n');
-  const parsed: ParsedLog[] = [];
-  let currentTimestamp = '';
-  let currentSpeaker = '';
-  let currentMessage: string[] = [];
-
-  for (const line of lines) {
-    // 타임스탬프 감지
-    if (line.startsWith('📅')) {
-      currentTimestamp = line.replace('📅 ', '').trim();
-      continue;
-    }
-
-    // 화자 감지
-    if (line.startsWith('💬') || line.startsWith('✅')) {
-      // 이전 메시지 저장
-      if (currentSpeaker && currentMessage.length > 0) {
-        parsed.push({
-          timestamp: currentTimestamp,
-          speaker: currentSpeaker,
-          message: currentMessage.join('\n').trim()
-        });
-      }
-
-      currentSpeaker = line.replace(/💬|✅/g, '').replace(':', '').trim();
-      currentMessage = [];
-      continue;
-    }
-
-    // 메시지 수집
-    if (line.trim() && currentSpeaker) {
-      currentMessage.push(line);
-    }
+  try {
+    const parsed = JSON.parse(log);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Failed to parse discussion log:', error);
+    return [];
   }
-
-  // 마지막 메시지 저장
-  if (currentSpeaker && currentMessage.length > 0) {
-    parsed.push({
-      timestamp: currentTimestamp,
-      speaker: currentSpeaker,
-      message: currentMessage.join('\n').trim()
-    });
-  }
-
-  return parsed;
 };
 
 export default function AIAgentLogPage() {
@@ -230,11 +192,15 @@ export default function AIAgentLogPage() {
                       <div
                         key={index}
                         className={`p-4 rounded-lg transition-all ${
-                          log.speaker === 'AI Agent'
+                          log.role === 'Manager' || log.role === '매니저'
+                            ? 'bg-purple-50 border-l-4 border-purple-500'
+                            : log.role === '난독증 치료 전문가'
                             ? 'bg-blue-50 border-l-4 border-blue-500'
-                            : log.speaker === '보호자'
+                            : log.role === '아동 심리 전문가'
                             ? 'bg-green-50 border-l-4 border-green-500'
-                            : 'bg-amber-50 border-l-4 border-amber-500'
+                            : log.role === '학부모 대리인'
+                            ? 'bg-red-50 border-l-4 border-red-500'
+                            : 'bg-neutral-50 border-l-4 border-neutral-400'
                         }`}
                       >
                         {log.timestamp && (
@@ -243,17 +209,13 @@ export default function AIAgentLogPage() {
                           </div>
                         )}
 
-                        <div className="flex items-start gap-3 mb-2">
-                          <span className="text-xl">
-                            {log.speaker === 'AI Agent' ? '🤖' :
-                             log.speaker === '보호자' ? '👤' : '✅'}
-                          </span>
+                        <div className="mb-2">
                           <span className="font-bold text-sm text-neutral-800">
-                            {log.speaker}
+                            {log.role}
                           </span>
                         </div>
 
-                        <div className="text-sm text-neutral-700 whitespace-pre-wrap pl-10">
+                        <div className="text-sm text-neutral-700 whitespace-pre-wrap">
                           {log.message}
                         </div>
                       </div>
