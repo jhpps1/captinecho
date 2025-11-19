@@ -21,7 +21,7 @@ public record GetSupplementaryProblemsResult(
             Short seqNo,
             Short level,
             String questionText,
-            String hint,
+//            String hint,
             String imageUrl,
             String soundUrl,
             List<String> questionPhonemes,

@@ -7,7 +7,6 @@ import com.captainecho.captainecho.auth.presentation.response.SignupResponse;
 import com.captainecho.captainecho.auth.presentation.request.LocalLoginRequest;
 import com.captainecho.captainecho.auth.presentation.request.LocalSignupRequest;
 import com.captainecho.captainecho.auth.presentation.request.LoginRequest;
-import com.captainecho.captainecho.auth.presentation.response.LocalLoginResponse;
 import com.captainecho.captainecho.auth.presentation.response.LoginResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,9 +42,11 @@ public class AuthController {
     }
 
     @PostMapping("/local/login")
-    public ResponseEntity<LocalLoginResponse> localLogin(@Valid @RequestBody LocalLoginRequest request) {
-        String accessToken = authService.localLogin(request.toCommand());
+    public ResponseEntity<LoginResponse> localLogin(@Valid @RequestBody LocalLoginRequest request) {
+        LoginResult result = authService.localLogin(request.toCommand());
 
-        return ResponseEntity.ok(LocalLoginResponse.of(accessToken));
+        LoginResponse response = LoginResponse.from(result);
+
+        return ResponseEntity.ok(response);
     }
 }
