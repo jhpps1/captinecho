@@ -86,7 +86,7 @@ export default function CurriculumCard({
         <h4 className="font-bold text-neutral-800 font-pretendard mb-2">
           {curriculum.title}
         </h4>
-        <p className="text-sm text-neutral-600 font-pretendard mb-3">
+        <p className="text-sm text-neutral-600 font-pretendard mb-3 whitespace-pre-line">
           {curriculum.description}
         </p>
 
@@ -104,7 +104,7 @@ export default function CurriculumCard({
                 <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                   {index + 1}
                 </span>
-                <span>{goal}</span>
+                <span className="whitespace-pre-line">{goal}</span>
               </li>
             ))}
           </ul>
