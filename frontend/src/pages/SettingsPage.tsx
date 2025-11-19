@@ -132,7 +132,9 @@ export default function SettingsPage() {
   };
 
   const handleStudentSelect = (studentId: number) => {
-    setSelectedStudentId(studentId);
+    // 학생 선택 시 해당 학생의 대시보드로 이동
+    sessionStorage.setItem('studentId', studentId.toString());
+    navigate('/protector-dashboard');
   };
 
   // 1. [탈퇴 버튼 클릭] -> 1단계 모달 열기
