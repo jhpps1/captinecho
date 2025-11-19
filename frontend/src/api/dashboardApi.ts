@@ -55,6 +55,10 @@ export interface SetProtectorGoalResponse {
   success: boolean;
 }
 
+export interface GetProtectorGoalResponse {
+  protectorGoal: string | null;
+}
+
 // ===== PIN 복구 관련 타입 =====
 
 export interface SendRecoveryCodeResponse {
@@ -159,6 +163,19 @@ export const getWeeklyGoalPercent = async (studentId: number): Promise<WeeklyGoa
 export const getProtectorGoalList = async (): Promise<ProtectorGoalListResponse> => {
   const response = await axiosInstance.get<ProtectorGoalListResponse>(
     `/student/dashboard/protector/goal`
+  );
+  return response.data;
+};
+
+/**
+ * 개별 학생의 현재 보호자 목표 조회
+ * GET /api/student/{studentId}/dashboard/goal
+ */
+export const getProtectorGoal = async (
+  studentId: number
+): Promise<GetProtectorGoalResponse> => {
+  const response = await axiosInstance.get<GetProtectorGoalResponse>(
+    `/student/${studentId}/dashboard/goal`
   );
   return response.data;
 };
