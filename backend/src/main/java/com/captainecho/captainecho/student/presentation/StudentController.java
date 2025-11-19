@@ -10,6 +10,7 @@ import com.captainecho.captainecho.student.application.command.DeleteStudentInte
 import com.captainecho.captainecho.student.application.command.GetDailyStreakCommand;
 import com.captainecho.captainecho.student.application.command.GetImproveAccuracyCommand;
 import com.captainecho.captainecho.student.application.command.GetStudentInterestCommand;
+import com.captainecho.captainecho.student.application.command.GetCurrentJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetTotalJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetWeeklyJamoStatCommand;
 import com.captainecho.captainecho.student.application.command.GetBestImproveJamoCommand;
@@ -23,6 +24,7 @@ import com.captainecho.captainecho.student.application.result.DeleteStudentInter
 import com.captainecho.captainecho.student.application.result.GetDailyStreakResult;
 import com.captainecho.captainecho.student.application.result.GetImproveAccuracyResult;
 import com.captainecho.captainecho.student.application.result.GetStudentInterestResult;
+import com.captainecho.captainecho.student.application.result.GetCurrentJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetTotalJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetWeeklyJamoStatResult;
 import com.captainecho.captainecho.student.application.result.GetBestImproveJamoResult;
@@ -44,6 +46,7 @@ import com.captainecho.captainecho.student.presentation.response.DeleteStudentIn
 import com.captainecho.captainecho.student.presentation.response.GetStudentInterestResponse;
 import com.captainecho.captainecho.student.presentation.response.GetWeeklyJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.ImproveAccuracyResponse;
+import com.captainecho.captainecho.student.presentation.response.CurrentJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.RecoveryCodeResponse;
 import com.captainecho.captainecho.student.presentation.response.TotalJamoStatResponse;
 import com.captainecho.captainecho.student.presentation.response.BestImproveJamoResponse;
@@ -227,6 +230,26 @@ public class StudentController {
         GetTotalJamoStatResult result = studentService.getTotalJamoStat(command);
 
         TotalJamoStatResponse response = TotalJamoStatResponse.from(result);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{studentId}/dashboard/current/jamo/stat")
+    @Operation(summary = "이번 주 학습 분석 조회", description = "특정 아동의 이번 주 학습 분석(자모별 정답률)을 조회합니다 (jamo_stat 실시간 데이터)")
+    public ResponseEntity<CurrentJamoStatResponse> getCurrentJamoStat(
+            @AuthenticationPrincipal ProtectorPrincipal principal,
+            @PathVariable Integer studentId
+    ) {
+        if (principal == null) {
+            throw new EchoException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        Integer protectorId = principal.getProtectorId();
+
+        GetCurrentJamoStatCommand command = new GetCurrentJamoStatCommand(protectorId, studentId);
+        GetCurrentJamoStatResult result = studentService.getCurrentJamoStat(command);
+
+        CurrentJamoStatResponse response = CurrentJamoStatResponse.from(result);
 
         return ResponseEntity.ok(response);
     }
