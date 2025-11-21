@@ -41,7 +41,7 @@ export const SuppleRunner = () => {
   useEffect(() => {
     bgmRef.current = new Audio('/adventurepage/wave.mp3');
     bgmRef.current.loop = true; 
-    bgmRef.current.volume = 0.5;
+    bgmRef.current.volume = 0.15;
 
     const playPromise = bgmRef.current.play();
     if (playPromise !== undefined) {
