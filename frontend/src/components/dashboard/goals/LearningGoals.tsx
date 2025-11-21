@@ -50,8 +50,8 @@ export default function LearningGoals({ dailyGoals, weeklyGoals }: LearningGoals
               px-4 py-2 rounded-md text-sm font-medium font-pretendard transition-all duration-200
               ${
                 viewMode === 'today'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-800'
+                  ? 'bg-white text-primary shadow-sm cursor-default'
+                  : 'text-neutral-600 hover:text-neutral-800 cursor-pointer'
               }
             `}
           >
@@ -63,8 +63,8 @@ export default function LearningGoals({ dailyGoals, weeklyGoals }: LearningGoals
               px-4 py-2 rounded-md text-sm font-medium font-pretendard transition-all duration-200
               ${
                 viewMode === 'week'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-800'
+                  ? 'bg-white text-primary shadow-sm cursor-default'
+                  : 'text-neutral-600 hover:text-neutral-800 cursor-pointer'
               }
             `}
           >

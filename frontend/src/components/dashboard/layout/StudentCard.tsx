@@ -28,7 +28,7 @@ export default function StudentCard({
     <button
       onClick={onClick}
       className={`
-        w-full p-3 rounded-lg transition-all duration-200
+        w-full p-3 rounded-lg transition-all duration-200 cursor-pointer
         ${
           isSelected
             ? 'bg-primary/10 border-2 border-primary'

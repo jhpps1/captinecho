@@ -68,7 +68,7 @@ export default function SettingsMenu({ isExpanded, onLogout }: SettingsMenuProps
             onClick={item.onClick}
             className={`
               w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200
-              hover:bg-neutral-100
+              hover:bg-neutral-100 cursor-pointer
               ${item.variant === 'danger' ? 'text-error hover:bg-error/10' : 'text-neutral-700'}
               ${!isExpanded ? 'justify-center' : ''}
             `}
