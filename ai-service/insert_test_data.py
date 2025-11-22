@@ -3,7 +3,7 @@
 import psycopg2
 from datetime import datetime
 
-DB_HOST = "3.35.241.113"
+DB_HOST = "3.36.129.126"
 DB_PORT = 5432
 DB_NAME = "captain_echo"
 DB_USER = "doonki"
