@@ -1,3 +1,6 @@
+# Captain Echo - Git Ignore Configuration
+# Updated: 2025-11-22 (Jenkins Webhook Test)
+
 # Logs
 logs
 *.log
