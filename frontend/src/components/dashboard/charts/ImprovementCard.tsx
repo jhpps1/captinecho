@@ -32,13 +32,13 @@ export default function ImprovementCard({
     ? overallImprovement.current! - overallImprovement.previous!
     : 0;
 
-  // 가장 많이 개선된 자모 (상위 2개)
+  // 가장 많이 개선된 음소 (상위 2개)
   const topImproved = [...jamoImprovements]
     .filter((j) => j.improvement > 0)
     .sort((a, b) => b.improvement - a.improvement)
     .slice(0, 2);
 
-  // 개선이 필요한 자모 (하위 2개, 개선율 낮은 순)
+  // 개선이 필요한 음소 (하위 2개, 개선율 낮은 순)
   const needsWork = [...jamoImprovements]
     .sort((a, b) => a.improvement - b.improvement)
     .slice(0, 2);
@@ -140,7 +140,7 @@ export default function ImprovementCard({
           {topImproved.length > 0 && (
             <div className="mb-6">
               <h4 className="text-sm font-semibold text-neutral-700 font-pretendard mb-3">
-                가장 많이 개선된 자모
+                가장 많이 개선된 음소
               </h4>
               <div className="space-y-3">
                 {topImproved.map((jamo, index) => (
