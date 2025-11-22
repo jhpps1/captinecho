@@ -144,7 +144,7 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
     );
   }
 
-  // --- 기존 '부족한 자모' 경고 상태 로직 (변경 없음) ---
+  // --- 기존 '부족한 음소' 경고 상태 로직 (변경 없음) ---
   return (
     <div className="bg-warning/5 rounded-xl p-6 border border-warning/20">
       {/* Header */}
@@ -155,10 +155,10 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-neutral-800 font-pretendard">
-            부족한 자모가 있어요
+            노력해야할 음소가 있어요
           </h3>
           <p className="text-sm text-neutral-600 font-pretendard mt-1">
-            아래 자모에 대한 집중 학습이 필요합니다
+            아래 음소에 대한 집중 학습이 필요합니다
           </p>
         </div>
 
@@ -191,7 +191,7 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
                 {weakness.jamo}
               </div>
               <div className="text-xs text-neutral-500 font-pretendard mb-2">
-                {weakness.type || '자모'}
+                {weakness.type || '음소'}
               </div>
               <div className="text-sm font-semibold text-error font-pretendard">
                 {weakness.accuracy}%
@@ -313,7 +313,7 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
           )}
 
           <h4 className="text-md font-bold text-neutral-800 font-pretendard mb-4">
-            📊 전체 자모별 정확도 (40개)
+            📊 전체 음소별 정확도 (40개)
           </h4>
 
           <ResponsiveContainer
