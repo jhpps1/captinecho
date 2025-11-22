@@ -8,6 +8,7 @@ import { getStudents } from '../api/protectorApi';
 
 interface Student {
   id: number;
+  name: string;
   lastName: string;
   fullName: string;
   level: number;
@@ -49,8 +50,9 @@ export default function LearningAnalysisDetailPage() {
       const response = await getStudents();
       const studentList: Student[] = response.students.map(s => ({
         id: s.studentId,
-        lastName: s.name.charAt(0),
-        fullName: s.name,
+        name: s.name || '이름 없음',
+        lastName: s.name?.charAt(0) || 'N',
+        fullName: s.name || '이름 없음',
         level: s.level || 0,
         streak: 0,
         profileImage: s.profileImage,
