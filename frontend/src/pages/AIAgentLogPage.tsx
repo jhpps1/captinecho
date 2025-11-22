@@ -156,7 +156,7 @@ export default function AIAgentLogPage() {
               <div>
                 <h1 className="text-3xl font-bold text-neutral-800">AI Agent 협의 로그</h1>
                 <p className="text-neutral-600 mt-1">
-                  {selectedStudent.fullName} 학생의 AI 협의 내용을 확인하세요
+                  {selectedStudent.fullName} 학생의 AI 에이전트 협의 내용을 확인하세요
                 </p>
               </div>
               <button
