@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -47,10 +48,24 @@ public class AdventureService {
             throw new EchoException(StudentErrorCode.STUDENT_ACCESS_DENIED);
         }
 
-        // 3. 이미 진행 중인 세션이 있는지 확인
-        if (learningSessionRepository.findLatestOngoingSessionByStudentId(command.studentId()).isPresent()) {
-            throw new EchoException(StudentErrorCode.SESSION_ALREADY_IN_PROGRESS);
-        }
+        // 3. 진행 중인 세션이 있으면 자동 종료 (15분 타임아웃)
+        learningSessionRepository.findLatestOngoingSessionByStudentId(command.studentId())
+                .ifPresent(session -> {
+                    LocalDateTime sessionStart = session.getStartTime();
+                    LocalDateTime now = LocalDateTime.now();
+                    long durationMinutes = Duration.between(sessionStart, now).toMinutes();
+
+                    // 15분 타임아웃 적용: 15분 이내는 실제 시간, 15분 초과는 15분으로 제한
+                    if (durationMinutes <= 15) {
+                        session.updateEndTime(now);
+                    } else {
+                        session.updateEndTime(sessionStart.plusMinutes(15));
+                    }
+
+                    learningSessionRepository.save(session);
+                    log.info("기존 세션 자동 종료: sessionId={}, duration={}분",
+                             session.getSessionId(), durationMinutes);
+                });
 
         // 4. LearningSession 생성 및 저장 (startTime만 설정, endTime은 null)
         LearningSession session = LearningSession.builder()
