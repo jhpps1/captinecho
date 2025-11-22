@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface DayProblemRepository extends JpaRepository<DayProblem, Integer> {
     Integer countByStudent_StudentIdAndAssignedDate(Integer studentId, LocalDate assignedDate);
@@ -59,6 +60,17 @@ public interface DayProblemRepository extends JpaRepository<DayProblem, Integer>
             @Param("adventureTypeId") Integer adventureTypeId,
             @Param("level") Short level
     );
+
+    /**
+     * 특정 문제 ID로 문제와 학생 정보를 함께 조회 (Fetch Join으로 LazyInitializationException 방지)
+     */
+    @Query("""
+            SELECT dp
+            FROM DayProblem dp
+            JOIN FETCH dp.student
+            WHERE dp.dayProblemId = :dayProblemId
+            """)
+    Optional<DayProblem> findByIdWithStudent(@Param("dayProblemId") Integer dayProblemId);
 
     /**
      * 문제 ID 리스트로 문제들을 연관 엔티티와 함께 조회 (Fetch Join으로 N+1 방지)

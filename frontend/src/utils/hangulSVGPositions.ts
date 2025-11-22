@@ -25,36 +25,65 @@ export interface JamoPosition {
 type GlyphSet = 'positional' | 'compat';
 type GetJamoOptions = { glyphSet?: GlyphSet };
 
-/** ====== 레이아웃 메트릭(조밀 버전) ====== */
+/** ====== 레이아웃 메트릭(오버라이드 평균값 기반) ====== */
 const METRICS = {
-  FS: { noT: 72, withT: 60 }, // 기본 폰트 사이즈 (그대로)
+  // 패턴별 폰트 크기 (오버라이드 932개 평균값)
+  FS: {
+    noT: {
+      horizontal: 72,    // 평균 72.00 (80개 샘플)
+      complex: 57        // 평균 57.27 (108개 샘플)
+    },
+    withT: {
+      vertical: 54,      // 평균 54.03 (362개 샘플)
+      horizontal: 60,    // 평균 59.60 (228개 샘플)
+      complex: 48        // 평균 47.56 (154개 샘플)
+    }
+  },
+  // 패턴별 초성 위치
   L:  {
-    xNoT: 28,
-    yNoT: 54,  // 52 → 54 (조금 아래)
-    xT: 27,
-    yT: 46     // 44 → 46 (조금 아래)
+    horizontal_noT: { x: 49.80, y: 37.73 },   // 80개 샘플
+    horizontal_withT: { x: 50.00, y: 47.05 }, // 228개 샘플
+    vertical_withT: { x: 34.18, y: 50.46 },   // 362개 샘플
+    complex_noT: { x: 48.61, y: 37.82 },      // 108개 샘플
+    complex_withT: { x: 47.05, y: 46.72 }     // 154개 샘플
   },
   V: {
-    // 세로모음(ㅏㅑㅓㅕㅣ): 중앙으로 약간 더 내림
+    // 세로모음 (종성 있음만, 종성 없음은 compat 모드)
     vert: {
       xNoT: 62,
       yNoT: 56,
-      xT: 60,
-      yT: 46
+      xT: 48.21,         // 평균 48.21
+      yT: 53.17          // 평균 53.17
     },
-    // 가로모음 높이값(조금 아래로)
-    horizYNoT: { 'ㅗ': 44, 'ㅡ': 52, 'ㅜ': 60 } as Record<string, number>, // 42/50/58 → 44/52/60
-    horizYT:   { 'ㅗ': 42, 'ㅡ': 50, 'ㅜ': 58 } as Record<string, number>,   // 40/48/56 → 42/50/58
-    // 복합모음 전용 기본치(단일 글리프지만 살짝 축소)
+    // 가로모음 Y 위치 (오버라이드 평균값)
+    horizYNoT: {
+      'ㅗ': 75.61,       // 평균 (19개 샘플)
+      'ㅡ': 74.63,       // 평균 (14개 샘플)
+      'ㅜ': 68.95        // 평균 (19개 샘플)
+    } as Record<string, number>,
+    horizYT: {
+      'ㅗ': 51.90,       // 평균 (74개 샘플)
+      'ㅡ': 52.39,       // 평균 (56개 샘플)
+      'ㅜ': 53.97        // 평균 (56개 샘플)
+    } as Record<string, number>,
+    // 복합모음 위치
     complex: {
-      x: 58,
-      yNoT: 54,
-      yT: 45,
+      xNoT: 57.64,       // 평균 (108개 샘플)
+      yNoT: 60.44,       // 평균
+      xT: 55.50,         // 평균 (154개 샘플)
+      yT: 52.75,         // 평균
       fsDelta: -3
     },
+    // 가로모음/복합모음 X 위치 (평균 기반)
+    horizXNoT: 50.02,
+    horizXWithT: 50.17
   },
-  // ⬆ 종성 더 위로: 68 → 64 (숫자 작을수록 위)
-  T:  { x: 50, y: 55, pairDx: 4, fsDeltaPair: -2 },
+  // 패턴별 종성 위치 (오버라이드 평균값)
+  T: {
+    vertical: { x: 48.61, y: 51.23, fs: 59.04 },     // 362개 샘플
+    horizontal: { x: 49.95, y: 53.48, fs: 59.87 },  // 228개 샘플
+    complex: { x: 53.30, y: 51.24, fs: 58.00 }      // 154개 샘플
+  },
   LV_SPREAD: 4,
   H_LV_SPREAD: 4,
 };
@@ -182,18 +211,36 @@ export function getJamoPositions(
     if (positions.length) return positions;
   }
 
-  // ===== 규칙 기반 배치 (조밀 메트릭 적용) =====
-  const FS = hasT ? METRICS.FS.withT : METRICS.FS.noT;
+  // ===== 규칙 기반 배치 (오버라이드 평균값 기반) =====
+  const v = V[0];
+  const vt = getVowelType(v);
+
+  // 패턴별 폰트 크기
+  let FS: number;
+  if (!hasT) {
+    if (vt === 'horizontal') FS = METRICS.FS.noT.horizontal;      // 72
+    else if (vt === 'complex') FS = METRICS.FS.noT.complex;       // 57
+    else FS = 72; // vertical_noT 기본값 (compat 모드, 오버라이드 없음)
+  } else {
+    if (vt === 'vertical') FS = METRICS.FS.withT.vertical;        // 54
+    else if (vt === 'horizontal') FS = METRICS.FS.withT.horizontal; // 60
+    else FS = METRICS.FS.withT.complex;                            // 48
+  }
 
   const pos: JamoPosition[] = [];
 
-  // 초성 (spread 적용은 중성에서)
-  const Lx0 = hasT ? METRICS.L.xT : METRICS.L.xNoT;
-  const Ly = hasT ? METRICS.L.yT : METRICS.L.yNoT;
-
-  // 중성 (단일 글리프)
-  const v = V[0];
-  const vt = getVowelType(v);
+  // 패턴별 초성 위치
+  let Lx0: number, Ly: number;
+  const pattern = `${vt}_${hasT ? 'withT' : 'noT'}`;
+  const Lmetrics = METRICS.L[pattern as keyof typeof METRICS.L];
+  if (Lmetrics) {
+    Lx0 = Lmetrics.x;
+    Ly = Lmetrics.y;
+  } else {
+    // vertical_noT 기본값 (compat 모드)
+    Lx0 = 28;
+    Ly = 54;
+  }
 
   if (vt === 'vertical') {
     const spread = METRICS.LV_SPREAD;
@@ -219,7 +266,8 @@ export function getJamoPositions(
       }
     );
   } else if (vt === 'horizontal') {
-    const Vy = (hasT ? METRICS.V.horizYT : METRICS.V.horizYNoT)[v] ?? (hasT ? 50 : 52);
+    const Vy = (hasT ? METRICS.V.horizYT : METRICS.V.horizYNoT)[v] ?? (hasT ? 52 : 72);
+    const Vx = hasT ? METRICS.V.horizXWithT : METRICS.V.horizXNoT;
     const spread = METRICS.H_LV_SPREAD ?? 0;
     const Lx = Lx0 - spread / 2;
 
@@ -234,14 +282,14 @@ export function getJamoPositions(
       {
         part: 'V',
         char: toPositionalGlyph('V', v, glyphSet),
-        x: 50 + spread / 2,
+        x: Vx + spread / 2,
         y: Vy,
         fontSize: FS,
       }
     );
   } else {
     // complex: 단일 글리프지만 약간 축소/위치 보정
-    const x = METRICS.V.complex.x;
+    const x = hasT ? METRICS.V.complex.xT : METRICS.V.complex.xNoT;
     const y = hasT ? METRICS.V.complex.yT : METRICS.V.complex.yNoT;
     const fs = FS + METRICS.V.complex.fsDelta;
 
@@ -263,14 +311,15 @@ export function getJamoPositions(
     );
   }
 
-  // 종성 (겹받침도 단일 글리프 그대로)
+  // 종성 (겹받침도 단일 글리프 그대로, 패턴별 평균값 적용)
   if (hasT) {
+    const Tmetrics = METRICS.T[vt];
     pos.push({
       part: 'T',
       char: toPositionalGlyph('T', T[0], glyphSet),
-      x: METRICS.T.x,
-      y: METRICS.T.y,
-      fontSize: FS,
+      x: Tmetrics.x,
+      y: Tmetrics.y,
+      fontSize: Tmetrics.fs,
     });
   }
 

@@ -5,7 +5,7 @@ interface StudentProfileProps {
   student: {
     id: number;
     name: string;
-    level: number;
+    level: number | null;
     profileImage?: string;
   };
   weeklyAttendance: boolean[]; // [Mon, Tue, Wed, Thu, Fri]
@@ -42,9 +42,11 @@ export default function StudentProfile({
             <h2 className="text-2xl font-bold font-pretendard text-neutral-800">
               {student.name}
             </h2>
-            <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-semibold font-pretendard">
-              Lv.{student.level}
-            </span>
+            {student.level !== null && (
+              <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-semibold font-pretendard">
+                Lv.{student.level}
+              </span>
+            )}
           </div>
 
           {/* Weekly Streak Section */}

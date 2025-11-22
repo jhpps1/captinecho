@@ -61,8 +61,8 @@ const SelectProfile = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
 
   // --- BGM 관련 State 및 Ref ---
-  const [volume, setVolume] = useState(0.5); // 볼륨 상태 (0.0 ~ 1.0)
-  const [lastVolume, setLastVolume] = useState(0.5); // 음소거 해제 시 복원할 볼륨
+  const [volume, setVolume] = useState(0.15); // 볼륨 상태 (0.0 ~ 1.0)
+  const [lastVolume, setLastVolume] = useState(0.15); // 음소거 해제 시 복원할 볼륨
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // BGM 재생 로직
@@ -109,7 +109,7 @@ const SelectProfile = () => {
       setVolume(0); // 음소거 (볼륨 0)
     } else {
       // 음소거 해제 (이전 볼륨으로 복원, 0이었으면 0.5로)
-      setVolume(lastVolume > 0 ? lastVolume : 0.5);
+      setVolume(lastVolume > 0 ? lastVolume : 0.15);
     }
 
     // 사용자가 음소거 버튼을 눌러 상호작용했으므로,

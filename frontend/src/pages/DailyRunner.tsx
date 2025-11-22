@@ -39,7 +39,7 @@ export const DailyRunner = () => {
     // 오디오 객체 생성
     bgmRef.current = new Audio('/adventurepage/wave.mp3');
     bgmRef.current.loop = true; // 반복 재생
-    bgmRef.current.volume = 0.5; // 볼륨 설정 (필요시 조절)
+    bgmRef.current.volume = 0.15; // 볼륨 설정 (필요시 조절)
 
     // 재생 시도
     const playPromise = bgmRef.current.play();

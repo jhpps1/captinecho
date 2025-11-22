@@ -54,8 +54,8 @@ const ParrotStore = () => {
     const [error, setError] = useState<string | null>(null);
 
     // --- BGM 관련 State 및 Ref ---
-    const [volume, setVolume] = useState(0.5); // 볼륨 상태 (0.0 ~ 1.0)
-    const [lastVolume, setLastVolume] = useState(0.5); // 음소거 해제 시 복원할 볼륨
+    const [volume, setVolume] = useState(0.15); // 볼륨 상태 (0.0 ~ 1.0)
+    const [lastVolume, setLastVolume] = useState(0.15); // 음소거 해제 시 복원할 볼륨
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // === 기존 학생 데이터 로드 useEffect ===
@@ -186,7 +186,7 @@ const ParrotStore = () => {
                 audioRef.current.muted = false;
 
                 if (volume === 0) {
-                    const defaultVolume = lastVolume > 0 ? lastVolume : 0.5;
+                    const defaultVolume = lastVolume > 0 ? lastVolume : 0.15;
                     setVolume(defaultVolume);
                 }
 
@@ -215,7 +215,7 @@ const ParrotStore = () => {
         if (volume > 0) {
             setVolume(0);
         } else {
-            setVolume(lastVolume > 0 ? lastVolume : 0.5);
+            setVolume(lastVolume > 0 ? lastVolume : 0.15);
         }
 
         if (audioRef.current && audioRef.current.paused) {

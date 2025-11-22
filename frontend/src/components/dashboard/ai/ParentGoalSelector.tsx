@@ -105,7 +105,7 @@ export default function ParentGoalSelector({
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center gap-3 p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors"
+          className="w-full flex items-center gap-3 p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors cursor-pointer"
         >
           <span className="text-2xl">{GOAL_ICONS[currentOption?.goal || ''] || '📋'}</span>
           <div className="flex-1 text-left">
@@ -141,7 +141,7 @@ export default function ParentGoalSelector({
                 key={goal.goal}
                 onClick={() => handleSelect(goal.goal)}
                 className={`
-                  w-full flex items-center gap-3 p-3 transition-colors
+                  w-full flex items-center gap-3 p-3 transition-colors cursor-pointer
                   ${
                     selectedGoal === goal.goal
                       ? 'bg-primary/10 border-l-4 border-primary'

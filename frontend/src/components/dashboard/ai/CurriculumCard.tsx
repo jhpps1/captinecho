@@ -1,4 +1,4 @@
-import { Brain, FileText, AlertCircle, RefreshCw } from 'lucide-react';
+import { Brain, AlertCircle, RefreshCw } from 'lucide-react';
 import ParentGoalSelector from './ParentGoalSelector';
 import { useState } from 'react';
 
@@ -73,10 +73,10 @@ export default function CurriculumCard({
         {onViewAgentLog && (
           <button
             onClick={onViewAgentLog}
-            className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-            title="에이전트 로그 확인"
+            className="px-4 py-3 bg-white border-2 border-primary text-primary rounded-lg font-semibold font-pretendard hover:bg-primary/10 transition-colors text-base shadow-sm cursor-pointer"
+            title="에이전트 협의 로그 확인"
           >
-            <FileText size={20} className="text-neutral-600" />
+            협의 로그 확인
           </button>
         )}
       </div>
@@ -84,14 +84,11 @@ export default function CurriculumCard({
       {/* Curriculum Content */}
       <div className="bg-white rounded-lg p-4 mb-4">
         <h4 className="font-bold text-neutral-800 font-pretendard mb-2">
-          {curriculum.title}
-        </h4>
-        <p className="text-sm text-neutral-600 font-pretendard mb-3 whitespace-pre-line">
           {curriculum.description}
-        </p>
+        </h4>
 
         {/* Goals List */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <p className="text-xs font-semibold text-neutral-500 font-pretendard">
             이번 주 학습 목표
           </p>
@@ -108,7 +105,7 @@ export default function CurriculumCard({
               </li>
             ))}
           </ul>
-        </div>
+        </div> */}
 
         {/* Created At */}
         <p className="text-xs text-neutral-400 font-pretendard mt-3">

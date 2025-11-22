@@ -178,15 +178,16 @@ export const Adventure4 = ({ problem, onSubmit, isTutorialMode, mode, studentId 
           // 1번째 오답: 격려 메시지
           setEncouragementMessage('다시 한번 도전해보자!');
           setTimeout(() => setEncouragementMessage(null), 3000);
-        } else if (newCount === 3) {
-          // 2번째 오답: 이미지 힌트 (피드백 캐릭터 사라진 후 표시)
-          if (problem.imageUrl) {
-            setTimeout(() => setShowImageHint(true), 3000);
-            setTimeout(() => setShowImageHint(false), 8000);
-          }
-        } else if (newCount >= 4) {
-          // 3번째 오답: 스피커 버튼 (피드백 캐릭터 사라진 후 표시)
           setTimeout(() => setShowSpeakerButton(true), 3000);
+        // } else if (newCount === 3) {
+        //   // 2번째 오답: 이미지 힌트 (피드백 캐릭터 사라진 후 표시)
+        //   if (problem.imageUrl) {
+        //     setTimeout(() => setShowImageHint(true), 3000);
+        //     setTimeout(() => setShowImageHint(false), 8000);
+        //   }
+        // } else if (newCount >= 4) {
+        //   // 3번째 오답: 스피커 버튼 (피드백 캐릭터 사라진 후 표시)
+        //   setTimeout(() => setShowSpeakerButton(true), 3000);
         }
 
         return newCount;

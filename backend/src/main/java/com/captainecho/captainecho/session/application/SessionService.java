@@ -109,7 +109,7 @@ public class SessionService {
             command.isCorrect() &&
             command.dayProblemId() != null) {
 
-            DayProblem dayProblem = dayProblemRepository.findById(command.dayProblemId())
+            DayProblem dayProblem = dayProblemRepository.findByIdWithStudent(command.dayProblemId())
                     .orElseThrow(() -> new EchoException(StudentErrorCode.PROBLEM_NOT_FOUND));
 
             // 학생에게 할당된 문제인지 확인
