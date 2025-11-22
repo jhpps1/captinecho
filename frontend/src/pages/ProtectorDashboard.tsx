@@ -22,18 +22,15 @@ import {
   getDailyStreak,
   type DailyStreakResponse,
   getWeeklyJamoStat,
-  type WeeklyJamoStatResponse,
+  getDailyAccuracy,
+  getWeeklyAccuracy,
 } from '../api/dashboardApi';
 
 import {
-  getDailyAccuracy,
-  getWeeklyAccuracy,
-  type AccuracyResponse,
   getBestJamos,
   getWorstJamos,
   type JamoImprovementApiData,
   getOverallAccuracy,
-  type OverallAccuracyResponse,
   getAllJamoStats,
   getCurrentJamoStats,
   type JamoStatData,
@@ -56,27 +53,13 @@ interface JamoImprovementData {
   improvement: number;
 }
 
-/**
- * 이번 주 연속 학습일 계산
- */
-const calculateWeeklyStreak = (learningTime: LearningTimeResponse): number => {
-  const dailyData = learningTime.thisWeekLearningTime.daily;
-  const today = new Date().getDay(); // 0=일요일, 1=월요일, ...
-
-  let streak = 0;
-  // 오늘부터 역순으로 순회
-  for (let i = today; i >= 0; i--) {
-    // 월요일=1, 화요일=2, ... 일요일=0
-    const dayIndex = i === 0 ? 6 : i - 1; // API 데이터는 월요일부터 시작
-    if (dailyData[dayIndex]?.learningMinutes > 0) {
-      streak++;
-    } else {
-      break; // 학습하지 않은 날을 만나면 중단
-    }
-  }
-
-  return streak;
-};
+// 💡 추가: WeaknessAlert 컴포넌트가 필요로 하는 데이터 형식
+interface JamoData {
+  jamo: string;
+  accuracy: number;
+  accuracyRate: number;
+  count: number;
+}
 
 export default function ProtectorDashboard() {
   const navigate = useNavigate();
@@ -91,14 +74,13 @@ export default function ProtectorDashboard() {
   const [dailyStreak, setDailyStreak] = useState<DailyStreakResponse | null>(null)
   const [dailyAccuracy, setDailyAccuracy] = useState(0);
   const [weeklyAccuracy, setWeeklyAccuracy] = useState(0);
-  const [dailyGoalCount, setDailyGoalCount] = useState(0);
   const [dailyCompletedCount, setDailyCompletedCount] = useState(0);
   const [weeklyGoalPercent, setWeeklyGoalPercent] = useState(0);
   const [jamoImprovements, setJamoImprovements] = useState<JamoImprovementData[]>([]);
   const [overallAccuracy, setOverallAccuracy] = useState<{ previous: number | null; current: number | null }>({ previous: null, current: null });
   const [jamoStats, setJamoStats] = useState<JamoStatData[]>([]);
-  const [currentWeekJamoStats, setCurrentWeekJamoStats] = useState<JamoStatData[]>([]);  // 이번 주 데이터
-  const [lastWeekJamoStats, setLastWeekJamoStats] = useState<JamoStatData[]>([]);      // 저번 주 데이터
+  const [currentWeekJamoStats, setCurrentWeekJamoStats] = useState<JamoData[]>([]);  // 이번 주 데이터
+  const [lastWeekJamoStats, setLastWeekJamoStats] = useState<JamoData[]>([]);      // 저번 주 데이터
 
   // 개별 에러 상태
   const [learningTimeError, setLearningTimeError] = useState<string | null>(null);
@@ -116,7 +98,7 @@ export default function ProtectorDashboard() {
         const studentList: Student[] = response.students.map((s) => ({
           id: s.studentId,
           name: s.name,
-          level: s.level,
+          level: s.level ?? null,
           streak: 0, // 초기값, 학습 시간 데이터 로드 후 업데이트
           isActive: false,
           profileImage: s.profileImage,
@@ -176,7 +158,6 @@ export default function ProtectorDashboard() {
         // 각 결과 추출
         const curriculumData = results[0].status === 'fulfilled' ? results[0].value : null;
         const learningTimeData = results[1].status === 'fulfilled' ? results[1].value : null;
-        const dailyGoalData = results[2].status === 'fulfilled' ? results[2].value : null;
         const dailyCompletedData = results[3].status === 'fulfilled' ? results[3].value : null;
         const weeklyPercentData = results[4].status === 'fulfilled' ? results[4].value : null;
         const dailyStreakData = results[5].status === 'fulfilled' ? results[5].value : null;
@@ -216,7 +197,6 @@ export default function ProtectorDashboard() {
         }
 
         // Daily Goals 데이터 설정
-        if (dailyGoalData) setDailyGoalCount(dailyGoalData.todayGoalCount);
         if (dailyCompletedData) setDailyCompletedCount(dailyCompletedData.completedCount);
         if (weeklyPercentData) setWeeklyGoalPercent(weeklyPercentData.weekGoalPercent);
 
@@ -244,6 +224,7 @@ export default function ProtectorDashboard() {
           const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
+            accuracyRate: stat.accuracyRate,
             count: stat.count
           }));
           setCurrentWeekJamoStats(mappedCurrentWeekStats);
@@ -252,6 +233,7 @@ export default function ProtectorDashboard() {
           const mappedAllStats = allJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
+            accuracyRate: stat.accuracyRate,
             count: stat.count
           }));
           setCurrentWeekJamoStats(mappedAllStats);
@@ -264,6 +246,7 @@ export default function ProtectorDashboard() {
           const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
             jamo: stat.jamo,
             accuracy: stat.accuracyRate,
+            accuracyRate: stat.accuracyRate,
             count: stat.count
           }));
           setLastWeekJamoStats(mappedLastWeekStats);
@@ -379,6 +362,7 @@ export default function ProtectorDashboard() {
         const mappedCurrentWeekStats = currentWeekJamoStatsData.accuracyRates.map(stat => ({
           jamo: stat.jamo,
           accuracy: stat.accuracyRate,
+          accuracyRate: stat.accuracyRate,
           count: stat.count
         }));
         setCurrentWeekJamoStats(mappedCurrentWeekStats);
@@ -391,6 +375,7 @@ export default function ProtectorDashboard() {
         const mappedLastWeekStats = lastWeekJamoStatsData.accuracyRates.map(stat => ({
           jamo: stat.jamo,
           accuracy: stat.accuracyRate,
+          accuracyRate: stat.accuracyRate,
           count: stat.count
         }));
         setLastWeekJamoStats(mappedLastWeekStats);
