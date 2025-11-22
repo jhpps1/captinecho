@@ -165,7 +165,7 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
         {/* Detail Toggle Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors font-pretendard"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors font-pretendard cursor-pointer"
         >
           {isExpanded ? (
             <>

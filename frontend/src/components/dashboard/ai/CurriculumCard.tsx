@@ -1,4 +1,4 @@
-import { Brain, FileText, AlertCircle, RefreshCw } from 'lucide-react';
+import { Brain, AlertCircle, RefreshCw } from 'lucide-react';
 import ParentGoalSelector from './ParentGoalSelector';
 import { useState } from 'react';
 
@@ -73,10 +73,10 @@ export default function CurriculumCard({
         {onViewAgentLog && (
           <button
             onClick={onViewAgentLog}
-            className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-            title="에이전트 로그 확인"
+            className="px-4 py-3 bg-white border-2 border-primary text-primary rounded-lg font-semibold font-pretendard hover:bg-primary/10 transition-colors text-base shadow-sm cursor-pointer"
+            title="에이전트 협의 로그 확인"
           >
-            <FileText size={20} className="text-neutral-600" />
+            협의 로그 확인
           </button>
         )}
       </div>

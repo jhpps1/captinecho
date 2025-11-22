@@ -46,7 +46,7 @@ export default function DashboardSidebar({
       {/* Mobile Hamburger Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md cursor-pointer"
       >
         {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -71,7 +71,7 @@ export default function DashboardSidebar({
         {/* Desktop Toggle Button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="hidden lg:flex absolute -right-3 top-6 w-6 h-6 bg-white border border-neutral-200 rounded-full items-center justify-center hover:bg-neutral-50 transition-colors"
+          className="hidden lg:flex absolute -right-3 top-6 w-6 h-6 bg-white border border-neutral-200 rounded-full items-center justify-center hover:bg-neutral-50 transition-colors cursor-pointer"
         >
           {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
@@ -98,8 +98,8 @@ export default function DashboardSidebar({
                   flex-1 py-3 text-sm font-medium font-pretendard transition-colors
                   ${
                     activeTab === 'students'
-                      ? 'text-primary border-b-2 border-primary'
-                      : 'text-neutral-500 hover:text-neutral-700'
+                      ? 'text-primary border-b-2 border-primary cursor-default'
+                      : 'text-neutral-500 hover:text-neutral-700 cursor-pointer'
                   }
                 `}
               >
@@ -111,8 +111,8 @@ export default function DashboardSidebar({
                   flex-1 py-3 text-sm font-medium font-pretendard transition-colors
                   ${
                     activeTab === 'settings'
-                      ? 'text-primary border-b-2 border-primary'
-                      : 'text-neutral-500 hover:text-neutral-700'
+                      ? 'text-primary border-b-2 border-primary cursor-default'
+                      : 'text-neutral-500 hover:text-neutral-700 cursor-pointer'
                   }
                 `}
               >
