@@ -8,7 +8,7 @@ const SIDEBAR_TAB_KEY = 'dashboard-sidebar-active-tab';
 interface Student {
   id: number;
   name: string;
-  level: number;
+  level: number | null;
   streak: number;
   isActive?: boolean;
   profileImage?: string;
