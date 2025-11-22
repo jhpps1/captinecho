@@ -462,7 +462,7 @@ const SelectProfile = () => {
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
                           <span className="text-5xl font-bold text-white">
-                            {profile.name.charAt(0)}
+                            {profile.name?.charAt(0) || 'N'}
                           </span>
                         </div>
                       )}

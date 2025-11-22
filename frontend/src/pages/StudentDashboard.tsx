@@ -355,7 +355,7 @@ export default function StudentDashboard() {
                                             <img src={profile.imageUrl} alt="프로필" className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                                                <span className="text-2xl font-bold text-white">{profile.name.charAt(0)}</span>
+                                                <span className="text-2xl font-bold text-white">{profile.name?.charAt(0) || 'N'}</span>
                                             </div>
                                         )}
                                     </div>

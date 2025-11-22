@@ -472,7 +472,7 @@ export default function ManageStudentsPage() {
                     ) : (
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
                         <span className="text-2xl font-bold text-white">
-                          {student.name.charAt(0)}
+                          {student.name?.charAt(0) || 'N'}
                         </span>
                       </div>
                     )}
