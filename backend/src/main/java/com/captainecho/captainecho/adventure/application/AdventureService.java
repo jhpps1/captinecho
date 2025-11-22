@@ -57,9 +57,9 @@ public class AdventureService {
 
                     // 15분 타임아웃 적용: 15분 이내는 실제 시간, 15분 초과는 15분으로 제한
                     if (durationMinutes <= 15) {
-                        session.setEndTime(now);
+                        session.updateEndTime(now);
                     } else {
-                        session.setEndTime(sessionStart.plusMinutes(15));
+                        session.updateEndTime(sessionStart.plusMinutes(15));
                     }
 
                     learningSessionRepository.save(session);
