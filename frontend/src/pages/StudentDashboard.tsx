@@ -271,22 +271,25 @@ export default function StudentDashboard() {
 
     // 아래 게임시작 타륜 버튼 클릭시 동작하는 코드
     const handleStartGame = () => {
-        // 뱃고동 소리 재생
-        try {
-            const audio = new Audio('/studentboard/boathorn.mp3');
-            audio.volume = 0.09;
-            audio.play().catch(error => {
-                console.warn("Audio play failed, possibly due to browser autoplay policy:", error);
-            });
-        } catch (e) {
-            console.error("Error creating or playing audio:", e);
-        }
+            // 뱃고동 소리 재생
+            try {
+                const audio = new Audio('/studentboard/boathorn.mp3');
+                
+                // [수정됨] 기존 0.09 고정값 대신 슬라이더의 volume 상태를 대입합니다.
+                audio.volume = volume; 
 
-        setIsStartingGame(true);
-        setTimeout(() => {
-            navigate(`/daily`);
-        }, 1800); // 애니메이션 시간(1.8초) 후 이동
-    };
+                audio.play().catch(error => {
+                    console.warn("Audio play failed, possibly due to browser autoplay policy:", error);
+                });
+            } catch (e) {
+                console.error("Error creating or playing audio:", e);
+            }
+
+            setIsStartingGame(true);
+            setTimeout(() => {
+                navigate(`/daily`);
+            }, 1800); // 애니메이션 시간(1.8초) 후 이동
+        };
 
     // 일일 탐험 완료 시 메시지 표시 핸들러
     const handleShowCompletionMessage = () => {
