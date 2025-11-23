@@ -148,7 +148,7 @@ const ParrotStore = () => {
         audioRef.current = new Audio('/parrotstore/backgroundmusic.mp3');
         audioRef.current.loop = true;
         audioRef.current.volume = volume;
-        audioRef.current.muted = false;
+        audioRef.current.muted = true;
 
         const playPromise = audioRef.current.play();
 

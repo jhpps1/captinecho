@@ -103,7 +103,7 @@ export default function StudentDashboard() {
         audioRef.current = new Audio('/studentboard/backgroundmusic.mp3');
         audioRef.current.loop = true; // 반복 재생
         audioRef.current.volume = volume; // 초기 볼륨 적용
-        audioRef.current.muted = false; // 초기 재생 상태 적용
+        audioRef.current.muted = true; // 초기 재생 상태 적용
 
         // 자동 재생 시도
         const playPromise = audioRef.current.play();
