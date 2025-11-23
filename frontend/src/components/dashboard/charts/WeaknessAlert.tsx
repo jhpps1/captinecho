@@ -394,7 +394,7 @@ export default function WeaknessAlert({ allJamoData, currentWeekData, lastWeekDa
           </ResponsiveContainer>
 
           <p className="text-xs text-neutral-500 text-center mt-4 font-pretendard">
-            전체 40개 자모 • 빨간색: 80% 미만 • 파란색: 80% 이상 • 회색: 학습 전
+            전체 40개 음소 • 빨간색: 80% 미만 • 파란색: 80% 이상 • 회색: 학습 전
           </p>
         </div>
       )}

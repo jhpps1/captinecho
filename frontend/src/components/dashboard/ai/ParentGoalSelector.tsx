@@ -81,7 +81,7 @@ export default function ParentGoalSelector({
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={18} className="text-primary" />
           <h4 className="text-sm font-semibold text-neutral-700 font-pretendard">
-            학부모 의견 (다음 주 커리큘럼에 반영)
+            보호자 의견 (다음 주 커리큘럼에 반영)
           </h4>
         </div>
         <div className="p-3 bg-neutral-50 rounded-lg text-sm text-neutral-500 font-pretendard">
@@ -97,7 +97,7 @@ export default function ParentGoalSelector({
       <div className="flex items-center gap-2 mb-3">
         <MessageSquare size={18} className="text-primary" />
         <h4 className="text-sm font-semibold text-neutral-700 font-pretendard">
-          학부모 의견 (다음 주 커리큘럼에 반영)
+          보호자 의견 (다음 주 커리큘럼에 반영)
         </h4>
       </div>
 
