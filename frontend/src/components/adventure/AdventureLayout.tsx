@@ -7,35 +7,30 @@ import { useTutorialVoice } from '../../hooks/useTutorialVoice';
 
 interface AdventureLayoutProps {
   children: (isTutorialMode: boolean) => ReactNode;
-  adventureTypeId?: 1 | 2 | 3 | 4; // 탐험 유형 (배경 변경용)
-  onExitConfirm?: () => void | Promise<void>; // 나가기 확인 시 호출되는 콜백
+  adventureTypeId?: 1 | 2 | 3 | 4;
+  onExitConfirm?: () => void | Promise<void>;
 }
 
-/**
- * AdventureLayout - 탐험 페이지 공통 레이아웃
- *
- * @description
- * - 공통 배경 (양피지 스타일)
- * - 공통 상단 액션바 (튜토리얼/나가기 버튼)
- * - 공통 튜토리얼 오버레이
- * - children으로 DailyRunner/SuppleRunner 렌더
- *
- * @param children - DailyRunner 또는 SuppleRunner
- */
 export const AdventureLayout = ({ children, adventureTypeId, onExitConfirm }: AdventureLayoutProps) => {
   const navigate = useNavigate();
   const [isTutorialMode, setIsTutorialMode] = useState(false);
   const { playVoice, stopVoice } = useTutorialVoice();
 
-  // adventureTypeId에 따른 배경 이미지 선택
-  const getBackgroundImage = () => {
-    if (adventureTypeId) {
-      return `/adventurepage/adventure_${adventureTypeId}_background.png`;
-    }
-    return '/adventurepage/map_background.png'; // 기본 배경
-  };
+  // 배경 이미지 경로 계산
+  const bgImageSrc = adventureTypeId 
+    ? `/adventurepage/adventure_${adventureTypeId}_background.png`
+    : '/adventurepage/map_background.png';
 
-  // ESC 키로 튜토리얼 닫기
+  // [최적화 1] 컴포넌트 마운트 시 이미지 미리 로딩 (브라우저 캐시 태우기)
+  useEffect(() => {
+    const img = new Image();
+    img.src = bgImageSrc;
+    
+    // 오버레이 이미지도 미리 로딩해두면 좋습니다
+    const overlayImg = new Image();
+    overlayImg.src = '/adventurepage/map_background.png';
+  }, [bgImageSrc]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isTutorialMode) {
@@ -47,27 +42,19 @@ export const AdventureLayout = ({ children, adventureTypeId, onExitConfirm }: Ad
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTutorialMode, stopVoice]);
 
-  // Adventure 타입별 튜토리얼 음성 메시지
   const getTutorialVoice = (): string => {
     switch (adventureTypeId) {
-      case 1:
-        return '회색 칸에 들어갈 글자를 골라보세요!';
-      case 2:
-        return '그림을 보고 빈칸에 들어갈 글자를 선택하세요!';
-      case 3:
-        return '그림을 보고 알맞은 단어를 선택하세요!';
-      case 4:
-        return '단어를 보고 똑같이 말해보세요!';
-      default:
-        return '문제를 풀어보세요!';
+      case 1: return '회색 칸에 들어갈 글자를 골라보세요!';
+      case 2: return '그림을 보고 빈칸에 들어갈 글자를 선택하세요!';
+      case 3: return '그림을 보고 알맞은 단어를 선택하세요!';
+      case 4: return '단어를 보고 똑같이 말해보세요!';
+      default: return '문제를 풀어보세요!';
     }
   };
 
-  // 튜토리얼 버튼 클릭
   const handleTutorialClick = () => {
     const goingToTutorial = !isTutorialMode;
     setIsTutorialMode(goingToTutorial);
-
     if (goingToTutorial) {
       playVoice('tutorial', getTutorialVoice());
     } else {
@@ -77,17 +64,27 @@ export const AdventureLayout = ({ children, adventureTypeId, onExitConfirm }: Ad
 
   return (
     <div
-      className="flex flex-col min-h-screen relative"
+      className="flex flex-col min-h-screen relative overflow-hidden"
       style={{
-        backgroundImage: `url(${getBackgroundImage()})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#D4B896',
+        backgroundColor: '#D4B896', // 이미지가 뜨기 전 잠깐 보일 색상
         minWidth: '100vw',
       }}
     >
+      {/* [최적화 2] CSS backgroundImage 대신 img 태그 사용 
+          - fetchPriority="high": 브라우저에게 최우선 다운로드 요청
+          - loading="eager": 지연 로딩 방지
+      */}
+      <img 
+        src={bgImageSrc}
+        alt="Background"
+        fetchPriority="high"
+        loading="eager"
+        decoding="async"
+        className="absolute inset-0 w-full h-full object-cover z-0"
+      />
+
       {/* 양피지 배경 장식 (탐험 배경 위에 오버레이) */}
+      {/* z-index를 0으로 유지하되 DOM 순서상 배경 이미지 뒤에 오므로 위에 겹쳐짐 */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
         <div
           style={{
@@ -101,17 +98,17 @@ export const AdventureLayout = ({ children, adventureTypeId, onExitConfirm }: Ad
         />
       </div>
 
-      {/* 튜토리얼 오버레이 (어두운 배경) */}
+      {/* 튜토리얼 오버레이 */}
       <TutorialOverlay active={isTutorialMode} />
 
-      {/* 상단 액션 바 (튜토리얼/나가기) */}
+      {/* 상단 액션 바 */}
       <TopActionsBar
         onTutorialClick={handleTutorialClick}
         onExitConfirm={onExitConfirm}
         isCompleted={false}
       />
 
-      {/* Runner 컴포넌트 렌더링 */}
+      {/* Runner 컴포넌트 */}
       <div className="relative z-10 flex-1 flex items-center justify-center">
         {children(isTutorialMode)}
       </div>
