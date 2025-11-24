@@ -218,6 +218,7 @@ public class DashboardService {
                     .protectorGoal(command.protectorGoal())
                     .totalTime(0)
                     .curriculum(null)
+                    .curriculumStructure(null)  // JSONB 필드 추가
                     .discussionLog(null)
                     .build();
 
