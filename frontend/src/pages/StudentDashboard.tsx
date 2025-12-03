@@ -94,7 +94,7 @@ export default function StudentDashboard() {
     const [isCompletionMessageVisible, setIsCompletionMessageVisible] = useState(false);
 
     // BGM 관련 State 및 Ref
-    const [volume, setVolume] = useState(0.0); // 볼륨 상태 (0.0 ~ 1.0)
+    const [volume, setVolume] = useState(0.25); // 볼륨 상태 (0.0 ~ 1.0)
     const [lastVolume, setLastVolume] = useState(0.15); // 음소거 해제 시 복원할 볼륨
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -103,7 +103,7 @@ export default function StudentDashboard() {
         audioRef.current = new Audio('/studentboard/backgroundmusic.mp3');
         audioRef.current.loop = true; // 반복 재생
         audioRef.current.volume = volume; // 초기 볼륨 적용
-        audioRef.current.muted = true; // 초기 재생 상태 적용
+        audioRef.current.muted = false; // 초기 재생 상태 적용
 
         // 자동 재생 시도
         const playPromise = audioRef.current.play();

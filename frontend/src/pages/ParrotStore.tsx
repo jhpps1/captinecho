@@ -54,7 +54,7 @@ const ParrotStore = () => {
     const [error, setError] = useState<string | null>(null);
 
     // --- BGM 관련 State 및 Ref ---
-    const [volume, setVolume] = useState(0.0); // 볼륨 상태 (0.0 ~ 1.0)
+    const [volume, setVolume] = useState(0.25); // 볼륨 상태 (0.0 ~ 1.0)
     const [lastVolume, setLastVolume] = useState(0.15); // 음소거 해제 시 복원할 볼륨
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -148,7 +148,7 @@ const ParrotStore = () => {
         audioRef.current = new Audio('/parrotstore/backgroundmusic.mp3');
         audioRef.current.loop = true;
         audioRef.current.volume = volume;
-        audioRef.current.muted = true;
+        audioRef.current.muted = false;
 
         const playPromise = audioRef.current.play();
 
