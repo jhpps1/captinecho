@@ -108,3 +108,9 @@ nextwork.md
 *.crt
 *.csr
 infrastructure/nginx/ssl/
+
+# One-off PIN updates and local debug logs
+update_pin.sql
+update_pin_correct.sql
+update_pin_plaintext.sql
+ai-service/output_log.txt

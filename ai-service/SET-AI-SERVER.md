@@ -1,0 +1,25 @@
+# AI 서버 환경변수
+
+값은 `.env`에만 둔다. 이 파일에는 이름만 적는다.
+
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `OPENAI_BASE_URL`
+- `OPENAI_WHISPER_API_KEY`
+- `GEMINI_API_KEY`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `S3_BUCKET_NAME`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DATABASE_URL`
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+- `BACKEND_URL`
+
+예시는 `ai-service/.env.example`을 본다.
