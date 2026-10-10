@@ -1,7 +1,7 @@
 # 🚢 Captain Echo (꼬마선장 에코)
 
 > **AI 멀티 에이전트가 만드는 맞춤형 난독증 학습 여정**
-> CrewAI 기반 3+1 에이전트 협업으로 아동 개개인에게 최적화된 학습 커리큘럼을 자동 생성합니다.
+> CrewAI hierarchical 프로세스로 전문가 에이전트 3명과 매니저 LLM이 주간 커리큘럼을 만듭니다.
 
 <br />
 
@@ -42,21 +42,20 @@
 ### 기획 배경
 
 **난독증(Dyslexia)**은 지능이나 학습 의욕과 무관하게 읽기와 쓰기에 어려움을 겪는 **음운인식 장애**입니다.
-- 국내 초등학생의 **약 5-10%**가 난독증으로 추정됩니다
-- 조기 발견 및 개입 시 **80% 이상 개선 가능**하지만, 개인별 맞춤 학습 콘텐츠 부족이 문제입니다
-- 기존 획일적인 학습 교재는 **아동의 관심사, 현재 수준, 음소 혼동 패턴**을 반영하지 못합니다
+- 아동마다 관심사, 현재 수준, 음소 혼동 패턴이 다르다. 같은 교재로는 그 차이를 반영하기 어렵다.
+- 유병률과 개선율 수치는 이 저장소에 없다.
 
 ### 서비스 개요
 
 **Captain Echo**는 AI 멀티 에이전트가 아동의 학습 데이터를 분석하여 **매주 자동으로 맞춤 커리큘럼과 문제를 생성**하는 난독증 학습 플랫폼입니다.
 
-- **개발 기간**: 2025.10.10 ~ 2025.11.20 (6주)
-- **팀 구성**: 6명 (Backend 2, Frontend 2, AI 1, Infra 1)
-- **핵심 기술**: CrewAI 멀티 에이전트 시스템, Spring Boot, React, FastAPI
+- **기획 기간**: 2025.10.10 ~ 2025.11.20
+- **개발 커밋**: 2025.10.14 ~ 2025.12.03
+- **핵심 기술**: CrewAI, Spring Boot, React, FastAPI
 
 **주요 특징**:
 - 🎯 **개인 맞춤형 학습**: 초기 진단으로 음소 혼동 패턴 분석 후 약점 집중 학습
-- 🤖 **AI 에이전트 협업**: 학습전문가·심리전문가·학부모대표 에이전트가 토론하여 최적 커리큘럼 생성
+- 🤖 **AI 에이전트 협업**: `build_hierarchical_crew`가 난독증 치료 전문가, 아동 심리 전문가, 학부모 대리인을 만들고, 매니저 LLM이 커리큘럼 JSON을 받는다
 - 🎮 **게임화된 학습**: 모험 컨셉의 4가지 유형 학습 문제 (음소 맞추기, 빈칸 채우기, 단어 맞추기, 읽기 평가)
 - 🔄 **자동 적응형 난이도**: 주간 정답률 분석 후 자동으로 레벨 조정
 - 📊 **보호자 대시보드**: 학습 진행 상황, 오답 패턴, AI 생성 주간 리포트 제공
@@ -71,74 +70,27 @@
 
 Captain Echo의 가장 큰 기술적 차별점은 **CrewAI 기반 멀티 에이전트 협업 시스템**입니다.
 
-### 🎭 4-Agent 협업 구조
+### 에이전트 구성
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Manager Agent (조율자)                     │
-│           GPT-4o 기반 최종 의사결정 및 품질 검증              │
-└────────────────────┬────────────────────────────────────────┘
-                     │ 조율 및 합의 도출
-        ┌────────────┼────────────┐
-        ↓            ↓            ↓
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Academic     │ │ Wellbeing    │ │ Parent       │
-│ Agent        │ │ Agent        │ │ Agent        │
-├──────────────┤ ├──────────────┤ ├──────────────┤
-│ 학습 전문가   │ │ 심리 전문가   │ │ 학부모 대표   │
-│              │ │              │ │              │
-│• 음소 혼동    │ │• 인지 부하    │ │• 보호자 목표  │
-│  패턴 분석    │ │  모니터링     │ │  반영         │
-│• 난이도 조정  │ │• 자신감 관리  │ │• 학습량 균형  │
-│• 학습 효율    │ │• 학습 동기    │ │• 실용성 검증  │
-│  최적화       │ │  향상         │ │              │
-└──────────────┘ └──────────────┘ └──────────────┘
-        ↓            ↓            ↓
-        └────────────┼────────────┘
-                     ↓
-          📋 맞춤형 주간 커리큘럼 생성
-    (레벨, 문제 유형, 목표 음소, 학습 목표)
-```
+실행 경로는 `ai-service/app/src/crew.py`의 `build_hierarchical_crew`다.
 
-### 🔄 동작 원리
-
-1. **데이터 수집**: 학생의 주간 학습 데이터 (정답률, 오답 패턴, 소요 시간, 현재 레벨)
-2. **에이전트 토론** (Hierarchical Process):
-   - Academic Agent: "ㄱ-ㄲ 혼동률 65% → 레벨 3 유지하며 집중 학습 필요"
-   - Wellbeing Agent: "주간 정답률 45% → 자신감 저하 우려, 쉬운 문제 30% 포함"
-   - Parent Agent: "보호자 목표: 약점 보완 → 혼동 음소 중심 구성 동의, 학습량 적정성 확인"
-   - Manager Agent: "레벨 3, ㄱ-ㄲ 집중(60%), 복습(30%), 신규(10%) 배분으로 결정"
-3. **커리큘럼 생성**: 에이전트 합의 결과를 JSON으로 구조화
-4. **문제 자동 생성**: 커리큘럼 기반으로 LLM(GPT-4o/Gemini)이 실제 학습 문제 생성
-5. **주간 재생성**: 매주 일요일 23:00 자동 실행 (APScheduler)
-
-### 📊 학습 데이터 기반 의사결정
+- 에이전트는 세 명이다. 역할 이름은 난독증 치료 전문가, 아동 심리 전문가, 학부모 대리인이다.
+- 프로세스는 `Process.hierarchical`이다. 매니저는 `settings.OPENAI_MODEL` LLM이고 기본값은 gpt-4o다. `agents` 목록에는 들어 있지 않다.
+- 태스크는 `curriculum_task` 하나다. `agent`는 `None`이고, 기대 출력은 JSON이다. 필드에는 `level_adjustment`, `curriculum_structure`, `dialogue`, `discussion_summary`가 있다.
+- `agents/` 패키지에도 에이전트 빌더가 있다. `build_hierarchical_crew`는 그 패키지를 import하지 않는다.
+- 문제 이미지는 모험 유형 2, 3이고 `GEMINI_API_KEY`가 있을 때 `imagen-4.0-generate-001`로 만든다.
+- `server.py`가 기동하면 APScheduler가 매주 일요일 23:00 KST에 `total_weekly_batch`를 실행한다. 순서는 주간 리포트, CrewAI 커리큘럼, 문제 생성이다. `main.py` 주석에는 배치를 Spring Boot가 관리한다고 적혀 있다.
 
 ```python
-# ai-service/app/src/crew.py 핵심 로직
-class CaptainEchoCrew:
-    def generate_weekly_curriculum(self, student_data):
-        """
-        CrewAI Hierarchical Process:
-        - Manager Agent가 3개 전문가 에이전트 조율
-        - 각 에이전트는 전문 영역에서 의견 제시
-        - 토론 과정과 최종 결정 근거 문서화
-        """
-        crew = Crew(
-            agents=[academic_agent, wellbeing_agent, parent_agent, manager_agent],
-            tasks=[analyze_task, recommend_task, validate_task, finalize_task],
-            process=Process.hierarchical,  # 계층적 의사결정
-            manager_llm=ChatOpenAI(model="gpt-4o")
-        )
-        result = crew.kickoff(inputs=student_data)
-        return result.json_dict  # 구조화된 커리큘럼
+crew = Crew(
+    agents=[academic_agent, wellbeing_agent, parent_agent],
+    tasks=[curriculum_task],
+    process=Process.hierarchical,
+    manager_llm=manager_llm,
+)
 ```
 
-### 🎯 실제 적용 효과
-
-- ✅ **개인화 정확도**: 음소별 혼동률 패턴 반영으로 학습 효율 ↑
-- ✅ **학습 지속성**: 심리 전문가 에이전트의 난이도 조절로 중도 포기율 ↓
-- ✅ **보호자 신뢰**: 투명한 의사결정 과정 제공으로 만족도 ↑
+개인화 정확도, 중도 포기율, 보호자 만족도 측정값은 이 저장소에 없다.
 
 <br />
 
@@ -151,7 +103,7 @@ class CaptainEchoCrew:
 ### 학생용 기능
 
 #### 1️⃣ 초기 진단 시스템
-- 40개 문항으로 **자모 혼동 패턴** 정밀 분석 (예: ㄱ-ㄲ, ㅓ-ㅕ)
+- 초기 진단 시드 `seed_initial_diagnosis_problems.sql`은 문제를 15개 넣는다. 파일 주석의 40은 자모 개수다.
 - 진단 결과 기반 **개인 맞춤 학습 프로필** 생성
 - AI가 약점 음소 우선순위 결정
 
@@ -170,8 +122,7 @@ Level 4: 받침 조합
 Level 5: 복합 단어
 Level 6: 문장 독해
 ```
-- 주간 정답률 70% 이상 시 자동 레벨업
-- 50% 미만 시 레벨 유지 및 복습 강화
+- `level_evaluator.should_adjust_level`: 평균 정확도 80% 이상이면 레벨을 1 올리고, 50% 이하면 1 내린다. 그 사이는 유지한다. 레벨 범위는 1에서 6이다.
 
 #### 4️⃣ 관심사 기반 학습
 - 회원가입 시 관심사 선택 (동물, 스포츠, 음식, 자연 등)
@@ -243,31 +194,27 @@ Level 6: 문장 독해
 │ • REST API                  │   │ • CrewAI Multi-Agent        │
 │ • JWT Authentication        │   │ • Curriculum Generation     │
 │ • OAuth2 (Google)           │   │ • Problem Generation        │
-│ • Business Logic            │◄──┤ • LLM Integration           │
-│ • Scheduled Tasks           │   │   - OpenAI GPT-4o           │
-│   (Weekly Curriculum)       │   │   - Google Gemini           │
-│ • File Upload (S3)          │   │ • Vector DB (ChromaDB)      │
+│ • Business Logic            │◄──┤ • OpenAI (기본 gpt-4o)      │
+│ • File Upload (S3)          │   │ • Imagen 이미지             │
 │ • Email Service             │   │ • STT Evaluation            │
 └──────────┬──────────────────┘   └──────────┬──────────────────┘
            │                                 │
-           ↓                                 ↓
-┌──────────────────────┐           ┌────────────────────┐
-│   PostgreSQL DB      │           │  ChromaDB          │
-│   Port 5432          │           │  LanceDB           │
-│                      │           │  (Vector Store)    │
-│ • User Data          │           └────────────────────┘
-│ • Learning Records   │
-│ • Curriculum         │
-│ • Problem Sets       │
-└──────────┬───────────┘
+           └──────────────┬──────────────────┘
+                          ↓
+┌──────────────────────────────────────────────────────────┐
+│                    PostgreSQL                            │
+│                    Port 5432                             │
+│  User Data · Learning Records · Curriculum · Problems    │
+└──────────┬───────────────────────────────────────────────┘
            │
            ↓
 ┌──────────────────────┐
 │   Redis Cache        │
 │   Port 6379          │
 │                      │
-│ • Session Store      │
-│ • Rate Limiting      │
+│ • PIN 복구 코드      │
+│ • 학생 데이터 5분 캐시 │
+│ • RQ 작업 큐         │
 └──────────────────────┘
 
            ↓ Metrics
@@ -282,52 +229,24 @@ Level 6: 문장 독해
 
 #### 1. 주간 커리큘럼 자동 생성
 ```
-[Spring Scheduler] (매주 일요일 23:00 KST)
+[AI Service APScheduler] 매주 일요일 23:00 KST
     ↓
-[GET] /api/students/{id}/weekly-data
+total_weekly_batch
     ↓
-[POST] AI Service /api/curriculum/generate
-    ↓
-CrewAI Multi-Agent 토론 (3-5분 소요)
-    ↓
-커리큘럼 JSON 반환
-    ↓
-[POST] /api/curriculum/save
+주간 리포트 → CrewAI 커리큘럼 → 문제 생성
     ↓
 PostgreSQL 저장
 ```
 
-#### 2. 실시간 문제 생성
-```
-학생 학습 시작
-    ↓
-[GET] /api/adventures/problems?curriculum_id=xxx
-    ↓
-[POST] AI Service /api/problems/generate
-    ↓
-LLM (GPT-4o) 문제 생성
-    ↓
-문제 JSON 반환 및 캐싱 (Redis)
-    ↓
-클라이언트 응답
-```
+진단 직후의 커리큘럼 요청은 Spring이 AI 서비스의 `/api/curriculum/generate/{id}`와 `/api/problems/generate/{id}`를 호출하는 경로가 따로 있다.
 
-#### 3. STT 읽기 평가
-```
-학생 음성 녹음
-    ↓
-[POST] /api/evaluation/speech (MP3 파일)
-    ↓
-AWS S3 업로드
-    ↓
-[POST] AI Service /api/stt/evaluate
-    ↓
-Whisper API 변환
-    ↓
-정답 텍스트와 비교 (음소 단위)
-    ↓
-정답률 및 피드백 반환
-```
+#### 2. 문제 생성
+
+문제 생성 API는 `POST /api/problems/generate/{student_id}`다. Redis에 넣는 캐시는 문제 JSON이 아니라 `student_data:{id}`이고, 유지 시간은 300초다.
+
+#### 3. STT
+
+음성 변환은 `POST /api/stt/transcribe`, 발음 평가는 `POST /api/stt/evaluate-pronunciation`다. 변환 모델은 `whisper-1`이다.
 
 <br />
 
@@ -377,28 +296,17 @@ Whisper API 변환
 - **Testing**: Vitest + React Testing Library
 
 ### AI Service
-<img src="https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white"/> <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white"/> <img src="https://img.shields.io/badge/CrewAI-FF6B6B?style=flat-square&logo=ai&logoColor=white"/> <img src="https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white"/> <img src="https://img.shields.io/badge/ChromaDB-FF6B6B?style=flat-square&logo=database&logoColor=white"/>
+<img src="https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white"/> <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white"/> <img src="https://img.shields.io/badge/CrewAI-FF6B6B?style=flat-square&logo=ai&logoColor=white"/> <img src="https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white"/>
 
-- **Framework**: FastAPI 0.120
-- **AI Orchestration**: **CrewAI 1.3** (Hierarchical Multi-Agent)
-- **LLM**:
-  - OpenAI GPT-4o (메인)
-  - Google Gemini 1.5 Pro (보조)
-- **Vector Database**:
-  - ChromaDB (문제 임베딩)
-  - LanceDB (성능 최적화)
-- **Database ORM**: SQLAlchemy 2.0
-- **Scheduler**: APScheduler (주간 커리큘럼 생성)
-- **ML Libraries**:
-  - tiktoken (토큰 계산)
-  - instructor (구조화된 LLM 출력)
-  - tokenizers (텍스트 전처리)
-- **Document Processing**:
-  - pdfplumber (PDF 파싱)
-  - python-docx (DOCX 파싱)
-  - pytube (유튜브 자막 추출)
+- **Framework**: FastAPI 0.120.3
+- **AI Orchestration**: CrewAI 1.3.0. 에이전트 3명과 매니저 LLM
+- **LLM**: OpenAI. 기본 모델 이름은 `OPENAI_MODEL`이고 예시 값은 gpt-4o
+- **이미지**: 모험 유형 2·3이고 키가 있을 때 Imagen `imagen-4.0-generate-001`
+- **Scheduler**: APScheduler. 일요일 23:00 KST
+- `requirements.txt`에 `chromadb`, `lancedb`, `tiktoken`, `instructor`, `pdfplumber`, `python-docx`, `pytube`가 있다. 앱 코드에서 import하지 않는다.
+- **Database ORM**: SQLAlchemy
 - **Cloud Storage**: boto3 (AWS S3)
-- **Audio**: OpenAI Whisper API (STT)
+- **Audio**: OpenAI Whisper API. 모델 이름은 `whisper-1`. 경로는 `/api/stt/transcribe`, `/api/stt/evaluate-pronunciation`
 
 ### Infrastructure & DevOps
 <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white"/> <img src="https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white"/> <img src="https://img.shields.io/badge/Jenkins-D24939?style=flat-square&logo=jenkins&logoColor=white"/> <img src="https://img.shields.io/badge/Prometheus-E6522C?style=flat-square&logo=prometheus&logoColor=white"/> <img src="https://img.shields.io/badge/Grafana-F46800?style=flat-square&logo=grafana&logoColor=white"/>
@@ -407,12 +315,12 @@ Whisper API 변환
   - Docker 24.x
   - Docker Compose (멀티 컨테이너 오케스트레이션)
 - **Web Server**:
-  - Nginx 1.25 (리버스 프록시)
+  - Nginx. 프론트 이미지는 `nginx:alpine`
   - CloudFlare SSL (Origin Certificate)
 - **CI/CD**:
-  - Jenkins 2.x (자동 빌드/배포)
-  - GitLab Webhook 연동
-  - develop 브랜치 → EC2 자동 배포
+  - `Jenkinsfile`: develop는 dev, master는 prod
+  - dev 배포는 develop의 머지 커밋만 진행한다
+  - 배포는 `docker-compose.prod.yml`을 down한 뒤 up한다
 - **Monitoring**:
   - Prometheus (메트릭 수집)
   - Grafana (대시보드 시각화)
@@ -479,44 +387,33 @@ S13P31D101/
 │
 ├── ai-service/                       # FastAPI AI 서비스
 │   ├── app/src/
-│   │   ├── agents/                  # CrewAI 에이전트 정의
-│   │   │   ├── academic.py          # 학습 전문가 에이전트
-│   │   │   ├── wellbeing.py         # 심리 전문가 에이전트
-│   │   │   ├── parent.py            # 학부모 대표 에이전트
-│   │   │   └── manager_agent.py     # 관리자 에이전트 (조율)
-│   │   ├── crew.py                  # CrewAI Hierarchical 설정
-│   │   ├── api/                     # FastAPI 라우터
-│   │   │   ├── curriculum.py        # 커리큘럼 생성 API
-│   │   │   ├── problems.py          # 문제 생성 API
-│   │   │   └── evaluation.py        # STT 평가 API
-│   │   ├── core/                    # 핵심 설정
-│   │   │   ├── database.py          # SQLAlchemy 설정
-│   │   │   ├── config.py            # 환경 변수
-│   │   │   └── models.py            # DB 모델
-│   │   ├── llm/                     # LLM 클라이언트
-│   │   │   ├── openai_client.py     # OpenAI GPT-4o
-│   │   │   └── gemini_client.py     # Google Gemini
-│   │   └── vectordb/                # 벡터 DB
-│   │       ├── chroma.py
-│   │       └── lance.py
-│   ├── requirements.txt             # Python 의존성
+│   │   ├── agents/                  # 에이전트 빌더. crew.py는 import하지 않음
+│   │   ├── api/                     # gemini_api, main_api, stt_api, tts_api, scheduler
+│   │   ├── core/
+│   │   ├── crew.py                  # build_hierarchical_crew
+│   │   ├── server.py                # 스케줄러를 시작
+│   │   ├── service/
+│   │   ├── tasks/
+│   │   └── utils/                   # level_evaluator, problem_job, llm
+│   ├── requirements.txt
 │   ├── Dockerfile
-│   └── SET-AI-SERVER.md             # AI 서버 설정 가이드
+│   └── SET-AI-SERVER.md
 │
-├── infrastructure/                   # DevOps 및 배포 설정
-│   ├── docker/                      # Docker Compose 설정
-│   │   ├── docker-compose.yml       # 전체 서비스 오케스트레이션
-│   │   ├── docker-compose.dev.yml   # 개발 환경
-│   │   └── docker-compose.prod.yml  # 프로덕션 환경
-│   ├── nginx/                       # Nginx 설정
-│   │   ├── nginx.conf               # 메인 설정
-│   │   ├── ssl/                     # SSL 인증서 (CloudFlare)
-│   │   └── conf.d/                  # 서비스별 설정
-│   ├── postgres/                    # PostgreSQL 초기화
-│   │   └── init.sql                 # 스키마 및 초기 데이터
-│   └── prometheus/                  # 모니터링 설정
-│       ├── prometheus.yml           # Prometheus 설정
-│       └── grafana/                 # Grafana 대시보드
+├── infrastructure/
+│   ├── docker/
+│   │   ├── docker-compose.ai.yml
+│   │   ├── docker-compose.dev.yml
+│   │   └── docker-compose.prod.yml
+│   ├── grafana/
+│   │   ├── datasources.yml
+│   │   └── dashboards/dashboard-provider.yml
+│   ├── nginx/
+│   │   └── nginx.conf
+│   ├── postgres/
+│   │   └── init.sql
+│   ├── prometheus/
+│   │   └── prometheus.yml
+│   └── scripts/local/
 │
 ├── Jenkinsfile                       # Jenkins CI/CD 파이프라인
 ├── SPRING_SCHEDULER_GUIDE.md         # 스케줄러 구현 가이드
@@ -541,120 +438,44 @@ S13P31D101/
 
 ### 환경 변수 설정
 
-#### 1. Backend 환경 변수 (`.env.backend`)
+예시 파일은 `ai-service/.env.example` 하나다. `.env.backend`, `.env.frontend`, `.env.ai`는 없다.
 
-```bash
-# Database
-DB_HOST=postgres
-DB_PORT=5432
-DB_NAME=captainecho
-DB_USER=postgres
-DB_PASSWORD=your_password
+Backend와 compose가 읽는 이름은 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `REDIS_HOST`, `JWT_SECRET`, `JWT_ACCESS_TOKEN_EXPIRY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OAUTH_REDIRECT_URI`, `AI_SERVICE_URL`, `MAIL_USERNAME`, `MAIL_PASSWORD`다.
 
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-# JWT
-JWT_SECRET=your_jwt_secret_key_here
-JWT_EXPIRATION=3600000  # 1시간
-
-# OAuth2
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
-
-# AWS S3
-AWS_ACCESS_KEY=your_aws_access_key
-AWS_SECRET_KEY=your_aws_secret_key
-AWS_S3_BUCKET=captainecho-files
-AWS_REGION=ap-northeast-2
-
-# AI Service
-AI_SERVICE_URL=http://ai-service:8000
-
-# Email
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your_email@gmail.com
-MAIL_PASSWORD=your_app_password
-```
-
-#### 2. Frontend 환경 변수 (`.env.frontend`)
-
-```bash
-VITE_API_BASE_URL=http://localhost:8080/api
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
-```
-
-#### 3. AI Service 환경 변수 (`.env.ai`)
-
-```bash
-# Database
-DATABASE_URL=postgresql://postgres:your_password@postgres:5432/captainecho
-
-# OpenAI
-OPENAI_API_KEY=sk-your_openai_api_key_here
-OPENAI_MODEL=gpt-4o
-
-# Google Gemini
-GOOGLE_API_KEY=your_gemini_api_key_here
-
-# CrewAI
-CREWAI_TELEMETRY_OPT_OUT=true
-
-# Vector DB
-CHROMA_DB_PATH=/app/data/chroma
-LANCE_DB_PATH=/app/data/lance
-
-# AWS S3
-AWS_ACCESS_KEY=your_aws_access_key
-AWS_SECRET_KEY=your_aws_secret_key
-AWS_S3_BUCKET=captainecho-files
-```
+- DB 이름은 `captain_echo`다.
+- `OAUTH_REDIRECT_URI` 기본값은 `http://localhost:8080/login/oauth2/code/google`이다.
+- `JWT_ACCESS_TOKEN_EXPIRY` 기본값은 3600000이다.
+- 프론트 코드가 읽는 Vite 변수는 `VITE_GOOGLE_CLIENT_ID`다. API 호출은 Vite 프록시 `/api`가 `http://localhost:8080`으로 넘긴다.
+- 이미지 키 이름은 `GEMINI_API_KEY`다. S3 키 이름은 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`이다.
+- 값의 자리는 `.env.example`과 `infrastructure/docker/docker-compose.dev.yml`을 본다. 비밀번호는 그 파일의 예시 값이다.
 
 ### Docker Compose 실행
 
-#### 전체 서비스 한 번에 실행
+루트에 `docker-compose.yml`은 없다. 파일은 `infrastructure/docker/`에 세 개다.
 
 ```bash
-# 프로젝트 루트에서
 cd infrastructure/docker
 
-# 환경 변수 파일 생성 후 실행
-docker-compose up -d
+# nginx, backend, postgres, redis, prometheus, grafana.
+# ai-service 블록은 주석이다.
+docker compose -f docker-compose.dev.yml up -d
 
-# 로그 확인
-docker-compose logs -f
+# ai-service, node-exporter, redis-local.
+docker compose -f docker-compose.ai.yml up -d
+
+# Jenkins 배포가 사용하는 파일.
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-#### 개별 서비스 실행
+#### 접속
 
-```bash
-# 1. 데이터베이스 먼저 실행
-docker-compose up -d postgres redis
-
-# 2. 백엔드 실행 (DB 준비 완료 후)
-docker-compose up -d backend
-
-# 3. AI 서비스 실행
-docker-compose up -d ai-service
-
-# 4. 프론트엔드 실행
-docker-compose up -d frontend
-
-# 5. Nginx 실행
-docker-compose up -d nginx
-```
-
-#### 서비스 접속 URL
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8080/api
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **AI Service Docs**: http://localhost:8000/docs
-- **Grafana**: http://localhost:3001 (admin / admin)
-- **Prometheus**: http://localhost:9090
+- 개발 compose의 프론트(nginx): http://localhost (80)
+- Vite 개발 서버: `frontend`에서 `npm run dev`. 포트 설정이 없으면 Vite 기본 5173이다.
+- Backend: http://localhost:8080
+- Swagger: http://localhost:8080/swagger-ui.html
+- AI Service: http://localhost:8000
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3001. 비밀번호 환경 변수는 `GF_SECURITY_ADMIN_PASSWORD`다.
 
 ### 로컬 개발 환경
 
@@ -711,110 +532,16 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 🔄 CI/CD 파이프라인
 
-### GitLab → Jenkins 연동
+배포 정의는 저장소 루트의 `Jenkinsfile`이다.
 
-```
-┌─────────────┐         Webhook          ┌─────────────┐
-│   GitLab    ├─────────────────────────►│   Jenkins   │
-│  (develop)  │  Push to develop branch  │   Server    │
-└─────────────┘                          └──────┬──────┘
-                                                │
-                                                ↓
-                                    ┌───────────────────────┐
-                                    │  Jenkins Pipeline     │
-                                    ├───────────────────────┤
-                                    │ 1. Git Clone          │
-                                    │ 2. Build Backend      │
-                                    │    - ./gradlew build  │
-                                    │ 3. Build Frontend     │
-                                    │    - npm run build    │
-                                    │ 4. Docker Image Build │
-                                    │ 5. Push to Registry   │
-                                    │ 6. Deploy to EC2      │
-                                    │    - docker-compose   │
-                                    │       up -d           │
-                                    └───────────┬───────────┘
-                                                │
-                                                ↓
-                                    ┌───────────────────────┐
-                                    │   AWS EC2 (Ubuntu)    │
-                                    │   - Backend Container │
-                                    │   - Frontend Container│
-                                    │   - AI Service        │
-                                    │   - Nginx             │
-                                    └───────────────────────┘
-```
-
-### Jenkinsfile 주요 스테이지
-
-```groovy
-pipeline {
-    agent any
-
-    stages {
-        stage('Checkout') {
-            // GitLab에서 소스 코드 클론
-        }
-
-        stage('Build Backend') {
-            steps {
-                sh './gradlew clean build'
-                sh 'docker build -t captainecho/backend:latest ./backend'
-            }
-        }
-
-        stage('Build Frontend') {
-            steps {
-                sh 'npm ci && npm run build'
-                sh 'docker build -t captainecho/frontend:latest ./frontend'
-            }
-        }
-
-        stage('Build AI Service') {
-            steps {
-                sh 'docker build -t captainecho/ai-service:latest ./ai-service'
-            }
-        }
-
-        stage('Deploy to EC2') {
-            steps {
-                // SSH로 EC2 접속 후 docker-compose up -d 실행
-                sh 'ssh ec2-user@your-ec2-ip "cd /app && docker-compose up -d"'
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                // 각 서비스 헬스 체크
-                sh 'curl http://your-domain/api/actuator/health'
-                sh 'curl http://your-domain/ai/health'
-            }
-        }
-    }
-
-    post {
-        success {
-            // 슬랙 알림 (선택사항)
-        }
-        failure {
-            // 배포 실패 알림
-        }
-    }
-}
-```
-
-### 배포 자동화 프로세스
-
-1. **개발자**: `git push origin develop`
-2. **GitLab**: Webhook으로 Jenkins에 푸시 이벤트 전송
-3. **Jenkins**:
-   - 소스 코드 클론
-   - 각 서비스 빌드 및 테스트
-   - Docker 이미지 빌드
-4. **EC2**:
-   - 새 이미지로 컨테이너 재시작
-   - Zero-downtime 배포 (Blue-Green)
-5. **헬스 체크**: 모든 서비스 정상 동작 확인
+- `develop`는 dev, `master`는 prod다. 제한 시간은 30분이다.
+- 환경 확인 단계에서 `docker`와 `docker compose version`을 출력한다.
+- 체크아웃은 `checkout scm`이다. 그 단계의 echo 문장은 GitLab이라고 적혀 있다. Webhook 설정은 이 파일에 없다.
+- Backend와 Frontend 이미지만 빌드한다. 이미지 이름은 `captain-echo-backend:latest`, `captain-echo-frontend:latest`다. AI 이미지 빌드 스테이지는 없다.
+- dev 배포는 `develop`의 머지 커밋만 진행한다. prod 배포는 `master`에서 진행한다.
+- 배포 디렉터리는 `/home/ubuntu/projects/S13P31D101`이다. `infrastructure/docker/docker-compose.prod.yml`을 `down`한 뒤 `up -d`한다.
+- 헬스 체크는 `http://localhost:8080/api/health`와 `http://localhost/health`다.
+- Blue-Green 단계와 Slack 알림 단계는 이 파일에 없다.
 
 <br />
 
@@ -824,50 +551,25 @@ pipeline {
 
 ## 📊 모니터링 및 로깅
 
-### Prometheus + Grafana 스택
+Prometheus 설정은 `infrastructure/prometheus/prometheus.yml`이다. 전역 scrape 간격은 15초다.
 
-#### Prometheus 메트릭 수집 대상
+수집 대상:
 
-1. **Backend (Spring Boot Actuator)**
-   - JVM 메모리/GC 메트릭
-   - HTTP 요청 수, 응답 시간, 에러율
-   - DB 커넥션 풀 상태
-   - 커스텀 메트릭 (예: 주간 커리큘럼 생성 성공/실패)
+- `prometheus` `localhost:9090` (30초)
+- `spring-boot-backend` `backend:8080` `/actuator/prometheus` (15초)
+- `fastapi-ai-service` `ai-service:8000` `/metrics` (15초)
+- `postgres-exporter:9187`, `redis-exporter:9121`, `nginx-exporter:9113` (30초)
+- `node-exporter-backend` `localhost:9100`, `node-exporter-ai` `10.0.2.20:9100` (30초)
+- `cadvisor:8080` (30초)
+- `custom-edu-metrics`도 `backend:8080` `/actuator/prometheus`를 긁는다. 교육 메트릭 이름 필터가 있다.
 
-2. **AI Service (FastAPI)**
-   - LLM API 호출 횟수 및 응답 시간
-   - CrewAI 에이전트 실행 시간
-   - 문제 생성 성공/실패율
-   - Vector DB 쿼리 성능
+`docker-compose.dev.yml`과 `docker-compose.prod.yml`의 서비스에는 postgres-exporter, redis-exporter, nginx-exporter, cadvisor가 없다. node-exporter는 `docker-compose.ai.yml`에 있다.
 
-3. **Infrastructure**
-   - Node Exporter: CPU, 메모리, 디스크 사용률
-   - PostgreSQL Exporter: 쿼리 성능, 커넥션 수
-   - Redis Exporter: 캐시 히트율, 메모리 사용량
+`alertmanagers`의 `alertmanager:9093`과 `rule_files`는 주석이다. Slack, Email 임계값 알림은 연결되어 있지 않다.
 
-#### Grafana 대시보드
+Grafana 파일은 `infrastructure/grafana/datasources.yml`과 `dashboards/dashboard-provider.yml`이다. 프로바이더 이름은 edu-platform, infrastructure, applications, ai-services다. 대시보드 JSON은 이 저장소에 없다.
 
-- **시스템 개요 대시보드**: 전체 서비스 상태 한눈에 보기
-- **백엔드 성능 대시보드**: API 응답 시간, 에러율, TPS
-- **AI 서비스 대시보드**: LLM 호출 통계, 커리큘럼 생성 성공률
-- **인프라 대시보드**: 서버 리소스 사용률
-
-### 주요 모니터링 지표
-
-| 서비스 | 메트릭 | 임계값 | 알림 |
-|-------|--------|--------|------|
-| Backend | API 응답 시간 | > 1초 | Slack |
-| Backend | 에러율 | > 5% | Email |
-| AI Service | LLM 응답 시간 | > 10초 | Slack |
-| PostgreSQL | 커넥션 수 | > 80% | Slack |
-| EC2 | CPU 사용률 | > 80% | Email |
-
-### 로깅 전략
-
-- **Backend**: SLF4J + Logback → JSON 포맷으로 stdout 출력
-- **Frontend**: Console.log (개발), Sentry (프로덕션 에러 추적)
-- **AI Service**: Python logging → 구조화된 로그
-- **중앙 집중 로깅**: Docker logs → CloudWatch Logs (선택사항)
+Sentry와 CloudWatch 설정은 이 저장소에 없다.
 
 <br />
 
@@ -896,13 +598,11 @@ pipeline {
 
 ## 📅 개발 기간
 
-**2025.10.10 ~ 2025.11.20** (6주)
+기획 문서에 적힌 기간은 **2025.10.10 ~ 2025.11.20**이다.
 
-- **Week 1-2**: 기획, 요구사항 분석, 기술 스택 선정
-- **Week 3**: 백엔드 API 개발, AI 에이전트 프로토타입
-- **Week 4**: 프론트엔드 UI/UX 구현, AI 서비스 연동
-- **Week 5**: 통합 테스트, 버그 픽스, 성능 최적화
-- **Week 6**: 최종 QA, 문서화, 배포
+이 브랜치의 개발 커밋은 **2025.10.14 ~ 2025.12.03**이다.
+
+주차별 산출물 목록은 이 저장소에 없다.
 
 <br />
 
